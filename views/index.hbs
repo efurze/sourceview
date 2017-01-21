@@ -1,9 +1,7 @@
 <p>Hello</p>
 <div id="graphics"></div>
 <script>
-  bonsai.run(document.getElementById('graphics'), {
-    url: 'js/renderer.js',
-    width: 500,
-    height: 400
-  });
+	$(function() {
+		Renderer.init("graphics");
+	});
 </script>

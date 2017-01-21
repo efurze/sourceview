@@ -43,6 +43,9 @@ app.use(function(req, res, next) {
 app.get('/', function(req, res) { 
 		res.render("index", {
 			title: "Source View",
+			scripts: [
+				{ path: "/js/renderer.js" }
+			]
 		});	    
 });
 
