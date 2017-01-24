@@ -3,6 +3,9 @@ var cookieParser = require('cookie-parser');
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var path = require('path');
+var fs = require('fs');
+var Promise = require('bluebird');
+Promise.promisifyAll(fs);
 
 // Create the app.
 var app = express();
@@ -41,12 +44,27 @@ app.use(function(req, res, next) {
 
 // Routes
 app.get('/', function(req, res) { 
-		res.render("index", {
-			title: "Source View",
-			scripts: [
-				{ path: "/js/renderer.js" }
-			]
+	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
+		.then(function(data) {
+			res.render("index", {
+				title: "Source View",
+				range: data,
+				scripts: [
+					{ path: "/js/renderer.js" }
+				]
+			});
+		}).catch(function(err) {
+			res.send(err.toString());
 		});	    
+});
+
+app.get('/repo/range', function(req, res) { 
+	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
+		.then(function(data) {
+			res.send(data.toString());
+		}).catch(function(err) {
+			res.send(err.toString());
+		})
 });
 
 

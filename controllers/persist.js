@@ -6,7 +6,7 @@ require('./types.js');
 
 Promise.promisifyAll(fs);
 
-var DATA_DIR = './persist';
+var DATA_DIR = './model/data';
 
 var FILESIZE_FILE = 'filesizehistory.json';
 var SIZERANGE_FILE = 'filesizerange.json';

@@ -7,7 +7,7 @@ var Repo = new repo('/Users/efurze/repos/sourceview');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
 
-//Repo.buildCommitHistory('master');
+Repo.buildCommitHistory('master');
 
 /*
 Repo.fileSizeHistory('master').then(function(file_lengths) {
@@ -26,10 +26,10 @@ Util.revWalk('master').then(function(msgs) {
 })
 */
 
-
-Util.buildTree('22f69063496851bdd4791e4ef0a23659c6ef25d5').then(function(data) {
+/*
+Util.buildTree('47a1896726837f356ca32807c3ee5773a66e7e23').then(function(data) {
 	console.log(JSON.stringify(data));
 	//console.log(Util.enumerateFiles(data, ""));
 });
-
+*/
 

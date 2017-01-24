@@ -4,16 +4,31 @@ $(function() {
 
 	window.Renderer = {
 		
+		_range: null, // {'filename': size, }
 
-		init: function() {
+		init: function(range_data) {
+			Renderer._range = range_data;
 			Renderer.render();
 		},
 
 		render: function() {
-			var draw = SVG('svg').size(300,300);
-			var rect = draw.rect(100,100).attr({fill: 'yellow'});
-			var text = draw.text("lorem ipsum");
-			text.transform({scaleX: 0.5, scaleY: 0.5});
+			var window_size = 1000;
+			var draw = SVG('svg').size(500,2000);
+			var rect = draw.rect(500,window_size).attr({fill: '#43464B'});
+
+			var line_count = 0;
+			var total_lines = 0;
+			Object.keys(Renderer._range).forEach(function(file) {
+				total_lines += Renderer._range[file];
+			});
+
+			Object.keys(Renderer._range).forEach(function(file) {
+				draw.text(file).attr({fill: '#4682b4', x: 5, y: (line_count*window_size)/total_lines});	
+				line_count += Renderer._range[file];
+			});
+
+			
+
 		}
 
 	};
