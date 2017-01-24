@@ -3,19 +3,15 @@
 $(function() {
 
 	window.Renderer = {
+		
 
-		init: function(element_id) {
-			bonsai.run(document.getElementById(element_id), {
-		    code: Renderer.render,
-		    width: 500,
-		    height: 400
-		  });
+		init: function() {
+			Renderer.render();
 		},
 
 		render: function() {
-			new Rect(10, 10, 100, 100)
-			        .addTo(stage)
-			        .attr('fillColor', 'green');
+			var draw = SVG('svg').size(300,300);
+			var rect = draw.rect(100,100).attr({fill: 'blue'});
 		}
 
 	};
