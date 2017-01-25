@@ -5,11 +5,16 @@ var Types = require('./types.js');
 var Util = require('./git_util.js');
 var Git = require('./git.js');
 var Persist = require('./persist.js');
+var Resolve = require('path').resolve;
 
 var Repo = function(path) {
+	path = Resolve(path);
+	var parts = path.split('/');
+	this._repoName = parts[parts.length-1];
+
 	this._git = new Git(path);
 	this._util = new Util(this._git);
-	this._persist = new Persist();
+	this._persist = new Persist(this._repoName);
 };
 
 Repo.prototype.buildCommitHistory = function(branch) {
