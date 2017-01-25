@@ -103,6 +103,8 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 };
 
 
+
+
 Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	return self._util.revWalk(branch_name)
