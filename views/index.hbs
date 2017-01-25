@@ -1,14 +1,14 @@
 
 <div class="row">
-    <div class="col-md-2 text-center nopadding">
+    <div class="col-md-2 text-center">
         <div id="filenames"></div>
     </div>
-    <div class="col-md-10 text-center small-padding">
+    <div class="col-md-10 text-center">
         <div id="repo"></div>
     </div>
 </div>
 <script>
 	$(function() {
-		Renderer.init({{{range}}});
+		Renderer.init({{{repo_data.range_data}}}, {{{repo_data.history_data}}});
 	});
 </script>

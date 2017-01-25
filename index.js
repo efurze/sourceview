@@ -44,11 +44,16 @@ app.use(function(req, res, next) {
 
 // Routes
 app.get('/', function(req, res) { 
-	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
-		.then(function(data) {
+	var data = {};
+	fs.readFileAsync(__dirname + "/model/data/master.filesizehistory.json")
+		.then(function(history) {
+			data['history_data'] = history;
+			return fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json");		
+		}).then(function(range) {
+			data['range_data'] = range;
 			res.render("index", {
 				title: "Source View",
-				range: data,
+				repo_data: data,
 				scripts: [
 					{ path: "/js/renderer.js" }
 				]
