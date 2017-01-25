@@ -109,12 +109,16 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits
-			return Promise.map(history, function(commit) {
-				return self._git.diff(commit.id)
-					.then(function(diff) {
-						return diff._summary;
-					});
-			});
+			return Promise.all(history.map(function(commit, index) {
+				if (index < history.length-2) {
+					return self._git.diff(history[index+1].id, commit.id)
+						.then(function(diff) {
+							return diff._summary;
+						});
+				} else {
+					return null;
+				}
+			}));
 		});
 };
 

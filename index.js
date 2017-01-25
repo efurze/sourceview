@@ -48,9 +48,12 @@ app.get('/', function(req, res) {
 	fs.readFileAsync(__dirname + "/model/data/master.filesizehistory.json")
 		.then(function(history) {
 			data['history_data'] = history;
-			return fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json");		
+			return fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json");	
 		}).then(function(range) {
 			data['range_data'] = range;
+			return fs.readFileAsync(__dirname + "/model/data/master.diffhistory.json");	
+		}).then(function(diffs) {
+			data['diffs'] = diffs;
 			res.render("index", {
 				title: "Source View",
 				repo_data: data,
