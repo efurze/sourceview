@@ -23,11 +23,14 @@ Repo.prototype.buildCommitHistory = function(branch) {
 		.then(function(history) {
 			return self._persist.saveFileSizeHistory(branch, history)
 				.then(function() {
+					status("Persisting fileSizeHistory");
 					return self.saveSizeRange(branch, history);
 				});
 		}).then(function() {
+			status("Building diff history");
 			return self.diffHistory(branch);
 		}).then(function(history) {
+			status("Persisting diff history");
 			return self._persist.saveDiffHistory(branch, history);
 		});
 };
@@ -67,16 +70,23 @@ Repo.prototype.saveSizeRange = function(branch_name, file_size_history) {
 */
 Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 	var self = this;
+	status("Building revision history for", branch_name);
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits
-			//console.log("walking history of length", history.length);
+			status("Creating FizeSizeHistory for", history.length, "revisions");
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
 
+			status("Building initial tree");
 			return self._util.buildTree(current_rev.tree)
 				.then(getAllFileIds)
 				.then(function(files) { // {filepath => sha1}
-					return Promise.each(Object.keys(files), function(filepath) {
+					var filecount = Object.keys(files).length;
+					status("Built tree. Getting file info for", filecount, "files");
+					return Promise.each(Object.keys(files), function(filepath, index) {
+						if (index % 100 == 0) {
+							status(index + " / " + filecount);
+						}
 						return self._git.catFile(files[filepath])
 							.then(function(filedata) {
 								files[filepath] = filedata.length;
@@ -85,8 +95,10 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 						return files;
 					});
 				}).then(function(files) { // {filepath => filelength}
+					status("Building diff history");
 					var initial_files = Clone(files); // for first rev
-					return Promise.mapSeries(history, function(rev) {
+					return Promise.mapSeries(history, function(rev, index) {
+						status("Revision", index + " / " + history.length);
 						return self._git.diff(current_rev.tree, rev.tree)
 							.then(function(diff) {
 								current_rev = rev;
@@ -115,7 +127,9 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits
-			return Promise.all(history.map(function(commit, index) {
+			status("Creating diff history for", history.length, "revisions");
+			return Promise.mapSeries(history, function(commit, index) {
+				status("Diff for revision", index + " / " + history.length);
 				if (index < history.length-1) {
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
@@ -124,7 +138,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 				} else {
 					return;
 				}
-			})).then(function(diff_ary) {
+			}).then(function(diff_ary) {
 				return diff_ary.filter(function(diff) {
 					if (diff) 
 						return true;
@@ -191,6 +205,10 @@ var getAllFileIds = function(tree, path) {
 	});
 
 	return files;
+};
+
+var status = function() {
+	console.log.apply(console, arguments);
 };
 
 module.exports = Repo;
