@@ -60,7 +60,8 @@ app.get('/', function(req, res) {
 				title: "Source View",
 				repo_data: data,
 				scripts: [
-					{ path: "/js/renderer.js" }
+					{ path: "/js/renderer.js" },
+					{ path: "/js/view.js" }
 				]
 			});
 		}).catch(function(err) {

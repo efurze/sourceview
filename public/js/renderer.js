@@ -1,125 +1,145 @@
 'use strict'
 
-$(function() {
+var Renderer = function(range_data, history_data, diffs) {
+	var self = this;
+	this._range = range_data; // {'filename': size, }
+	this._history = history_data; // indexed by commit
+	this._diffs = diffs;		
 
-	window.Renderer = {
-		
-		_range: null, // {'filename': size, }
-		_history: null,
-		_diffs: null,
-		_yAxis: {},
-		_maxLineCount: 0,
-		_repoSVG: null,
-		_viewportHeight: 0,
-		_files: [], // sorted in display order, top-to-bottom
+	this._lastMouseX = -1;
+	this._lastMouseY = -1;
+	this._yAxis = {};
+	this._maxLineCount = 0;
+	this._repoSVG = null;
+	this._viewportHeight = 0;
+	this._files = []; // sorted in display order, top-to-bottom
+	this._sizeHistory = {}; // indexed by filename (not commit)	
 
-		init: function(range_data, history_data, diffs) {
-			Renderer._range = range_data;
-			Renderer._history = history_data;
-			Renderer._diffs = diffs;			
+	this._repoSVG = SVG('repo');
+	this._repoSVG.mousemove(function(event) {
+		self.mouseMove(event);
+	});
+	this.calculateLayout();
+	this.render();
+};
 
-			Renderer.calculateLayout();
-			Renderer.render();
-		},
+Renderer.prototype.calculateLayout = function() {
+	var self = this;
+	this._files = Object.keys(this._range);
+	this._files.sort(function (a, b) {
+		return a.toLowerCase().localeCompare(b.toLowerCase());
+	});
+	this._files.forEach(function(file) {
+		self._sizeHistory[file] = [];
+		self._yAxis[file] = self._maxLineCount;
+		self._maxLineCount += self._range[file];
+	});
+};
 
-		calculateLayout: function() {
-			Renderer._files = Object.keys(Renderer._range);
-			Renderer._files.sort(function (a, b) {
-				return a.toLowerCase().localeCompare(b.toLowerCase());
-			});
-			Renderer._files.forEach(function(file) {
-				Renderer._yAxis[file] = Renderer._maxLineCount;
-				Renderer._maxLineCount += Renderer._range[file];
-			});
-		},
+Renderer.prototype.render = function() {
+	var self = this;
+	self.renderFilenames();
+	self.renderHistory();
+	self.renderDiffs();
+};
 
-		render: function() {
-			Renderer.renderFiles();
-			Renderer.renderRepo();
-			Renderer.renderDiffs();
-		},
+Renderer.prototype.renderFilenames = function() {
+	var self = this;
+	var filesSVG = SVG('filenames');
+	var vb = filesSVG.viewbox();
+	var rect = filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
 
-		renderFiles: function() {
-			var filesSVG = SVG('filenames');
-			var vb = filesSVG.viewbox();
-			var rect = filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
+	var y = 0;
+	var fontHeight = 0;
+	self._files.forEach(function(file) {
+		var nextShouldBeAt = (self._yAxis[file]*(vb.height-fontHeight))/self._maxLineCount;
+		if (true) { //(nextShouldBeAt >= y + fontHeight) {
+			y = nextShouldBeAt;
+			var text = filesSVG.text(file)
+				.attr({
+					fill: 'black', 
+					x: 5, 
+					y: y
+				}).font({
+					  family:   'Helvetica'
+					, size:     8
+				});
+			fontHeight = text.bbox().height;
+		}
+	});			
+};
 
-			var y = 0;
-			var fontHeight = 0;
-			Renderer._files.forEach(function(file) {
-				var nextShouldBeAt = (Renderer._yAxis[file]*vb.height)/Renderer._maxLineCount;
-				if (true) { //(nextShouldBeAt >= y + fontHeight) {
-					y = nextShouldBeAt;
-					var text = filesSVG.text(file)
+Renderer.prototype.renderHistory = function() {
+	var self = this;
+	var vb = self._repoSVG.viewbox();
+	self._repoSVG.rect(vb.width, vb.height).attr({fill: '#A2BCCD'});
+
+	var commit_width = vb.width/self._history.length;
+	var dx = 0;
+	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
+		Object.keys(commit.tree).forEach(function(filename) {
+			var size = commit.tree[filename];
+			if (self._sizeHistory[filename]) {
+				self._sizeHistory[filename].push(size);
+			}
+			if (size) {
+				self._repoSVG.rect(commit_width, (size*vb.height)/self._maxLineCount)
 						.attr({
-							fill: 'black', 
-							x: 5, 
-							y: y
-						}).font({
-							  family:   'Helvetica'
-							, size:     8
-						});
-					fontHeight = text.bbox().height;
-				}
-			});			
-		},
+							x: vb.width - dx - commit_width,
+							y: (self._yAxis[filename]*vb.height)/self._maxLineCount,
+							fill:'#8296A4'});
+			}
+		});
+		dx += commit_width;
+	});
+};
 
-		renderRepo: function() {
-			Renderer._repoSVG = SVG('repo');
-			var vb = Renderer._repoSVG.viewbox();
-			Renderer._repoSVG.rect(vb.width, vb.height).attr({fill: '#A2BCCD'});
+Renderer.prototype.renderDiffs = function() {
+	var self = this;
+	var vb = self._repoSVG.viewbox();
+	var commit_width = vb.width/self._history.length;
+	var dx = 0;
 
-			var commit_width = vb.width/Renderer._history.length;
-			var dx = 0;
-			Renderer._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
-				Object.keys(commit.tree).forEach(function(filename) {
-					var size = commit.tree[filename];
-					if (size) {
-						Renderer._repoSVG.rect(commit_width, (size*vb.height)/Renderer._maxLineCount)
-								.attr({
-									x: vb.width - dx - commit_width,
-									y: (Renderer._yAxis[filename]*vb.height)/Renderer._maxLineCount,
-									fill:'#8296A4'});
-					}
-				});
-				dx += commit_width;
+	self._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
+		if (!diff) 
+			return;
+		Object.keys(diff).forEach(function(filename) {
+			var edits = diff[filename];
+			var file_begin = self._yAxis[filename];
+			var filelen = self._range[filename];
+			var file_y = (file_begin*vb.height)/self._maxLineCount;
+			var file_dy = filelen/self._maxLineCount;
+			edits.forEach(function(edit) { // "+1,9"
+				var parts = edit.split(",");
+				var linenum = parseInt(parts[0].slice(1));
+				var len = parseInt(parts[1]);
+				var dy =  (len*vb.height)/self._maxLineCount;
+				var x = vb.width - dx - commit_width;
+				var y = ((file_begin+linenum)*vb.height)/self._maxLineCount;
+				self._repoSVG.rect(commit_width,
+									dy)
+									.attr({
+										'x': x,
+										'y': y,
+										fill:'#424D54'
+									});
 			});
-		},
+		});
+		dx += commit_width;
+	});
+};
 
-		renderDiffs: function() {
-			var vb = Renderer._repoSVG.viewbox();
-			var commit_width = vb.width/Renderer._history.length;
-			var dx = 0;
 
-			Renderer._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
-				if (!diff) 
-					return;
-				Object.keys(diff).forEach(function(filename) {
-					var edits = diff[filename];
-					var file_begin = Renderer._yAxis[filename];
-					var filelen = Renderer._range[filename];
-					var file_y = (file_begin*vb.height)/Renderer._maxLineCount;
-					var file_dy = filelen/Renderer._maxLineCount;
-					edits.forEach(function(edit) { // "+1,9"
-						var parts = edit.split(",");
-						var linenum = parseInt(parts[0].slice(1));
-						var len = parseInt(parts[1]);
-						var dy =  (len*vb.height)/Renderer._maxLineCount;
-						var x = vb.width - dx - commit_width;
-						var y = ((file_begin+linenum)*vb.height)/Renderer._maxLineCount;
-						Renderer._repoSVG.rect(commit_width,
-											dy)
-											.attr({
-												'x': x,
-												'y': y,
-												fill:'#424D54'
-											});
-					});
-				});
-				dx += commit_width;
-			});
-		},
+Renderer.prototype.mouseMove = function(event) {
+	var self = this;
+	if (event.x == self._lastMouseX 
+		&& event.y == self._lastMouseY ) {
+		return;
+	}
 
-	};
-});
+	self._lastMouseX = event.x;
+	self._lastMouseY = event.y;
+};
+
+
 
