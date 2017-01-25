@@ -49,11 +49,15 @@ Renderer.prototype.renderFilenames = function() {
 	var vb = filesSVG.viewbox();
 	var rect = filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
 
-	var y = 0;
-	var fontHeight = 0;
-	self._files.forEach(function(file) {
+	var fontHeight = 10; // TODO: initialize this somehow
+	var y = vb.height;
+	var filecount = self._files.length;
+
+	// Draw bottom-to-top so we elide the small files instead of the big ones
+	for (var i=1; i <= filecount; i++) {
+		var file = self._files[filecount - i];
 		var nextShouldBeAt = (self._yAxis[file]*(vb.height-fontHeight))/self._maxLineCount;
-		if (true) { //(nextShouldBeAt >= y + fontHeight) {
+		if (nextShouldBeAt <= y - fontHeight) {
 			y = nextShouldBeAt;
 			var text = filesSVG.text(file)
 				.attr({
@@ -66,7 +70,7 @@ Renderer.prototype.renderFilenames = function() {
 				});
 			fontHeight = text.bbox().height;
 		}
-	});			
+	}		
 };
 
 Renderer.prototype.renderHistory = function() {
