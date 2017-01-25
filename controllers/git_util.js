@@ -39,7 +39,7 @@ Util.prototype.enumerateFiles = function(tree, path) {
 
 	tree.children.forEach(function(child) {
 		if (child instanceof Node) {
-			var subtree = self.enumerateFiles(child, child.name);
+			var subtree = self.enumerateFiles(child, path + child.name);
 			files = files.concat(subtree);
 		} else {
 			files.push(path + child.name);

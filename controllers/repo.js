@@ -69,7 +69,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits
-
+			//console.log("walking history of length", history.length);
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
 
@@ -101,6 +101,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 							'commit': initial_commit,
 							'tree': initial_files
 						});
+						//console.log("Adding commit #" + file_history.length);
 						return file_history;
 					});
 				});
@@ -115,15 +116,22 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits
 			return Promise.all(history.map(function(commit, index) {
-				if (index < history.length-2) {
+				if (index < history.length-1) {
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
 							return diff._summary;
 						});
 				} else {
-					return {};
+					return;
 				}
-			}));
+			})).then(function(diff_ary) {
+				return diff_ary.filter(function(diff) {
+					if (diff) 
+						return true;
+					else
+						return false;
+				});
+			});
 		});
 };
 
@@ -173,7 +181,7 @@ var getAllFileIds = function(tree, path) {
 
 	tree.children.forEach(function(child) {
 		if (child instanceof Node) {
-			var subtree = getAllFileIds(child, child.name);
+			var subtree = getAllFileIds(child, path+child.name);
 			Object.keys(subtree).forEach(function(filename) {
 				files[filename] = subtree[filename];
 			});
