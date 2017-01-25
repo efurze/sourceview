@@ -10,12 +10,27 @@ $(function() {
 		_yAxis: {},
 		_maxLineCount: 0,
 		_repoSVG: null,
+		_viewportHeight: 0,
+		_files: [], // sorted in display order, top-to-bottom
 
 		init: function(range_data, history_data, diffs) {
 			Renderer._range = range_data;
 			Renderer._history = history_data;
-			Renderer._diffs = diffs;
+			Renderer._diffs = diffs;			
+
+			Renderer.calculateLayout();
 			Renderer.render();
+		},
+
+		calculateLayout: function() {
+			Renderer._files = Object.keys(Renderer._range);
+			Renderer._files.sort(function (a, b) {
+				return a.toLowerCase().localeCompare(b.toLowerCase());
+			});
+			Renderer._files.forEach(function(file) {
+				Renderer._yAxis[file] = Renderer._maxLineCount;
+				Renderer._maxLineCount += Renderer._range[file];
+			});
 		},
 
 		render: function() {
@@ -25,34 +40,28 @@ $(function() {
 		},
 
 		renderFiles: function() {
-			
-			var files = SVG('filenames');
+			var filesSVG = SVG('filenames');
+			var vb = filesSVG.viewbox();
+			var rect = filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
 
-			var vb = files.viewbox();
-			files.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
-
-			var max_height = vb.height;
-			var line_count = 0;
-			var total_lines = 0;
-			Object.keys(Renderer._range).forEach(function(file) {
-				total_lines += Renderer._range[file];
-			});
-
-			Object.keys(Renderer._range).forEach(function(file) {
-				files.text(file)
-					.attr({
-						fill: 'black', 
-						x: 5, 
-						y: (line_count*max_height)/total_lines
-					}).font({
-						  family:   'Helvetica'
-						, size:     8
+			var y = 0;
+			var fontHeight = 0;
+			Renderer._files.forEach(function(file) {
+				var nextShouldBeAt = (Renderer._yAxis[file]*vb.height)/Renderer._maxLineCount;
+				if (true) { //(nextShouldBeAt >= y + fontHeight) {
+					y = nextShouldBeAt;
+					var text = filesSVG.text(file)
+						.attr({
+							fill: 'black', 
+							x: 5, 
+							y: y
+						}).font({
+							  family:   'Helvetica'
+							, size:     8
 						});
-				Renderer._yAxis[file] = line_count;
-				line_count += Renderer._range[file];
+					fontHeight = text.bbox().height;
+				}
 			});			
-
-			Renderer._maxLineCount = total_lines;
 		},
 
 		renderRepo: function() {
