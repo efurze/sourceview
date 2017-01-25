@@ -12,10 +12,16 @@ $(function() {
 		},
 
 		render: function() {
-			var window_size = 1000;
-			var draw = SVG('svg').size(500,2000);
-			var rect = draw.rect(500,window_size).attr({fill: '#43464B'});
+			var repo = SVG('repo');
+			var files = SVG('filenames');
 
+			var vb = files.viewbox();
+			files.rect(vb.width, vb.height).attr({fill: 'grey'});
+			
+			vb = repo.viewbox();
+			repo.rect(vb.width, vb.height).attr({fill: '#43464B'});
+
+			var max_height = vb.height;
 			var line_count = 0;
 			var total_lines = 0;
 			Object.keys(Renderer._range).forEach(function(file) {
@@ -23,7 +29,7 @@ $(function() {
 			});
 
 			Object.keys(Renderer._range).forEach(function(file) {
-				draw.text(file).attr({fill: '#4682b4', x: 5, y: (line_count*window_size)/total_lines});	
+				files.text(file).attr({fill: 'black', x: 5, y: (line_count*max_height)/total_lines});	
 				line_count += Renderer._range[file];
 			});
 
