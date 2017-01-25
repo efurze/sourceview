@@ -116,7 +116,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 							return diff._summary;
 						});
 				} else {
-					return null;
+					return {};
 				}
 			}));
 		});

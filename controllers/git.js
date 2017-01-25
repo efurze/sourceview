@@ -88,6 +88,7 @@ Git.prototype.diff = function(sha1, sha2) {
 	if (sha2) {
 		args.push(sha2);
 	}
+	args.push('-U0');
 	return self._git.diffAsync(args)
 		.then(function(diffstr) {
 			return new diff(diffstr);

@@ -39,7 +39,15 @@ $(function() {
 			});
 
 			Object.keys(Renderer._range).forEach(function(file) {
-				files.text(file).attr({fill: 'black', x: 5, y: (line_count*max_height)/total_lines});
+				files.text(file)
+					.attr({
+						fill: 'black', 
+						x: 5, 
+						y: (line_count*max_height)/total_lines
+					}).font({
+						  family:   'Helvetica'
+						, size:     8
+						});
 				Renderer._yAxis[file] = line_count;
 				line_count += Renderer._range[file];
 			});			
@@ -75,6 +83,8 @@ $(function() {
 			var dx = 0;
 
 			Renderer._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
+				if (!diff) 
+					return;
 				Object.keys(diff).forEach(function(filename) {
 					var edits = diff[filename];
 					var file_begin = Renderer._yAxis[filename];
