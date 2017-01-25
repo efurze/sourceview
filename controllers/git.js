@@ -65,6 +65,7 @@ var Git = function(path) {
 
 Git.prototype.catFile = function(id) {
 	var self = this;
+	//console.log("cat-file", id);
 	var type;
 	return self._git.revparseAsync([id])
 		.then(function(sha) {
@@ -79,8 +80,12 @@ Git.prototype.catFile = function(id) {
 				}).then(function(data) {
 					return parseCatFile(data, type, sha);
 				});
+		}).catch(function(err) {
+			console.log("catFile error", err.toString());
+			return null;
 		});
 };
+
 
 Git.prototype.diff = function(sha1, sha2) {
 	var self = this;
@@ -98,21 +103,34 @@ Git.prototype.diff = function(sha1, sha2) {
 // @ref: SHA or branch/tag name ('master', 'HEAD', etc)
 Git.prototype.revList = function(ref) {
 	var self = this;
-	var history = []; // ascending list of commit shas
-	return self.catFile(ref)
-		.then(function(commit) {
-			if (commit) {
-				history.push(commit.id);
-				if (commit.parents && commit.parents.length) {
-					// recurse
-					return self.revList(commit.parents[0])
-						.then(function(more_history) {
-							return history.concat(more_history);
-						});
+	var resolve, reject;
+	var promise = new Promise(function (res, rej) {
+		resolve = res;
+		reject = rej;
+	});
+
+	history = []; // descending list of commit shas
+
+	var doRevList = function (reference, history_ary) {
+		self.catFile(reference)
+			.then(function(commit) { // commit object
+				if (commit) {
+					history_ary.push(commit.id);
 				}
-			}
-			return history;
-		});
+				if (commit && commit.parents && commit.parents.length) {
+					// recurse via timer so we don't blow the stack
+					setImmediate(doRevList, commit.parents[0], history_ary);
+				} else {
+					resolve(history_ary);
+				}
+			}).catch(function(err) {
+				reject(err);
+			});
+	};
+
+	doRevList(ref, history);
+
+	return promise;
 };
 
 module.exports = Git;
