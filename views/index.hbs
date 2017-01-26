@@ -3,12 +3,22 @@
     <div class="col-md-2 text-center">
         <div id="filenames"></div>
     </div>
-    <div class="col-md-10 text-center">
-        <div id="repo"></div>
+    <div class="col-md-10 text-center" id="col2">
+        <div id="canvas_div">
+            <canvas id="repo_canvas" class="canvas"></canvas>
+        </div>
     </div>
 </div>
 <script>
-	$(function() {
+	$(document).ready(function() {
+
+        // this is required to make the canvas fill the entire div
+        
+        var c = $("#repo_canvas");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
 		View.init({{{repo_data.range_data}}}, 
 			{{{repo_data.history_data}}}, 
 			{{{repo_data.diffs}}});

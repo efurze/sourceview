@@ -1,30 +1,29 @@
 'use strict'
 
-var Renderer = function(range_data, history_data, diffs) {
+var CanvasRenderer = function(range_data, history_data, diffs) {
 	var self = this;
 	this._range = range_data; // {'filename': size, }
 	this._history = history_data; // indexed by commit
 	this._diffs = diffs;		
 
+	this._canvas = document.getElementById("repo_canvas");
+	this._width = this._canvas.width;
+	this._height = this._canvas.height;
+	this._context = this._canvas.getContext('2d');
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
 	this._yAxis = {};
 	this._maxLineCount = 0;
-	this._repoSVG = null;
 	this._viewportHeight = 0;
 	this._files = []; // sorted in display order, top-to-bottom
 	this._sizeHistory = {}; // indexed by filename (not commit)	
 
-	this._repoSVG = SVG('repo');
-	this._repoSVG.mousemove(function(event) {
-		self.mouseMove(event);
-	});
 	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
 };
 
-Renderer.prototype.calculateLayout = function() {
+CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
 	this._files = Object.keys(this._range);
 	this._files.sort(function (a, b) {
@@ -37,7 +36,7 @@ Renderer.prototype.calculateLayout = function() {
 	});
 };
 
-Renderer.prototype.render = function() {
+CanvasRenderer.prototype.render = function() {
 	var self = this;
 	console.log("renderFilenames");
 	self.renderFilenames();
@@ -48,7 +47,7 @@ Renderer.prototype.render = function() {
 	console.log("done");
 };
 
-Renderer.prototype.renderFilenames = function() {
+CanvasRenderer.prototype.renderFilenames = function() {
 	var self = this;
 	var filesSVG = SVG('filenames');
 	var vb = filesSVG.viewbox();
@@ -78,36 +77,42 @@ Renderer.prototype.renderFilenames = function() {
 	}		
 };
 
-Renderer.prototype.renderHistory = function() {
+CanvasRenderer.prototype.renderHistory = function() {
 	var self = this;
-	var vb = self._repoSVG.viewbox();
-	self._repoSVG.rect(vb.width, vb.height).attr({fill: '#A2BCCD'});
+	
+	self._context.fillStyle = '#A2BCCD';
+	self._context.fillRect(0,0, self._width, self._height);
 
-	var commit_width = vb.width/self._history.length;
+	self._context.fillStyle = '#8296A4';
+	var commit_width = self._width/self._history.length;
 	var dx = 0;
 	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
 		Object.keys(commit.tree).forEach(function(filename) {
 			var size = commit.tree[filename];
-			if (self._sizeHistory[filename]) {
-				self._sizeHistory[filename].push(size);
-			}
 			if (size) {
-				self._repoSVG.rect(commit_width, (size*vb.height)/self._maxLineCount)
-						.attr({
-							x: vb.width - dx - commit_width,
-							y: (self._yAxis[filename]*vb.height)/self._maxLineCount,
-							fill:'#8296A4'});
+				var x = self._width - dx - commit_width;
+				var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
+				var dy = (size*self._height)/self._maxLineCount;
+				self._context.fillRect(x,
+					y,
+					commit_width,
+					dy
+				);
 			}
 		});
 		dx += commit_width;
 	});
+	
 };
 
-Renderer.prototype.renderDiffs = function() {
+
+
+CanvasRenderer.prototype.renderDiffs = function() {
 	var self = this;
-	var vb = self._repoSVG.viewbox();
-	var commit_width = vb.width/self._history.length;
+	var commit_width = self._width/self._history.length;
 	var dx = 0;
+
+	self._context.fillStyle = '#424D54';
 
 	self._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
 		if (!diff) 
@@ -116,30 +121,28 @@ Renderer.prototype.renderDiffs = function() {
 			var edits = diff[filename];
 			var file_begin = self._yAxis[filename];
 			var filelen = self._range[filename];
-			var file_y = (file_begin*vb.height)/self._maxLineCount;
+			var file_y = (file_begin*self._height)/self._maxLineCount;
 			var file_dy = filelen/self._maxLineCount;
 			edits.forEach(function(edit) { // "+1,9"
 				var parts = edit.split(",");
 				var linenum = parseInt(parts[0].slice(1));
 				var len = parseInt(parts[1]);
-				var dy =  (len*vb.height)/self._maxLineCount;
-				var x = vb.width - dx - commit_width;
-				var y = ((file_begin+linenum)*vb.height)/self._maxLineCount;
-				self._repoSVG.rect(commit_width,
-									dy)
-									.attr({
-										'x': x,
-										'y': y,
-										fill:'#424D54'
-									});
+				var dy =  (len*self._height)/self._maxLineCount;
+				var x = self._width - dx - commit_width;
+				var y = ((file_begin+linenum)*self._height)/self._maxLineCount;
+
+				self._context.fillRect(x,
+					y,
+					commit_width,
+					dy
+				);
 			});
 		});
 		dx += commit_width;
 	});
 };
 
-
-Renderer.prototype.mouseMove = function(event) {
+CanvasRenderer.prototype.mouseMove = function(event) {
 	var self = this;
 	if (event.x == self._lastMouseX 
 		&& event.y == self._lastMouseY ) {

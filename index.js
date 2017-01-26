@@ -60,6 +60,7 @@ app.get('/', function(req, res) {
 				title: "Source View",
 				repo_data: data,
 				scripts: [
+					{ path: "/js/canvas_renderer.js" },
 					{ path: "/js/renderer.js" },
 					{ path: "/js/view.js" }
 				]
