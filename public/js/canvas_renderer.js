@@ -18,20 +18,39 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._files = []; // sorted in display order, top-to-bottom
 	this._sizeHistory = {}; // indexed by filename (not commit)	
 	this._highlight = "";
+	this._filter = "";
 
 	$(this._canvas).mousemove(this.mouseMove.bind(this));
+	$("#filter_button").on('click', self.onFilterClick.bind(self));
 
 	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
 };
 
+CanvasRenderer.prototype.onFilterClick = function() {
+	var self = this;
+	self._filter = $("#filter_input").val();
+	self.calculateLayout();
+	self.render();
+};
+
 CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
-	this._files = Object.keys(this._range);
+	this._files = Object.keys(this._range)
+					.filter(function(filename) {
+						if (!self._filter || self._filter === "") {
+							return true;
+						}
+						return filename.startsWith(self._filter);
+					});
 	this._files.sort(function (a, b) {
 		return a.toLowerCase().localeCompare(b.toLowerCase());
 	});
+
+
+	self._maxLineCount = 0;
+	
 	this._files.forEach(function(file) {
 		self._sizeHistory[file] = [];
 		self._yAxis[file] = self._maxLineCount;

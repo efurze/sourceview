@@ -51,38 +51,6 @@ Util.prototype.enumerateFiles = function(tree, path) {
 
 
 
-/*
-Leah is awesome
-Leah is awesomeLeah is awesomeLeah is awesomeLeah is awesomeLeah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-Leah is awesome
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* returns tree node: 
 	{
 		name: <str>,
