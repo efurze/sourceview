@@ -168,13 +168,16 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	var self = this;
 	var commit_width = self._width/self._history.length;
-	var dx = 0;
-
-	self._context.fillStyle = '#424D54';
+	var x = self._width - commit_width;
 
 	self._diffs.forEach(function(diff) { // {commit:{}, diffs: {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
 		if (!diff || !diff.diffs) 
 			return;
+
+		self._context.fillStyle = '#424D54';
+		if (self._selectedCommit && self._selectedCommit.id == diff.commit.id) {
+			self._context.fillStyle = '#FFFFD5';
+		}
 
 		if (diff.diffs.hasOwnProperty(filename)) {
 			var edits = diff.diffs[filename];
@@ -187,7 +190,6 @@ CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 				var linenum = parseInt(parts[0].slice(1));
 				var len = parseInt(parts[1]);
 				var dy =  (len*self._height)/self._maxLineCount;
-				var x = self._width - dx - commit_width;
 				var y = ((file_begin+linenum)*self._height)/self._maxLineCount;
 
 				self._context.fillRect(x,
@@ -197,7 +199,8 @@ CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 				);
 			});
 		}
-		dx += commit_width;
+
+		x -= commit_width;
 	});
 };
 
@@ -216,14 +219,29 @@ CanvasRenderer.prototype.mouseMove = function(event) {
 		return;
 	}
 
-	self._lastMouseX = event.offsetX;
+	if (self._lastMouseX != event.offsetX) {
+		console.log("x", event.offsetX);
+		self._lastMouseX = event.offsetX;
+		self._selectedCommit = self.commitFromXCoord(event.offsetX);
+		if (self._selectedCommit) {
+			$("#commit_info").text(self._selectedCommit.commit_msg);
+			self.render();
+			//self.highlightFilename(file);
+		}
+	}
 
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
 		var file = self.fileFromYCoord(event.offsetY);
 		if (file != self._selectedFile) {
+			var previous = self._selectedFile;
 			self._selectedFile = file;
-			self.render();
+
+			self.renderFilenames();
+			self.renderFileHistory(previous);
+			self.renderFileDiffs(previous);
+			self.renderFileHistory(file);
+			self.renderFileDiffs(file);
 			self.highlightFilename(file);
 		}
 	}
@@ -239,6 +257,15 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 		}
 	}
 	return "";
+}
+
+CanvasRenderer.prototype.commitFromXCoord = function(x) {
+	var self = this;
+	var index = Math.floor((self._diffs.length * x) / self._width);
+	if (index >= 0 && index < self._diffs.length) {
+		return self._diffs[self._diffs.length-index-1].commit;
+	}
+	return null;
 }
 
 
