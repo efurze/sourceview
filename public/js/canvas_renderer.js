@@ -16,7 +16,6 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._yAxis = {}; // filename to offset in lines
 	this._maxLineCount = 0;
 	this._files = []; // sorted in display order, top-to-bottom
-	this._sizeHistory = {}; // indexed by filename (not commit)	
 	this._highlight = "";
 	this._filter = "";
 
@@ -52,22 +51,10 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	self._maxLineCount = 0;
 	
 	this._files.forEach(function(file) {
-		self._sizeHistory[file] = [];
 		self._yAxis[file] = self._maxLineCount;
 		self._maxLineCount += self._range[file];
 	});
-/*
-	// create indices
-	self._files.forEach(function(filename) {
-		self._sizeHistory[filename] = new Array(self._history.length);
-		self._sizeHistory[filename].fill(0);
-	});
-	self._history.forEach(function(commit, index) {
-		Object.keys(commit.tree).forEach(function(filename) {
-			self._sizeHistory[filename][index] = commit.tree[filename];
-		};
-	});
-*/
+
 };
 
 CanvasRenderer.prototype.render = function() {
@@ -77,7 +64,7 @@ CanvasRenderer.prototype.render = function() {
 	console.log("renderHistory");
 	self.renderHistory();
 	console.log("renderDiffs");
-	self.renderDiffs();
+	//self.renderDiffs();
 	console.log("done");
 };
 
@@ -135,42 +122,49 @@ CanvasRenderer.prototype.highlightFilename = function(filename) {
 		});
 }
 
-
 CanvasRenderer.prototype.renderHistory = function() {
 	var self = this;
-	
-	self._context.fillStyle = '#A2BCCD';
-	self._context.fillRect(0,0, self._width, self._height);
 
-	var commit_width = self._width/self._history.length;
-	var dx = 0;
-	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
-		Object.keys(commit.tree).forEach(function(filename) {
-			var size = commit.tree[filename];
-			if (size) {
-				var x = self._width - dx - commit_width;
-				var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
-				var dy = (size*self._height)/self._maxLineCount;
-				if (filename === self._highlight) {
-					self._context.fillStyle = "grey";
-				} else {
-					self._context.fillStyle = '#8296A4';
-				}
-				self._context.fillRect(x,
-					y,
-					commit_width,
-					dy
-				);
-			}
-		});
-		dx += commit_width;
+	self._files.forEach(function(filename) {
+		self.renderFileHistory(filename);
+		self.renderFileDiffs(filename);
 	});
-	
+};
+
+CanvasRenderer.prototype.renderFileHistory = function(filename) {
+	var self = this;
+
+	var commit_width = self._width/self._history.length;	
+	var total_height = (self._range[filename] * self._height)/self._maxLineCount;
+
+	var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
+
+	self._context.fillStyle = '#A2BCCD';
+	self._context.fillRect(0,y, self._width, total_height);
+
+	var x = self._width - commit_width;
+
+	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
+		var size = commit.tree.hasOwnProperty(filename) 
+						? commit.tree[filename] : 0;
+		var dy = (size*self._height)/self._maxLineCount;
+		if (filename === self._highlight) {
+			self._context.fillStyle = "grey";
+		} else {
+			self._context.fillStyle = '#8296A4';
+		}
+		self._context.fillRect(x,
+			y,
+			commit_width,
+			dy
+		);
+		x -= commit_width;
+	});
+
 };
 
 
-
-CanvasRenderer.prototype.renderDiffs = function() {
+CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	var self = this;
 	var commit_width = self._width/self._history.length;
 	var dx = 0;
@@ -180,7 +174,8 @@ CanvasRenderer.prototype.renderDiffs = function() {
 	self._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
 		if (!diff) 
 			return;
-		Object.keys(diff).forEach(function(filename) {
+
+		if (diff.hasOwnProperty(filename)) {
 			var edits = diff[filename];
 			var file_begin = self._yAxis[filename];
 			var filelen = self._range[filename];
@@ -200,7 +195,7 @@ CanvasRenderer.prototype.renderDiffs = function() {
 					dy
 				);
 			});
-		});
+		}
 		dx += commit_width;
 	});
 };
@@ -219,9 +214,7 @@ CanvasRenderer.prototype.mouseMove = function(event) {
 		var file = self.fileFromYCoord(event.offsetY);
 		if (file != self._highlight) {
 			self._highlight = file;
-			self.renderHistory();
-			self.renderDiffs();
-			self.renderFilenames();
+			self.render();
 			self.highlightFilename(file);
 		}
 	}
