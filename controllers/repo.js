@@ -42,7 +42,7 @@ Repo.prototype.saveSizeRange = function(branch_name, file_size_history) {
 	file_size_history.forEach(function(file_sizes) {
 		Object.keys(file_sizes.tree).forEach(function(filename) {
 			var current = max[filename] || 0;
-			if (current < file_sizes.tree[filename]) {
+			if (current <= file_sizes.tree[filename]) {
 				max[filename] = file_sizes.tree[filename];
 			}
 		});
