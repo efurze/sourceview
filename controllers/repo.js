@@ -15,6 +15,7 @@ var Repo = function(path) {
 	this._git = new Git(path);
 	this._util = new Util(this._git);
 	this._persist = new Persist(this._repoName);
+	this._initialTrees = {}; // branchname => filesize hash of initial commit
 };
 
 Repo.prototype.buildCommitHistory = function(branch) {
@@ -83,26 +84,11 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
 
-			status("Building initial tree");
-			return self._util.buildTree(current_rev.tree)
-				.then(getAllFileIds)
-				.then(function(files) { // {filepath => sha1}
-					var filecount = Object.keys(files).length;
-					status("Built tree. Getting file info for", filecount, "files");
-					return Promise.each(Object.keys(files), function(filepath, index) {
-						if (index % 100 == 0) {
-							status(index + " / " + filecount);
-						}
-						return self._git.catFile(files[filepath])
-							.then(function(filedata) {
-								files[filepath] = filedata.length;
-							});
-					}).then(function() {
-						return files;
-					});
-				}).then(function(files) { // {filepath => filelength}
+			return self.fileSizesForRevision(current_rev.tree)
+				.then(function(files) { // {filepath => filelength}
 					status("Building diff history");
 					var initial_files = Clone(files); // for first rev
+					self._initialTrees[branch_name] = initial_files;
 					return Promise.mapSeries(history, function(rev, index) {
 						status("Revision", index + " / " + history.length);
 						return self._git.diff(current_rev.tree, rev.tree)
@@ -126,6 +112,28 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 		});
 };
 
+// returns hash of: {filepath => filelength}
+Repo.prototype.fileSizesForRevision = function(tree_id) {
+	status("Building initial tree");
+	var self = this;
+	return self._util.buildTree(tree_id)
+				.then(getAllFileIds)
+				.then(function(files) { // {filepath => sha1}
+					var filecount = Object.keys(files).length;
+					status("Built tree. Getting file info for", filecount, "files");
+					return Promise.each(Object.keys(files), function(filepath, index) {
+						if (index % 100 == 0) {
+							status(index + " / " + filecount);
+						}
+						return self._git.catFile(files[filepath])
+							.then(function(filedata) {
+								files[filepath] = filedata.length;
+							});
+					}).then(function() {
+						return files;
+					});
+				});
+};
 
 
 /*
@@ -167,7 +175,27 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 							}
 						});
 				} else {
-					return;
+					return (function() {
+							if (self._initialTrees.hasOwnProperty(branch_name)) {
+								var resolve;
+								var promise = new Promise(function(res) {
+									resolve = res;
+								});
+								resolve(self._initialTrees[branch_name]);
+								return promise;
+							} else {
+								return self.fileSizesForRevision(commit.tree);
+							}
+						})().then(function(initial_sizes) {
+							var diffs = {};
+							Object.keys(initial_sizes).forEach(function(filename) {
+								diffs[filename] = ["-0,0", "+1," + initial_sizes[filename]];
+							});
+							return {
+								"commit": commit,
+								"diffs": diffs
+							};
+						});
 				}
 			}).then(function(diff_ary) {
 				return diff_ary.filter(function(diff) {

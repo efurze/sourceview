@@ -55,8 +55,8 @@ describe('diffHistory', function() {
     it('should generate diff history for 8th commit in this repo', function(done) {
         repo.diffHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a').then(function(result) {
             history = result;
-            //console.log(history);
-            expect(result).to.have.lengthOf(7);
+            console.log(history);
+            expect(result).to.have.lengthOf(8);
             done();
         });
     });
