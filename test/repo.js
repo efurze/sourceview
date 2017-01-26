@@ -37,11 +37,18 @@ var eighth_commit =  {
    'test.js': 35 
 };
 var first_diff =  { 
-    'views/index.hbs': [ '-1,5', '+1,13' ],
+  commit: 
+     { id: '9f2ac93709d0d5c7fe1bfd1493e29e2f6ab71f8f',
+       tree: '1b4d8b6bdd49783aa93e6aa6e480c6b556bdc38c',
+       author: 'Eric',
+       committer: 'Eric',
+       commit_msg: 'Added bonsai\n' },
+    diffs: 
+     {'views/index.hbs': [ '-1,5', '+1,13' ],
     'views/layouts/single.hbs': [ '-4', '+3,0' ],
     'views/main.hbs': [ '-2,2', '+2' ],
-    'views/partials/includes.hbs': [ '-16', '+16' ] 
-}
+    'views/partials/includes.hbs': [ '-16', '+16' ] } 
+};
 
 describe('diffHistory', function() {
     var history;

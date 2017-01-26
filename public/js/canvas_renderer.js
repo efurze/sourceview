@@ -16,10 +16,11 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._yAxis = {}; // filename to offset in lines
 	this._maxLineCount = 0;
 	this._files = []; // sorted in display order, top-to-bottom
-	this._highlight = "";
+	this._selectedFile = "";
 	this._filter = "";
 
 	$(this._canvas).mousemove(this.mouseMove.bind(this));
+	$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
 
 	console.log("calculateLayout");
@@ -148,7 +149,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 		var size = commit.tree.hasOwnProperty(filename) 
 						? commit.tree[filename] : 0;
 		var dy = (size*self._height)/self._maxLineCount;
-		if (filename === self._highlight) {
+		if (filename === self._selectedFile) {
 			self._context.fillStyle = "grey";
 		} else {
 			self._context.fillStyle = '#8296A4';
@@ -171,12 +172,12 @@ CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 
 	self._context.fillStyle = '#424D54';
 
-	self._diffs.forEach(function(diff) { // {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
-		if (!diff) 
+	self._diffs.forEach(function(diff) { // {commit:{}, diffs: {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
+		if (!diff || !diff.diffs) 
 			return;
 
-		if (diff.hasOwnProperty(filename)) {
-			var edits = diff[filename];
+		if (diff.diffs.hasOwnProperty(filename)) {
+			var edits = diff.diffs[filename];
 			var file_begin = self._yAxis[filename];
 			var filelen = self._range[filename];
 			var file_y = (file_begin*self._height)/self._maxLineCount;
@@ -200,6 +201,14 @@ CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	});
 };
 
+CanvasRenderer.prototype.historyDoubleClick = function(event) {
+	var self = this;
+	if (self._selectedFile) {
+		$("#filter_input").val(self._selectedFile);
+		self.onFilterClick();
+	}
+};
+
 CanvasRenderer.prototype.mouseMove = function(event) {
 	var self = this;
 	if (event.offsetX == self._lastMouseX 
@@ -212,14 +221,15 @@ CanvasRenderer.prototype.mouseMove = function(event) {
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
 		var file = self.fileFromYCoord(event.offsetY);
-		if (file != self._highlight) {
-			self._highlight = file;
+		if (file != self._selectedFile) {
+			self._selectedFile = file;
 			self.render();
 			self.highlightFilename(file);
 		}
 	}
 };
 
+// TODO: make this a binary search
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var self = this;
 	for (var i=0; i < self._files.length; i++) {

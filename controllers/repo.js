@@ -27,13 +27,19 @@ Repo.prototype.buildCommitHistory = function(branch) {
 					return self.saveSizeRange(branch, history);
 				});
 		}).then(function() {
-			status("Building diff history");
-			return self.diffHistory(branch);
-		}).then(function(history) {
+			self.buildDiffHistory(branch);
+		});
+};
+
+Repo.prototype.buildDiffHistory = function(branch) {
+	var self = this;
+	status("Building diff history");
+	return self.diffHistory(branch)
+		.then(function(history) {
 			status("Persisting diff history");
 			return self._persist.saveDiffHistory(branch, history);
 		});
-};
+}
 
 
 Repo.prototype.saveSizeRange = function(branch_name, file_size_history) {
@@ -122,7 +128,28 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 
 
 
-
+/*
+	returns: [
+		// commit 1:
+		{
+			commit: <commit object>
+			diffs: 
+			{
+				'file1': ["-11,2","+10,0","-66","+64","-96","+94"],
+				'file2': []
+			}
+		},
+		// commit 2:
+		{
+			commit: <commit object>
+			diffs:
+			{
+				'file1': ["-11,2","+10,0","-66","+64","-96","+94"],
+				'file2': []
+			}
+		},
+	]
+*/
 Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	return self._util.revWalk(branch_name)
@@ -133,14 +160,18 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 				if (index < history.length-1) {
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
-							return diff._summary;
+							delete commit.parents;
+							return {
+								"commit": commit,
+								"diffs": diff._summary
+							}
 						});
 				} else {
 					return;
 				}
 			}).then(function(diff_ary) {
 				return diff_ary.filter(function(diff) {
-					if (diff) 
+					if (diff && diff.diffs) 
 						return true;
 					else
 						return false;
