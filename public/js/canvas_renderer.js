@@ -10,13 +10,16 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._width = this._canvas.width;
 	this._height = this._canvas.height;
 	this._context = this._canvas.getContext('2d');
+	this._filesSVG = SVG('filenames');;
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
-	this._yAxis = {};
+	this._yAxis = {}; // filename to offset in lines
 	this._maxLineCount = 0;
-	this._viewportHeight = 0;
 	this._files = []; // sorted in display order, top-to-bottom
 	this._sizeHistory = {}; // indexed by filename (not commit)	
+	this._highlight = "";
+
+	$(this._canvas).mousemove(this.mouseMove.bind(this));
 
 	console.log("calculateLayout");
 	this.calculateLayout();
@@ -34,6 +37,18 @@ CanvasRenderer.prototype.calculateLayout = function() {
 		self._yAxis[file] = self._maxLineCount;
 		self._maxLineCount += self._range[file];
 	});
+/*
+	// create indices
+	self._files.forEach(function(filename) {
+		self._sizeHistory[filename] = new Array(self._history.length);
+		self._sizeHistory[filename].fill(0);
+	});
+	self._history.forEach(function(commit, index) {
+		Object.keys(commit.tree).forEach(function(filename) {
+			self._sizeHistory[filename][index] = commit.tree[filename];
+		};
+	});
+*/
 };
 
 CanvasRenderer.prototype.render = function() {
@@ -49,9 +64,8 @@ CanvasRenderer.prototype.render = function() {
 
 CanvasRenderer.prototype.renderFilenames = function() {
 	var self = this;
-	var filesSVG = SVG('filenames');
-	var vb = filesSVG.viewbox();
-	var rect = filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
+	var vb = self._filesSVG.viewbox();
+	var rect = self._filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
 
 	var fontHeight = 10; // TODO: initialize this somehow
 	var y = vb.height;
@@ -63,7 +77,7 @@ CanvasRenderer.prototype.renderFilenames = function() {
 		var nextShouldBeAt = (self._yAxis[file]*(vb.height-fontHeight))/self._maxLineCount;
 		if (nextShouldBeAt <= y - fontHeight) {
 			y = nextShouldBeAt;
-			var text = filesSVG.text(file)
+			var text = self._filesSVG.text(file)
 				.attr({
 					fill: 'black', 
 					x: 5, 
@@ -77,13 +91,38 @@ CanvasRenderer.prototype.renderFilenames = function() {
 	}		
 };
 
+CanvasRenderer.prototype.highlightFilename = function(filename) {
+	var self = this;
+	var vb = self._filesSVG.viewbox();
+	var fontHeight = 15; // TODO: initialize this somehow
+	var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
+
+	self._filesSVG.rect(vb.width, fontHeight * 2)
+		.attr({
+			x: 0,
+			y: y,
+			fill: '#F0DAA4',
+			stroke: 'black'
+		});
+
+	self._filesSVG.text(filename)
+		.attr({
+			fill: 'black',
+			x: 5,
+			y: y
+		}).font({
+			family: 'Helvetica',
+			size: 12
+		});
+}
+
+
 CanvasRenderer.prototype.renderHistory = function() {
 	var self = this;
 	
 	self._context.fillStyle = '#A2BCCD';
 	self._context.fillRect(0,0, self._width, self._height);
 
-	self._context.fillStyle = '#8296A4';
 	var commit_width = self._width/self._history.length;
 	var dx = 0;
 	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
@@ -93,6 +132,11 @@ CanvasRenderer.prototype.renderHistory = function() {
 				var x = self._width - dx - commit_width;
 				var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
 				var dy = (size*self._height)/self._maxLineCount;
+				if (filename === self._highlight) {
+					self._context.fillStyle = "grey";
+				} else {
+					self._context.fillStyle = '#8296A4';
+				}
 				self._context.fillRect(x,
 					y,
 					commit_width,
@@ -144,14 +188,36 @@ CanvasRenderer.prototype.renderDiffs = function() {
 
 CanvasRenderer.prototype.mouseMove = function(event) {
 	var self = this;
-	if (event.x == self._lastMouseX 
-		&& event.y == self._lastMouseY ) {
+	if (event.offsetX == self._lastMouseX 
+		&& event.offsetY == self._lastMouseY ) {
 		return;
 	}
 
-	self._lastMouseX = event.x;
-	self._lastMouseY = event.y;
+	self._lastMouseX = event.offsetX;
+
+	if (self._lastMouseY != event.offsetY) {
+		self._lastMouseY = event.offsetY;
+		var file = self.fileFromYCoord(event.offsetY);
+		if (file != self._highlight) {
+			self._highlight = file;
+			self.renderHistory();
+			self.renderDiffs();
+			self.renderFilenames();
+			self.highlightFilename(file);
+		}
+	}
 };
+
+CanvasRenderer.prototype.fileFromYCoord = function(y) {
+	var self = this;
+	for (var i=0; i < self._files.length; i++) {
+		var pixelOffset = (self._yAxis[self._files[i]] * self._height) / self._maxLineCount;
+		if (y <= pixelOffset) {
+			return i > 0 ? self._files[i-1] : self._files[0];
+		}
+	}
+	return "";
+}
 
 
 
