@@ -169,7 +169,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
 							delete commit.parents;
-							console.log(JSON.stringify(diff));
+							//console.log(JSON.stringify(diff));
 							return {
 								"commit": commit,
 								"diffs": diff._summary

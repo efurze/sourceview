@@ -363,16 +363,34 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 	}
 };
 
-// TODO: make this a binary search
+CanvasRenderer.prototype.filePixelOffset = function(filename) {
+	var self = this;
+	return (self._yAxis[filename] * self._height) / self._maxLineCount;
+};
+
+
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var self = this;
-	for (var i=0; i < self._files.length; i++) {
-		var pixelOffset = (self._yAxis[self._files[i]] * self._height) / self._maxLineCount;
-		if (y <= pixelOffset) {
-			return i > 0 ? self._files[i-1] : self._files[0];
+	var index = 0;
+	var offset = 0;
+	var next_index = self._files.length - 1;
+	var next_offset = self._height;
+
+	while (next_index - index > 1) {
+		var bisect_index = Math.round((next_index+index)/2);
+		var bisect_offset = self.filePixelOffset(self._files[bisect_index]);
+
+		if (y <= bisect_offset) {
+			next_index = bisect_index;
+			next_offset = bisect_offset;
+		} else {
+			index = bisect_index;
+			offset = bisect_offset;
 		}
+
+		console.log(index, next_index);
 	}
-	return "";
+	return self._files[index];
 }
 
 CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
