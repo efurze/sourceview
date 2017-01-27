@@ -15,7 +15,10 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._lastMouseY = -1;
 	this._yAxis = {}; // filename to offset in lines
 	this._maxLineCount = 0;
-	this._files = []; // sorted in display order, top-to-bottom
+
+	this._fromCommit = 0;
+	this._toCommit = diffs.length-1;
+	this._files = Object.keys(range_data); // sorted in display order, top-to-bottom
 	this._selectedFile = "";
 	this._filter = "";
 
@@ -31,19 +34,20 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
 	self._filter = $("#filter_input").val();
-	self.calculateLayout();
-	self.render();
-};
-
-CanvasRenderer.prototype.calculateLayout = function() {
-	var self = this;
-	this._files = Object.keys(this._range)
+	self._files = Object.keys(self._range)
 					.filter(function(filename) {
 						if (!self._filter || self._filter === "") {
 							return true;
 						}
 						return filename.startsWith(self._filter);
 					});
+	self.calculateLayout();
+	self.render();
+};
+
+CanvasRenderer.prototype.calculateLayout = function() {
+	var self = this;
+
 	this._files.sort(function (a, b) {
 		return a.toLowerCase().localeCompare(b.toLowerCase());
 	});
@@ -166,7 +170,7 @@ CanvasRenderer.prototype.renderHistory = function() {
 CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	var self = this;
 
-	var commit_width = self._width/self._history.length;	
+	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var total_height = (self._range[filename] * self._height)/self._maxLineCount;
 
 	var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
@@ -176,7 +180,8 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 
 	var x = self._width - commit_width;
 
-	self._history.forEach(function(commit) { // {commit:, tree: {'file':32, ...}}
+	for (var index=self._fromCommit; index <= self._toCommit; index++) {
+		var commit = self._history[index]; // {commit:, tree: {'file':32, ...}}
 		var size = commit.tree.hasOwnProperty(filename) 
 						? commit.tree[filename] : 0;
 		var dy = (size*self._height)/self._maxLineCount;
@@ -191,7 +196,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 			dy
 		);
 		x -= commit_width;
-	});
+	};
 
 };
 
@@ -199,9 +204,9 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	var self = this;
 
-	self._diffs.forEach(function(diff, index) { 
+	for (var index = self._fromCommit; index <= self._toCommit; index++) {
 		self.renderDiff(index);
-	});
+	};
 };
 
 CanvasRenderer.prototype.renderDiff = function(diff_index) { 
@@ -210,15 +215,19 @@ CanvasRenderer.prototype.renderDiff = function(diff_index) {
 		return;
 
 	var diff = self._diffs[diff_index];
-	Object.keys(diff.diffs).forEach(function(filename) {
-		self.renderFileDiff(diff_index, filename);
-	});
+	if (diff) {
+		Object.keys(diff.diffs).forEach(function(filename) {
+			self.renderFileDiff(diff_index, filename);
+		});
+	} else {
+		debugger
+	}
 };
 
 // diff:  // {commit:{}, diffs: {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
 CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) { 
 	var self = this;
-	var commit_width = self._width/self._history.length;
+	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
 
 	if (!diff_index < 0 || !diff_index >= self._diffs.length) 
 		return;
@@ -230,7 +239,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 		self._context.fillStyle = '#FFFFD5';
 	}
 
-	var x = commit_width * (self._diffs.length - diff_index - 1);
+	var x = commit_width * (self._toCommit - diff_index);
 
 	if (diff.diffs.hasOwnProperty(filename)) {
 		var edits = diff.diffs[filename];
@@ -256,10 +265,23 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	var self = this;
-	if (self._selectedFile) {
+
+	var index = self.commitIndexFromXCoord(event.offsetX);
+	self._selectedCommitIndex = -1;
+	$("#commit_info").text(self._diffs[index].commit.commit_msg);
+	self._fromCommit = index;
+	self._toCommit = index;
+	self._files = self._files.filter(function(filename) {
+		return self._diffs[index].diffs.hasOwnProperty(filename);
+	});
+	self.calculateLayout();
+	self.render();
+
+/*	if (self._selectedFile) {
 		$("#filter_input").val(self._selectedFile);
 		self.onFilterClick();
 	}
+*/
 };
 
 CanvasRenderer.prototype.mouseMove = function(event) {
@@ -279,7 +301,9 @@ CanvasRenderer.prototype.mouseMove = function(event) {
 			$("#commit_info").text(self._diffs[self._selectedCommitIndex].commit.commit_msg);
 			
 			self.renderFilenames();
-			self.renderDiff(previous);
+			if (previous >= 0) {
+				self.renderDiff(previous);
+			}
 			self.renderDiff(index);
 			self.highlightFilenames();
 		}
@@ -293,8 +317,10 @@ CanvasRenderer.prototype.mouseMove = function(event) {
 			self._selectedFile = file;
 
 			self.renderFilenames();
-			self.renderFileHistory(previous);
-			self.renderFileDiffs(previous);
+			if (previous) {
+				self.renderFileHistory(previous);
+				self.renderFileDiffs(previous);
+			}
 			self.renderFileHistory(file);
 			self.renderFileDiffs(file);
 			self.highlightFilenames();
@@ -316,9 +342,10 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 
 CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	var self = this;
-	var index = Math.floor((self._diffs.length * x) / self._width);
+	var length = self._toCommit - self._fromCommit + 1;
+	var index = Math.floor((length * x) / self._width);
 	if (index >= 0 && index < self._diffs.length) {
-		return self._diffs.length-index-1;
+		return self._toCommit-index;
 	}
 	return -1;
 }
