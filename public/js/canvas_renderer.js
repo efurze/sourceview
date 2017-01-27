@@ -100,28 +100,58 @@ CanvasRenderer.prototype.renderFilenames = function() {
 
 CanvasRenderer.prototype.highlightFilenames = function() {
 	var self = this;
-	var filename = self._selectedFile;
 	var vb = self._filesSVG.viewbox();
-	var fontHeight = 15; // TODO: initialize this somehow
-	var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
+	var fontHeight;
 
-	self._filesSVG.rect(vb.width, fontHeight * 2)
-		.attr({
-			x: 0,
-			y: y,
-			fill: '#F0DAA4',
-			stroke: 'black'
-		});
+	// files in this diff
+	if (self._selectedCommitIndex >= 0) {
+		var diff = self._diffs[self._selectedCommitIndex];
+		Object.keys(diff.diffs).forEach(function(filename) {
+			fontHeight = 10;
+			var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
 
-	self._filesSVG.text(filename)
-		.attr({
-			fill: 'black',
-			x: 5,
-			y: y
-		}).font({
-			family: 'Helvetica',
-			size: 12
+			self._filesSVG.rect(vb.width, 1.5*fontHeight)
+			.attr({
+				x: 0,
+				y: y,
+				fill: '#F0DAA4',
+			});
+
+			self._filesSVG.text(filename)
+			.attr({
+				fill: 'red',
+				x: 10,
+				y: y
+			}).font({
+				family: 'Helvetica',
+				size: 8
+			});
 		});
+	}
+
+	var filename = self._selectedFile;
+	if (filename) {
+		fontHeight = 15; // TODO: initialize this somehow
+		var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
+
+		self._filesSVG.rect(vb.width, fontHeight * 2)
+			.attr({
+				x: 0,
+				y: y,
+				fill: '#F0DAA4',
+				stroke: 'black'
+			});
+
+		self._filesSVG.text(filename)
+			.attr({
+				fill: 'black',
+				x: 5,
+				y: y
+			}).font({
+				family: 'Helvetica',
+				size: 12
+			});
+		}
 }
 
 CanvasRenderer.prototype.renderHistory = function() {
