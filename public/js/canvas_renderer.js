@@ -205,7 +205,7 @@ CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	var self = this;
 
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
-		self.renderDiff(index);
+		self.renderFileDiff(index, filename);
 	};
 };
 
