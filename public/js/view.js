@@ -8,8 +8,12 @@ $(function() {
 		_renderer: null,
 
 		init: function(range_data, history_data, diffs) {
+			/*
+			diffs.forEach(function(diff) {
+				diff.text = decodeURIComponent(diff.text);	
+			});
+			*/
 			View._renderer = new CanvasRenderer(range_data, history_data, diffs);
-			//View._renderer = new Renderer(range_data, history_data, diffs);
 		},
 
 	};

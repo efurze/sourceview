@@ -173,6 +173,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 							return {
 								"commit": commit,
 								"diffs": diff._summary
+								//,"text": encodeURIComponent(JSON.stringify(diff._parsed))
 							}
 						});
 				} else {

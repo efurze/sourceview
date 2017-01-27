@@ -387,8 +387,6 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 			index = bisect_index;
 			offset = bisect_offset;
 		}
-
-		console.log(index, next_index);
 	}
 	return self._files[index];
 }
