@@ -16,6 +16,17 @@
   height: 100%;
 }
 
+#code_div {
+  vertical-align: top;
+}
+
+#code{
+    height: 10000;
+    width: 100%;
+    vertical-align: top;
+   // display: none;
+}
+
 .nopadding {
    padding-left: 0;
    padding-right: 0;

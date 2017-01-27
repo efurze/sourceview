@@ -33,6 +33,12 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
+	//$("#filenames").css("transform", "scale(0.5)");
+
+	//$("#canvas_div").removeClass("col-md-10");
+	//$("#canvas_div").addClass("col-md-6");
+
+	
 	self._filter = $("#filter_input").val();
 	self._files = Object.keys(self._range)
 					.filter(function(filename) {
@@ -69,7 +75,7 @@ CanvasRenderer.prototype.render = function() {
 	console.log("renderHistory");
 	self.renderHistory();
 	console.log("renderDiffs");
-	//self.renderDiffs();
+	self.renderDiffs();
 	console.log("done");
 };
 
@@ -106,6 +112,11 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 	var self = this;
 	var vb = self._filesSVG.viewbox();
 	var fontHeight;
+
+	if (self._fromCommit == self._toCommit
+		|| self._files.length == 1) {
+		return;
+	}
 
 	// files in this diff
 	if (self._selectedCommitIndex >= 0) {
@@ -216,8 +227,14 @@ CanvasRenderer.prototype.renderDiff = function(diff_index) {
 
 	var diff = self._diffs[diff_index];
 	if (diff) {
+		var files = {};
+		self._files.forEach(function(file) {
+			files[file] = true;
+		});
+
 		Object.keys(diff.diffs).forEach(function(filename) {
-			self.renderFileDiff(diff_index, filename);
+			if (files.hasOwnProperty(filename))
+				self.renderFileDiff(diff_index, filename);
 		});
 	} else {
 		debugger
@@ -265,7 +282,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	var self = this;
-
+/*
 	var index = self.commitIndexFromXCoord(event.offsetX);
 	self._selectedCommitIndex = -1;
 	$("#commit_info").text(self._diffs[index].commit.commit_msg);
@@ -276,12 +293,12 @@ CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	});
 	self.calculateLayout();
 	self.render();
-
-/*	if (self._selectedFile) {
+*/
+	if (self._selectedFile) {
 		$("#filter_input").val(self._selectedFile);
 		self.onFilterClick();
 	}
-*/
+
 };
 
 CanvasRenderer.prototype.mouseMove = function(event) {
