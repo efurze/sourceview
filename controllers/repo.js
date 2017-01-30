@@ -6,6 +6,7 @@ var Util = require('./git_util.js');
 var Git = require('./git.js');
 var Persist = require('./persist.js');
 var Resolve = require('path').resolve;
+var Logger = require('../lib/logger.js');
 
 var Repo = function(path) {
 	path = Resolve(path);
@@ -91,6 +92,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 					self._initialTrees[branch_name] = initial_files;
 					return Promise.mapSeries(history, function(rev, index) {
 						status("Revision", index + " / " + history.length);
+						Logger.INFO("diffing", current_rev.id, rev.id, Logger.CHANNEL.REPO);
 						return self._git.diff(current_rev.tree, rev.tree)
 							.then(function(diff) {
 								current_rev = rev;
@@ -105,7 +107,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 							'commit': initial_commit,
 							'tree': initial_files
 						});
-						//console.log("Adding commit #" + file_history.length);
+						//Logger.INFO("Adding commit #" + file_history.length, Logger.CHANNEL.REPO);
 						return file_history;
 					});
 				});
@@ -169,11 +171,14 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
 							delete commit.parents;
-							//console.log(JSON.stringify(diff));
+							//Logger.INFO(JSON.stringify(diff), Logger.CHANNEL.REPO);
+							let summary = {};
+							diff.filenames().forEach(function(name) {
+								summary[name] = diff.summary(name);
+							});
 							return {
 								"commit": commit,
-								"diffs": diff._summary
-								//,"text": encodeURIComponent(JSON.stringify(diff._parsed))
+								"diffs": summary
 							}
 						});
 				} else {
@@ -214,25 +219,13 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	@files = {'foo.txt': 423, 'bar/foo.txt': 43}
 */
 Repo.prototype._updateFileSizes = function(files, diff) {
+	Logger.INFO(files, Logger.CHANNEL.REPO);
 	files = Clone(files);
-	diff = diff.parse_diff();
-	diff.forEach(function(filediff) {
-		var filename = filediff.from;
-		var delta = parseInt(filediff.additions) - parseInt(filediff.deletions);
-		if (!filename || filename === "/dev/null") {
-			// file created
-			filename = filediff.to;
-			files[filename] = delta;
-		} else if (filediff.to === "/dev/null") {
-			// file deleted
+	diff.filenames().forEach(function(filename) {
+		if (!files.hasOwnProperty(filename)) {
 			files[filename] = 0;
-		} else if (filediff.from !== filediff.to) {
-			// file renamed
-			files[filediff.from] = 0;
-			files[filediff.to] = delta;
-		} else {
-			files[filename] = files[filename] + delta;
 		}
+		files[filename] = files[filename] + diff.delta(filename);
 	});
 	return files;
 };
@@ -269,7 +262,9 @@ var getAllFileIds = function(tree, path) {
 };
 
 var status = function() {
-	console.log.apply(console, arguments);
+	var args = Array.from(arguments);
+	args.push(Logger.CHANNEL.REPO);
+	Logger.INFO.apply(Logger, args);
 };
 
 module.exports = Repo;

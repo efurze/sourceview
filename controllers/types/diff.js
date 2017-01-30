@@ -1,6 +1,7 @@
 'use strict'
 
 var parse = require('parse-diff');
+var Logger = require('../../lib/logger.js');
 
 
 /*
@@ -30,15 +31,14 @@ parse-diff output:
 
 var Diff = function(diffstr) { // git diff output
 	var self = this;
-	self._summary = {};
-/*
+
 	self._parsed = self.parse(diffstr);
-	Object.keys(self._parsed).forEach(function(filename) {
-		self._summary[filename] = Object.keys(self._parsed[filename]);
-	});
-*/
+//	Object.keys(self._parsed).forEach(function(filename) {
+//		self._summary[filename] = Object.keys(self._parsed[filename]);
+//	});
 
 
+/*
 	self._parsed = parse(diffstr);
 	self._parsed.forEach(function(file) {
 		// TODO: handle renames
@@ -55,7 +55,7 @@ var Diff = function(diffstr) { // git diff output
 			//console.log(chunk.content.split('@@')[1]); 
 		});
 	});
-
+*/
 	/*
 	self._summary:
 	{
@@ -71,7 +71,9 @@ var Diff = function(diffstr) { // git diff output
 returns:
 {
  'controllers/repo.js': 
-   { '-169,7 +169,7': 
+ {
+  summary: ['-169,7 +169,7', ],
+  chunks: { '-169,7 +169,7': 
       [ '                                        return self._git.diff(history[index+1].id, commit.id)',
         '                                                .then(function(diff) {',
         '                                                        delete commit.parents;',
@@ -84,7 +86,8 @@ returns:
         '                                                                ',
         '"diffs',
         '": diff._summary' 
-        ] 
+        ]
+ } 
 },
 */
 Diff.prototype.parse = function(diffstr) {
@@ -92,7 +95,8 @@ Diff.prototype.parse = function(diffstr) {
 	var lines = diffstr.split('\n');
 
 	var files = {};
-	var file, chunk, linenums, filename;
+	var file, chunk, linenums, from, to;
+	var chunks = {};
 	lines.forEach(function(line) {
 		if (!line) {
 			return;
@@ -101,47 +105,98 @@ Diff.prototype.parse = function(diffstr) {
 		if (line.startsWith("diff --git")) { // diff --git a/controllers/repo.js b/controllers/repo.js\
 			//console.log("new file", line);
 			if (chunk && linenums) {
-				file[linenums] = chunk;
+				chunks[linenums] = chunk;
+				file['chunks'] = chunks;
 				chunk = [];
+				chunks = {};
 				linenums = null;
 			}
 			if (file) {
+				var filename = from === "/dev/null" ? to : from;
 				files[filename] = file;
 			}
-			var parts = line.split(' ');
-			var from = parts[2];
-			var to = parts[3];
-			filename = from;
-			if (!filename || filename === '/dev/null') {
-				filename = to;
+			file = {}; // {"chunks": {"-33,6 +35,12" : array of lines}}
+		} else if (line.startsWith("+++")) { // +++ a/git.js
+			// to
+			to = line.slice(3).trim();
+			if (to != "/dev/null") {
+				to = to.slice(to.indexOf('/')+1); // strip off the "a/"
 			}
-			filename = filename.slice(2);
-			file = {}; // "-33,6 +35,12" : array of lines
-		} else if (line.startsWith("+++") || line.startsWith("---")) {
-			// skip
+		} else if (line.startsWith("---")) { // --- b/git.js
+			// from
+			from = line.slice(3).trim();
+			if (from != "/dev/null") {
+				from = from.slice(from.indexOf('/')+1); // strip off the "b/"
+			}
 		} else if (line.startsWith("@@")) { // @@ -33,6 +35,12 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 			//console.log("new chunk");
 			if (chunk && linenums) {
-				file[linenums] = chunk;
+				chunks[linenums] = chunk;
 			}
 			chunk = [];
  			linenums = line.split('@@')[1].trim();
+ 			Logger.DEBUGHI("New Chunk", line, Logger.CHANNEL.DIFF);
 		} else if (linenums) {
 			chunk.push(line);
 		}
 	});
 
-	if (chunk && file && filename && filename) {
-		file[linenums] = chunk;
+	if (chunk && chunks && file && linenums) {
+		var filename = from === "/dev/null" ? to : from;
+		chunks[linenums] = chunk;
+		file['chunks'] = chunks;
 		files[filename] = file;
 	}
+	Object.keys(files).forEach(function(filename) {
+		files[filename]['summary'] = [];
+		Object.keys(files[filename]['chunks'])
+			.forEach(function(chunk) {  // -33,6 +35,12
+				files[filename]['summary'] = files[filename]['summary'].concat(chunk.split(' '));
+			});
+		Logger.INFO("Summary", filename, files[filename]['summary'], Logger.CHANNEL.DIFF);
+	});
+
 
 	return files;
 }
 
-
-Diff.prototype.parse_diff = function() {
-	return this._parsed;
+Diff.prototype.filenames = function() {
+	return Object.keys(this._parsed);
 }
+
+Diff.prototype.summary = function(filename) {
+	return this._parsed[filename].summary;
+}
+
+Diff.prototype.delta = function(filename) {
+	let self = this;
+	var delta = 0;
+	if (self._parsed.hasOwnProperty(filename)) {
+		self._parsed[filename].summary.forEach(function(diff) {
+			Logger.DEBUGHI("calculating delta", filename, diff, Logger.CHANNEL.DIFF);
+			let parts = diff.split(",");
+			let sign = parts[0].slice(0, 1);
+			let count = 0;
+			if (parts.length > 1) {
+				count = parseInt(parts[1]);
+			} else {
+				count = parseInt(parts[0]);
+			}
+			Logger.DEBUGHI("lines changed", count, Logger.CHANNEL.DIFF);
+			if (sign === "+") {
+				delta += count;
+			} else {
+				delta -= count;
+			}
+		});
+	}
+	Logger.DEBUGHI(filename, delta, Logger.CHANNEL.DIFF);
+	return delta;
+}
+
+Diff.prototype.toString = function() {
+	return JSON.stringify(this._parsed);
+}
+
 
 module.exports = Diff;

@@ -36,6 +36,7 @@ var eighth_commit =  {
    'public/js/renderer.js': 36,
    'test.js': 35 
 };
+
 var first_diff =  { 
   commit: 
      { id: '9f2ac93709d0d5c7fe1bfd1493e29e2f6ab71f8f',
@@ -55,7 +56,7 @@ describe('diffHistory', function() {
     it('should generate diff history for 8th commit in this repo', function(done) {
         repo.diffHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a').then(function(result) {
             history = result;
-            console.log(history);
+            //console.log(history);
             expect(result).to.have.lengthOf(8);
             done();
         });
@@ -75,7 +76,7 @@ describe('fileSizeHistory', function() {
     it('should generate file size history for 8th commit in this repo', function(done) {
         repo.fileSizeHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a').then(function(result) {
             history = result;
-            //console.log(history);
+            console.log(history);
             expect(result).to.have.lengthOf(8);
         	done();
         });
