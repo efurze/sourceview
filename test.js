@@ -1,5 +1,5 @@
-var git = require('./controllers/git.js');
-var Git = new git('/Users/efurze/repos/sourceview');
+var Git = require('./controllers/git.js');
+var git = new Git('/Users/efurze/repos/sourceview');
 var Util = require('./controllers/git_util.js');
 var util = new Util(Git);
 var repo = require('./controllers/repo.js');
@@ -12,7 +12,7 @@ util.revWalk('master')
 	});
 */
 /*
-Git.revList('master')
+git.revList('master')
 	.then(function(history) {
 		console.log(history);
 	});
@@ -20,9 +20,9 @@ Git.revList('master')
 //Repo.buildCommitHistory('master');
 
 
-Repo.fileSizeHistory('109b8ca38666d6b9c28eee7779dfe8ef002080bf')
-	.then(function(file_lengths) {
-		console.log(file_lengths);
+git.diff('2f5429b0f92e373cd16d7a38ca5e8da0cf77039a~', '2f5429b0f92e373cd16d7a38ca5e8da0cf77039a')
+	.then(function(diff) {
+		console.log(diff);
 });
 
 

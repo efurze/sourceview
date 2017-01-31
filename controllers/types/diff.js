@@ -111,9 +111,10 @@ Diff.prototype.parse = function(diffstr) {
 		if (!line) {
 			return;
 		}
+		Logger.DEBUGHI("line", line, '\n', Logger.CHANNEL.DIFF);
 		//console.log(line);
 		if (line.startsWith("diff --git")) { // diff --git a/controllers/repo.js b/controllers/repo.js\
-			//console.log("new file", line);
+			Logger.INFOHI("new file", line, Logger.CHANNEL.DIFF);
 			if (chunk && linenums) {
 				chunks[linenums] = chunk;
 				file['chunks'] = chunks;
@@ -126,18 +127,20 @@ Diff.prototype.parse = function(diffstr) {
 				files[filename] = file;
 			}
 			file = {}; // {"chunks": {"-33,6 +35,12" : array of lines}}
-		} else if (line.startsWith("+++")) { // +++ a/git.js
+		} else if (line.startsWith("+++ ")) { // +++ a/git.js
 			// to
 			to = line.slice(3).trim();
 			if (to != "/dev/null") {
 				to = to.slice(to.indexOf('/')+1); // strip off the "a/"
 			}
-		} else if (line.startsWith("---")) { // --- b/git.js
+			Logger.INFOHI("TO file", to, Logger.CHANNEL.DIFF);
+		} else if (line.startsWith("--- ")) { // --- b/git.js
 			// from
 			from = line.slice(3).trim();
 			if (from != "/dev/null") {
 				from = from.slice(from.indexOf('/')+1); // strip off the "b/"
 			}
+			Logger.INFOHI("FROM file", from, Logger.CHANNEL.DIFF);
 		} else if (line.startsWith("@@")) { // @@ -33,6 +35,12 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 			//console.log("new chunk");
 			if (chunk && linenums) {
@@ -147,7 +150,7 @@ Diff.prototype.parse = function(diffstr) {
  			linenums = line.split('@@')[1].trim();
  			Logger.DEBUGHI("New Chunk", line, Logger.CHANNEL.DIFF);
 		} else if (linenums) {
-			chunk.push(line);
+			chunk.push(encodeURI(line));
 		}
 	});
 
@@ -190,7 +193,7 @@ Diff.prototype.delta = function(filename) {
 	var delta = 0;
 	if (self._parsed.hasOwnProperty(filename)) {
 		self._parsed[filename].summary.forEach(function(diff) {
-			Logger.DEBUGLOW("delta(): calculating delta", filename, "chunk:", diff, Logger.CHANNEL.DIFF);
+			Logger.DEBUG("delta(): calculating delta", filename, "chunk:", diff, Logger.CHANNEL.DIFF);
 			let parts = diff.split(",");
 			let sign = parts[0].slice(0, 1);
 			let count = 0;
@@ -199,7 +202,7 @@ Diff.prototype.delta = function(filename) {
 			} else {
 				count = 1;
 			}
-			Logger.DEBUGLOW("delta(): lines changed", count, Logger.CHANNEL.DIFF);
+			Logger.DEBUG("delta(): lines changed", count, Logger.CHANNEL.DIFF);
 			if (sign === "+") {
 				delta += count;
 			} else {
@@ -217,11 +220,7 @@ Diff.prototype.clone = function() {
 
 Diff.prototype.toString = function() {
 	var self = this;
-	var pruned = {};
-	Object.keys(self._parsed).forEach(function(filename) {
-		pruned[filename] = {'summary': self._parsed[filename].summary};
-	})
-	return JSON.stringify(pruned);
+	return JSON.stringify(self._parsed);
 }
 
 
