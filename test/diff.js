@@ -42,7 +42,10 @@ describe('diff test', function() {
             history.forEach(function(diff, index) {
                 console.log("EXPECTED", diff_history[index]);
                 console.log("ACTUAL", diff);
-                expect(diff).to.deep.equal(diff_history[index]);
+                diff.diffs.filenames().forEach(function(filename) {
+                  expect(diff.diffs.summary(filename)).to.deep.equal(diff_history[index].diffs[filename]);  
+                });
+                
             });
             done();
         });

@@ -49,6 +49,9 @@ Persist.prototype.getFileSizeRange = function(branch) {
 
 Persist.prototype.saveDiffHistory = function(branch, history) {
 	var filename = DATA_DIR + this._repoName + "/" + branch + "." + DIFF_FILE;
+	history.forEach(function(diff) {
+		diff.diffs = diff.diffs.toString();
+	});
 	return fs.writeFileAsync(filename, JSON.stringify(history));
 };
 

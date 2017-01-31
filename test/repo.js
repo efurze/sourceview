@@ -3,6 +3,7 @@ var assert = chai.assert;
 var expect = chai.expect;
 var Repo = require('../controllers/repo.js');
 var repo = new Repo(__dirname + '/..');
+var Diff = require("../controllers/types/diff.js");
 
 var first_commit = { 
     'Gruntfile.js': 85,
@@ -56,17 +57,14 @@ describe('diffHistory', function() {
     it('should generate diff history for 8th commit in this repo', function(done) {
         repo.diffHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a').then(function(result) {
             history = result;
-            //console.log(history);
             expect(result).to.have.lengthOf(8);
             done();
         });
     });
     it('should have accurate data for first diff', function() {
-        Object.keys(first_diff).forEach(function(file) {
-            expect(history[6][file]).to.deep.equal(first_diff[file]);
-        });
-        Object.keys(history[6]).forEach(function(file) {
-            expect(history[6][file]).to.deep.equal(first_diff[file]);
+        Object.keys(first_diff.diffs).forEach(function(file) {
+          console.log(file);
+            expect(history[6].diffs.summary(file)).to.deep.equal(first_diff.diffs[file]);
         });
     });
 });

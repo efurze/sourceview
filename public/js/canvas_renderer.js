@@ -256,7 +256,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	var x = commit_width * (self._toCommit - diff_index);
 
 	if (diff.diffs.hasOwnProperty(filename)) {
-		var edits = diff.diffs[filename];
+		var edits = diff.diffs[filename].summary;
 		var file_begin = self._yAxis[filename];
 		var filelen = self._range[filename];
 		var file_y = (file_begin*self._height)/self._maxLineCount;

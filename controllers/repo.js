@@ -148,20 +148,12 @@ Repo.prototype.fileSizesForRevision = function(tree_id) {
 		// commit 1:
 		{
 			commit: <commit object>
-			diffs: 
-			{
-				'file1': ["-11,2","+10,0","-66","+64","-96","+94"],
-				'file2': []
-			}
+			diffs: diff object
 		},
 		// commit 2:
 		{
 			commit: <commit object>
-			diffs:
-			{
-				'file1': ["-11,2","+10,0","-66","+64","-96","+94"],
-				'file2': []
-			}
+			diffs: diff object
 		},
 	]
 */
@@ -180,14 +172,10 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 					}
 				})().then(function(diff) {
 					delete commit.parents;
-					let summary = {};
-					diff.filenames().forEach(function(name) {
-						summary[name] = diff.summary(name);
-					});
 					return {
 						"commit": commit,
-						"diffs": summary
-					}
+						"diffs": diff
+					};
 				});
 			});
 		});

@@ -174,7 +174,15 @@ Diff.prototype.filenames = function() {
 }
 
 Diff.prototype.summary = function(filename) {
-	return this._parsed[filename].summary;
+	if (this._parsed.hasOwnProperty(filename)) {
+		return this._parsed[filename].summary;
+	} else {
+		return [];
+	}
+}
+
+Diff.prototype.data = function() {
+	return this._parsed;
 }
 
 Diff.prototype.delta = function(filename) {
@@ -208,7 +216,12 @@ Diff.prototype.clone = function() {
 };
 
 Diff.prototype.toString = function() {
-	return JSON.stringify(this._parsed);
+	var self = this;
+	var pruned = {};
+	Object.keys(self._parsed).forEach(function(filename) {
+		pruned[filename] = {'summary': self._parsed[filename].summary};
+	})
+	return JSON.stringify(pruned);
 }
 
 
