@@ -203,6 +203,10 @@ Diff.prototype.delta = function(filename) {
 	return delta;
 }
 
+Diff.prototype.clone = function() {
+	return JSON.parse(JSON.stringify(this));
+};
+
 Diff.prototype.toString = function() {
 	return JSON.stringify(this._parsed);
 }

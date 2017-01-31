@@ -81,6 +81,7 @@ describe('fileSizeHistory', function() {
         	done();
         });
     });
+
     it('should have accurate data for each commit', function(done) {
       for (let index=history.length-1; index >= 0; index--) {
         let commit = history[index];

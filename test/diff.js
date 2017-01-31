@@ -25,6 +25,17 @@ describe('diff test', function() {
         });
   });
 
+  it('should parse git show() output', function(done) {
+    git.show('a95b74d50734f36458cef910edc7badf38b49fec')
+        .then(function(diff) { 
+          diff.filenames().forEach(function(filename) {
+            console.log(filename, diff.delta(filename));
+          });
+          console.log(diff.toString());
+          done();
+        });
+  });
+
   it('should calculate first 8 diffs', function(done) {
     repo.diffHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a')
         .then(function(history) { 

@@ -172,50 +172,22 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 			status("Creating diff history for", history.length, "revisions");
 			return Promise.mapSeries(history, function(commit, index) {
 				status("Diff for revision", index + " / " + history.length);
-				if (index < history.length-1) {
-					Logger.INFO("Diffing commit", commit.id, Logger.CHANNEL.REPO);
-					return self._git.diff(history[index+1].id, commit.id)
-						.then(function(diff) {
-							delete commit.parents;
-							//Logger.INFO(JSON.stringify(diff), Logger.CHANNEL.REPO);
-							let summary = {};
-							diff.filenames().forEach(function(name) {
-								summary[name] = diff.summary(name);
-							});
-							return {
-								"commit": commit,
-								"diffs": summary
-							}
-						});
-				} else {
-					return (function() {
-							if (self._initialTrees.hasOwnProperty(branch_name)) {
-								var resolve;
-								var promise = new Promise(function(res) {
-									resolve = res;
-								});
-								resolve(self._initialTrees[branch_name]);
-								return promise;
-							} else {
-								return self.fileSizesForRevision(commit.tree);
-							}
-						})().then(function(initial_sizes) {
-							var diffs = {};
-							Object.keys(initial_sizes).forEach(function(filename) {
-								diffs[filename] = ["-0,0", "+1," + initial_sizes[filename]];
-							});
-							return {
-								"commit": commit,
-								"diffs": diffs
-							};
-						});
-				}
-			}).then(function(diff_ary) {
-				return diff_ary.filter(function(diff) {
-					if (diff && diff.diffs) 
-						return true;
-					else
-						return false;
+				return (function() {
+					if (index == history.length-1) {
+						return self._git.show(commit.id);
+					} else {
+						return self._git.diff(history[index+1].id, commit.id);
+					}
+				})().then(function(diff) {
+					delete commit.parents;
+					let summary = {};
+					diff.filenames().forEach(function(name) {
+						summary[name] = diff.summary(name);
+					});
+					return {
+						"commit": commit,
+						"diffs": summary
+					}
 				});
 			});
 		});
