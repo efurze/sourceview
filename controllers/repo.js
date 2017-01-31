@@ -229,9 +229,7 @@ var getAllFileIds = function(tree, path) {
 };
 
 var status = function() {
-	var args = Array.from(arguments);
-	args.push(Logger.CHANNEL.REPO);
-	Logger.INFO.apply(Logger, args);
+	console.log.apply(console, arguments);
 };
 
 module.exports = Repo;

@@ -1,5 +1,6 @@
 var git = require('./controllers/git.js');
 var Repo = require('./controllers/repo.js');
+let Logger = require('./lib/logger.js');
 
 
 
@@ -15,6 +16,7 @@ var diff = function(dir) {
 
 // process.argv[0] == node
 // process.argv[1] == process.js
+Logger.disable_logging();
 var repo = process.argv[2];
 console.log("Reading repository at " + repo);
 

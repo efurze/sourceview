@@ -232,8 +232,6 @@ CanvasRenderer.prototype.renderDiff = function(diff_index) {
 			if (files.hasOwnProperty(filename))
 				self.renderFileDiff(diff_index, filename);
 		});
-	} else {
-		debugger
 	}
 };
 
@@ -251,6 +249,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	if (self._selectedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
 		self._context.fillStyle = '#FFFFD5';
+		self.renderDiffContent();
 	}
 
 	var x = commit_width * (self._toCommit - diff_index);
@@ -274,6 +273,30 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 				dy
 			);
 		});
+	}
+};
+
+CanvasRenderer.prototype.renderDiffContent = function() {
+	let self = this;
+	if (self._selectedCommitIndex >= 0 
+		&& self._selectedCommitIndex < self._diffs.length) {
+		let diff_info = self._diffs[self._selectedCommitIndex];
+		if (diff_info && self._selectedFile) {
+			let diff = diff_info.diffs;
+
+			if (diff.hasOwnProperty(self._selectedFile)) {
+				let chunk_ids = Object.keys(diff[self._selectedFile].chunks);
+				let diff_str = "";
+				chunk_ids.forEach(function(id_str) { // -3,4
+					diff_str += id_str + ":\n";
+					diff_str += decodeURI(diff[self._selectedFile]
+											.chunks[id_str]
+											.join());
+					diff_str += "\n"
+				});
+				$("#code_textarea").text(diff_str);
+			}
+		}
 	}
 };
 
@@ -360,6 +383,7 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 		self.renderFileHistory(file);
 		self.renderFileDiffs(file);
 		self.highlightFilenames();
+		self.renderDiffContent();
 	}
 };
 

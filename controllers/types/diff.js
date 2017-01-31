@@ -160,13 +160,18 @@ Diff.prototype.parse = function(diffstr) {
 		file['chunks'] = chunks;
 		files[filename] = file;
 	}
-	Object.keys(files).forEach(function(filename) {
-		files[filename]['summary'] = [];
-		Object.keys(files[filename]['chunks'])
-			.forEach(function(chunk) {  // -33,6 +35,12
-				files[filename]['summary'] = files[filename]['summary'].concat(chunk.split(' '));
-			});
-	});
+
+	if (files) {
+		Object.keys(files).forEach(function(filename) {
+			files[filename]['summary'] = [];
+			if (files[filename]['chunks']) {
+				Object.keys(files[filename]['chunks'])
+					.forEach(function(chunk) {  // -33,6 +35,12
+						files[filename]['summary'] = files[filename]['summary'].concat(chunk.split(' '));
+					});
+			}
+		});
+	}
 
 
 	return files;
