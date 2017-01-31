@@ -1,6 +1,6 @@
 'use strict'
 
-var parse = require('parse-diff');
+//var parse = require('parse-diff');
 var Logger = require('../../lib/logger.js');
 
 
@@ -32,7 +32,17 @@ parse-diff output:
 var Diff = function(diffstr) { // git diff output
 	var self = this;
 
+	Logger.TRACE("RAW diff str", diffstr, Logger.CHANNEL.DIFF);
+
 	self._parsed = self.parse(diffstr);
+
+	Object.keys(self._parsed).forEach(function(filename) {
+		Logger.INFO("Summary", filename, 
+			self._parsed[filename]['summary'], 
+			"delta",
+			self.delta(filename),
+			Logger.CHANNEL.DIFF);
+	});
 //	Object.keys(self._parsed).forEach(function(filename) {
 //		self._summary[filename] = Object.keys(self._parsed[filename]);
 //	});
@@ -153,7 +163,6 @@ Diff.prototype.parse = function(diffstr) {
 			.forEach(function(chunk) {  // -33,6 +35,12
 				files[filename]['summary'] = files[filename]['summary'].concat(chunk.split(' '));
 			});
-		Logger.INFO("Summary", filename, files[filename]['summary'], Logger.CHANNEL.DIFF);
 	});
 
 
@@ -173,16 +182,16 @@ Diff.prototype.delta = function(filename) {
 	var delta = 0;
 	if (self._parsed.hasOwnProperty(filename)) {
 		self._parsed[filename].summary.forEach(function(diff) {
-			Logger.DEBUGHI("calculating delta", filename, diff, Logger.CHANNEL.DIFF);
+			Logger.DEBUGLOW("delta(): calculating delta", filename, "chunk:", diff, Logger.CHANNEL.DIFF);
 			let parts = diff.split(",");
 			let sign = parts[0].slice(0, 1);
 			let count = 0;
 			if (parts.length > 1) {
 				count = parseInt(parts[1]);
 			} else {
-				count = parseInt(parts[0]);
+				count = 1;
 			}
-			Logger.DEBUGHI("lines changed", count, Logger.CHANNEL.DIFF);
+			Logger.DEBUGLOW("delta(): lines changed", count, Logger.CHANNEL.DIFF);
 			if (sign === "+") {
 				delta += count;
 			} else {
@@ -190,7 +199,7 @@ Diff.prototype.delta = function(filename) {
 			}
 		});
 	}
-	Logger.DEBUGHI(filename, delta, Logger.CHANNEL.DIFF);
+	Logger.INFOHI("delta():", filename, delta, Logger.CHANNEL.DIFF);
 	return delta;
 }
 

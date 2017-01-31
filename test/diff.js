@@ -9,9 +9,9 @@ var repo = new Repo(__dirname + '/..');
 
 let first_diff = {
     "views/index.hbs": 8,
-"views/layouts/single.hbs": 4,
-"views/main.hbs": 0,
-"views/partials/includes.hbs": 32,
+"views/layouts/single.hbs": -1,
+"views/main.hbs": -1,
+"views/partials/includes.hbs": 0,
 };
 
 describe('diff test', function() {

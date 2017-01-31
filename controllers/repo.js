@@ -80,20 +80,24 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 	var self = this;
 	status("Building revision history for", branch_name);
 	return self._util.revWalk(branch_name)
-		.then(function(history) { // array of commits
+		.then(function(history) { // array of commits, most recent first
 			status("Creating FizeSizeHistory for", history.length, "revisions");
+			Logger.INFO("revList", JSON.stringify(history), Logger.CHANNEL.REPO);
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
+			history.reverse();
 
 			return self.fileSizesForRevision(current_rev.tree)
 				.then(function(files) { // {filepath => filelength}
 					status("Building diff history");
 					var initial_files = Clone(files); // for first rev
+					Logger.INFO("Initial file sizes", JSON.stringify(initial_files), Logger.CHANNEL.REPO);
 					self._initialTrees[branch_name] = initial_files;
 					return Promise.mapSeries(history, function(rev, index) {
 						status("Revision", index + " / " + history.length);
+						Logger.INFO(index, rev.id, rev.commit_msg, Logger.CHANNEL.REPO);
 						Logger.INFO("diffing", current_rev.id, rev.id, Logger.CHANNEL.REPO);
-						return self._git.diff(current_rev.tree, rev.tree)
+						return self._git.diff(current_rev.id, rev.id)
 							.then(function(diff) {
 								current_rev = rev;
 								files = self._updateFileSizes(files, diff);
@@ -103,6 +107,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 								}
 							});
 					}).then(function(file_history) {
+						file_history.reverse();
 						file_history.push({
 							'commit': initial_commit,
 							'tree': initial_files
@@ -168,6 +173,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 			return Promise.mapSeries(history, function(commit, index) {
 				status("Diff for revision", index + " / " + history.length);
 				if (index < history.length-1) {
+					Logger.INFO("Diffing commit", commit.id, Logger.CHANNEL.REPO);
 					return self._git.diff(history[index+1].id, commit.id)
 						.then(function(diff) {
 							delete commit.parents;
@@ -219,7 +225,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 	@files = {'foo.txt': 423, 'bar/foo.txt': 43}
 */
 Repo.prototype._updateFileSizes = function(files, diff) {
-	Logger.INFO(files, Logger.CHANNEL.REPO);
+	Logger.DEBUGHI(files, Logger.CHANNEL.REPO);
 	files = Clone(files);
 	diff.filenames().forEach(function(filename) {
 		if (!files.hasOwnProperty(filename)) {
@@ -227,6 +233,7 @@ Repo.prototype._updateFileSizes = function(files, diff) {
 		}
 		files[filename] = files[filename] + diff.delta(filename);
 	});
+	Logger.INFO("Updated filesizes", JSON.stringify(files), Logger.CHANNEL.REPO);
 	return files;
 };
 
