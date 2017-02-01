@@ -7,10 +7,16 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._diffs = diffs;		
 
 	this._canvas = document.getElementById("repo_canvas");
+	this._context = this._canvas.getContext('2d');
+
 	this._width = this._canvas.width;
 	this._height = this._canvas.height;
-	this._context = this._canvas.getContext('2d');
-	this._filesSVG = SVG('filenames');;
+	
+	
+	this._filesCanvas = document.getElementById("filenames");
+	this._filesContext = this._filesCanvas.getContext('2d');
+	this._filesWidth = this._filesCanvas.width;
+
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
 	this._yAxis = {}; // filename to offset in lines
@@ -27,16 +33,7 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
-/*
-	let offset = $("#diff_div").offset();
-	$("#diff_div").height($("#diff_div").height() * 2);
-	$("#diff_div").width($("#diff_div").width() * 2);
-	
-	$("#diff_div").css("transform", "scale(0.5)");
-	offset = $("#diff_div").offset();
-	offset = $("#code_div").offset();
-	$("#diff_div").offset({top: offset.top, left: offset.left});
-*/
+
 	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
@@ -92,88 +89,62 @@ CanvasRenderer.prototype.render = function() {
 
 CanvasRenderer.prototype.renderFilenames = function() {
 	var self = this;
-	var vb = self._filesSVG.viewbox();
-	var rect = self._filesSVG.rect(vb.width, vb.height).attr({fill: '#F0DAA4'});
+	self._filesContext.fillStyle = '#F0DAA4';
+	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
 	var fontHeight = 10; // TODO: initialize this somehow
-	var y = vb.height;
+	var y = self._height;
 	var filecount = self._files.length;
 
 	// Draw bottom-to-top so we elide the small files instead of the big ones
 	for (var i=1; i <= filecount; i++) {
 		var file = self._files[filecount - i];
-		var nextShouldBeAt = (self._yAxis[file]*(vb.height-fontHeight))/self._maxLineCount;
+		var nextShouldBeAt = (self._yAxis[file]*(self._height-fontHeight))/self._maxLineCount;
 		if (nextShouldBeAt <= y - fontHeight) {
 			y = nextShouldBeAt;
-			var text = self._filesSVG.text(file)
-				.attr({
-					fill: 'black', 
-					x: 5, 
-					y: y
-				}).font({
-					  family:   'Helvetica'
-					, size:     8
-				});
-			fontHeight = text.bbox().height;
+			self._filesContext.strokeStyle = 'black';
+			self._filesContext.fillStyle = 'black';
+			self._filesContext.font = "8px Helvetica";
+			self._filesContext.fillText(file, 5, y);
+			fontHeight = 8;
 		}
 	}		
 };
 
 CanvasRenderer.prototype.highlightFilenames = function() {
 	var self = this;
-	var vb = self._filesSVG.viewbox();
 	var fontHeight;
-
 
 	// files in this diff
 	if (self._selectedCommitIndex >= 0 && self._fromCommit != self._toCommit) {
 		var diff = self._diffs[self._selectedCommitIndex];
 		Object.keys(diff.diffs).forEach(function(filename) {
 			fontHeight = 10;
-			var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
+			var y = (self._yAxis[filename]*(self._height-fontHeight))/self._maxLineCount;
 
-			self._filesSVG.rect(vb.width, 1.5*fontHeight)
-			.attr({
-				x: 0,
-				y: y,
-				fill: '#F0DAA4',
-			});
+			self._filesContext.fillStyle = '#F0DAA4';
+			self._filesContext.fillRect(0, y, self._filesWidth, fontHeight * 1.5);
 
-			self._filesSVG.text(filename)
-			.attr({
-				fill: 'red',
-				x: 10,
-				y: y
-			}).font({
-				family: 'Helvetica',
-				size: 8
-			});
+			self._filesContext.fillStyle = 'red';
+			self._filesContext.font = "8px Helvetica";
+			self._filesContext.fillText(filename, 10, y);
 		});
 	}
 
 	var filename = self._selectedFile;
 	if (filename) {
 		fontHeight = 15; // TODO: initialize this somehow
-		var y = (self._yAxis[filename]*(vb.height-fontHeight))/self._maxLineCount;
+		var y = (self._yAxis[filename]*(self._height-fontHeight))/self._maxLineCount;
+		self._filesContext.fillStyle = '#F0DAA4';
+		self._filesContext.strokeStyle = 'black';
+		self._filesContext.font = "8px Helvetica";
+		self._filesContext.fillRect(0, y, self._filesWidth, fontHeight * 2);
+		self._filesContext.fillText(filename, 5, y);
 
-		self._filesSVG.rect(vb.width, fontHeight * 2)
-			.attr({
-				x: 0,
-				y: y,
-				fill: '#F0DAA4',
-				stroke: 'black'
-			});
-
-		self._filesSVG.text(filename)
-			.attr({
-				fill: 'black',
-				x: 5,
-				y: y
-			}).font({
-				family: 'Helvetica',
-				size: 12
-			});
-		}
+		self._filesContext.fillStyle = 'black';
+		self._filesContext.font = "12px Helvetica";
+		self._filesContext.fillText(filename, 5, y);
+	}
 }
 
 CanvasRenderer.prototype.renderHistory = function() {
@@ -260,7 +231,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	if (self._selectedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
 		self._context.fillStyle = '#FFFFD5';
-		self.renderDiffContent();
+		//self.renderDiffContent();
 	}
 
 	var x = commit_width * (self._toCommit - diff_index);

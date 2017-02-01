@@ -1,6 +1,6 @@
 <div class="row, main-row">
     <div class="col-md-2 text-center small-padding">
-        <div id="filenames"></div>
+        <canvas id="filenames" class="canvas"></canvas>
     </div>
     <div class="col-md-7 text-center small-padding" id="canvas_div">
         <canvas id="repo_canvas" class="canvas"></canvas>
@@ -25,6 +25,11 @@
         // this is required to make the canvas fill the entire div
 
         var c = $("#repo_canvas");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
+        c = $("#filenames");
         var container = $(c).parent();
         c.attr('width', $(container).width());
         c.attr('height', $(container).height());
