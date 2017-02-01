@@ -27,7 +27,16 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
-
+/*
+	let offset = $("#diff_div").offset();
+	$("#diff_div").height($("#diff_div").height() * 2);
+	$("#diff_div").width($("#diff_div").width() * 2);
+	
+	$("#diff_div").css("transform", "scale(0.5)");
+	offset = $("#diff_div").offset();
+	offset = $("#code_div").offset();
+	$("#diff_div").offset({top: offset.top, left: offset.left});
+*/
 	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
@@ -40,6 +49,7 @@ CanvasRenderer.prototype.onFilterClick = function() {
 	//$("#canvas_div").removeClass("col-md-10");
 	//$("#canvas_div").addClass("col-md-6");
 
+
 	
 	self._filter = $("#filter_input").val();
 	self._files = Object.keys(self._range)
@@ -51,6 +61,7 @@ CanvasRenderer.prototype.onFilterClick = function() {
 					});
 	self.calculateLayout();
 	self.render();
+	
 };
 
 CanvasRenderer.prototype.calculateLayout = function() {
@@ -278,23 +289,22 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 CanvasRenderer.prototype.renderDiffContent = function() {
 	let self = this;
+	$("#code_textarea").text("");
 	if (self._selectedCommitIndex >= 0 
 		&& self._selectedCommitIndex < self._diffs.length) {
 		let diff_info = self._diffs[self._selectedCommitIndex];
 		if (diff_info && self._selectedFile) {
 			let diff = diff_info.diffs;
 
-			if (diff.hasOwnProperty(self._selectedFile)) {
-				let chunk_ids = Object.keys(diff[self._selectedFile].chunks);
-				let diff_str = "";
-				chunk_ids.forEach(function(id_str) { // -3,4
-					diff_str += id_str + ":\n";
-					diff_str += decodeURI(diff[self._selectedFile]
-											.chunks[id_str]
-											.join());
-					diff_str += "\n"
+			if (diff.hasOwnProperty(self._selectedFile)
+				&& diff[self._selectedFile].raw) {
+				let diff_str = decodeURI(diff[self._selectedFile].raw);
+				//$("#code_textarea").text(diff_str);
+
+				var diff2htmlUi = new Diff2HtmlUI({
+					diff: diff_str
 				});
-				$("#code_textarea").text(diff_str);
+				diff2htmlUi.draw('#code_div', {inputFormat: 'diff', showFiles: false, matching: 'lines'});
 			}
 		}
 	}

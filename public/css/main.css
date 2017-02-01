@@ -12,18 +12,25 @@
   margin-bottom: 10px;
 }
 
-#canvas_div {
+#canvas_div, #diff_container, #code_div {
   height: 100%;
-}
-
-#code_div {
-  vertical-align: top;
 }
 
 #code_textarea{
     height: 100%;
     width: 100%;
-   // display: none;
+   display: none;
+}
+
+#diff_div{
+    height: 100%;
+    width: 100%;
+}
+
+textarea {
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: scroll;
 }
 
 .nopadding {

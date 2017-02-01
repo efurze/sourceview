@@ -70,6 +70,10 @@ app.get('/', function(req, res) {
 		});	    
 });
 
+app.get('/diff', function(req, res) { 
+	res.render("diff");
+});
+
 app.get('/repo/range', function(req, res) { 
 	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
 		.then(function(data) {

@@ -46,7 +46,17 @@ Persist.prototype.getFileSizeRange = function(branch) {
 		});
 };
 
-
+/*
+	history = {
+		commit:
+		diffs: {
+			'filename': {
+				'summary':,
+				'chunks':
+			}
+		}
+	}
+*/
 Persist.prototype.saveDiffHistory = function(branch, history) {
 	var filename = DATA_DIR + this._repoName + "/" + branch + "." + DIFF_FILE;
 	history.forEach(function(diff) {

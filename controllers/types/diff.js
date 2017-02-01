@@ -35,7 +35,6 @@ var Diff = function(diffstr) { // git diff output
 	Logger.TRACE("RAW diff str", diffstr, Logger.CHANNEL.DIFF);
 
 	self._parsed = self.parse(diffstr);
-
 	Object.keys(self._parsed).forEach(function(filename) {
 		Logger.INFO("Summary", filename, 
 			self._parsed[filename]['summary'], 
@@ -43,6 +42,9 @@ var Diff = function(diffstr) { // git diff output
 			self.delta(filename),
 			Logger.CHANNEL.DIFF);
 	});
+
+
+
 //	Object.keys(self._parsed).forEach(function(filename) {
 //		self._summary[filename] = Object.keys(self._parsed[filename]);
 //	});
@@ -106,15 +108,19 @@ Diff.prototype.parse = function(diffstr) {
 
 	var files = {};
 	var file, chunk, linenums, from, to;
+	var filediff;
+	var filediffs = {};
 	var chunks = {};
 	lines.forEach(function(line) {
 		if (!line) {
 			return;
 		}
 		Logger.DEBUGHI("line", line, '\n', Logger.CHANNEL.DIFF);
-		//console.log(line);
+		
+
 		if (line.startsWith("diff --git")) { // diff --git a/controllers/repo.js b/controllers/repo.js\
 			Logger.INFOHI("new file", line, Logger.CHANNEL.DIFF);
+			
 			if (chunk && linenums) {
 				chunks[linenums] = chunk;
 				file['chunks'] = chunks;
@@ -152,7 +158,22 @@ Diff.prototype.parse = function(diffstr) {
 		} else if (linenums) {
 			chunk.push(encodeURI(line));
 		}
+
+		if (line.startsWith("diff --git")) { // diff --git a/controllers/repo.js b/controllers/repo.js\
+			if (filediff) {
+				filediffs[filename] = encodeURI(filediff.join('\n'));
+				filediff = null;
+			} else {
+				filediff = [line];
+			}
+		} else if (filediff) {
+			filediff.push(line);
+		}
 	});
+
+	if (filediff) {
+		filediffs[filename] = encodeURI(filediff.join('\n'));
+	}
 
 	if (chunk && chunks && file && linenums) {
 		var filename = from === "/dev/null" ? to : from;
@@ -169,7 +190,9 @@ Diff.prototype.parse = function(diffstr) {
 					.forEach(function(chunk) {  // -33,6 +35,12
 						files[filename]['summary'] = files[filename]['summary'].concat(chunk.split(' '));
 					});
+				delete files[filename].chunks;
 			}
+			files[filename].raw = filediffs[filename];
 		});
 	}
 
