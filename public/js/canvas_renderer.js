@@ -90,23 +90,24 @@ CanvasRenderer.prototype.render = function() {
 CanvasRenderer.prototype.renderFilenames = function() {
 	var self = this;
 	self._filesContext.fillStyle = '#F0DAA4';
+	self._filesContext.strokeStyle = '#F0DAA4';
+	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
 	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
-	var fontHeight = 10; // TODO: initialize this somehow
-	var y = self._height;
+	var fontHeight = 8; // TODO: initialize this somehow
+	var y = self._height + fontHeight;
 	var filecount = self._files.length;
 
 	// Draw bottom-to-top so we elide the small files instead of the big ones
 	for (var i=1; i <= filecount; i++) {
-		var file = self._files[filecount - i];
-		var nextShouldBeAt = (self._yAxis[file]*(self._height-fontHeight))/self._maxLineCount;
+		var filename = self._files[filecount - i];
+		var nextShouldBeAt = self.fileYMiddle(filename) + fontHeight/2;
 		if (nextShouldBeAt <= y - fontHeight) {
 			y = nextShouldBeAt;
 			self._filesContext.strokeStyle = 'black';
 			self._filesContext.fillStyle = 'black';
 			self._filesContext.font = "8px Helvetica";
-			self._filesContext.fillText(file, 5, y);
-			fontHeight = 8;
+			self._filesContext.fillText(filename, 5, y);
 		}
 	}		
 };
@@ -119,12 +120,14 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 	if (self._selectedCommitIndex >= 0 && self._fromCommit != self._toCommit) {
 		var diff = self._diffs[self._selectedCommitIndex];
 		Object.keys(diff.diffs).forEach(function(filename) {
-			fontHeight = 10;
-			var y = (self._yAxis[filename]*(self._height-fontHeight))/self._maxLineCount;
+			fontHeight = 8;
+			var y = self.fileYMiddle(filename) - fontHeight/2 - 2;
 
+			self._filesContext.beginPath();
 			self._filesContext.fillStyle = '#F0DAA4';
-			self._filesContext.fillRect(0, y, self._filesWidth, fontHeight * 1.5);
+			self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 4);
 
+			self._filesContext.beginPath();
 			self._filesContext.fillStyle = 'red';
 			self._filesContext.font = "8px Helvetica";
 			self._filesContext.fillText(filename, 10, y);
@@ -133,17 +136,18 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 
 	var filename = self._selectedFile;
 	if (filename) {
-		fontHeight = 15; // TODO: initialize this somehow
-		var y = (self._yAxis[filename]*(self._height-fontHeight))/self._maxLineCount;
+		fontHeight = 12; // TODO: initialize this somehow
+		var y = self.fileYMiddle(filename) - fontHeight/2 - 4;
+		self._filesContext.beginPath();
 		self._filesContext.fillStyle = '#F0DAA4';
 		self._filesContext.strokeStyle = 'black';
-		self._filesContext.font = "8px Helvetica";
-		self._filesContext.fillRect(0, y, self._filesWidth, fontHeight * 2);
-		self._filesContext.fillText(filename, 5, y);
+		self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 8);
+		self._filesContext.rect(0, y, self._filesWidth, fontHeight + 8);
+		self._filesContext.stroke();
 
 		self._filesContext.fillStyle = 'black';
 		self._filesContext.font = "12px Helvetica";
-		self._filesContext.fillText(filename, 5, y);
+		self._filesContext.fillText(filename, 5, self.fileYMiddle(filename) + fontHeight/2);
 	}
 }
 
@@ -156,13 +160,29 @@ CanvasRenderer.prototype.renderHistory = function() {
 	});
 };
 
+CanvasRenderer.prototype.fileYTop = function(filename) {
+	var self = this;
+	return (self._yAxis[filename]*self._height)/self._maxLineCount;
+};
+
+CanvasRenderer.prototype.fileYBottom = function(filename) {
+	var self = this;
+	var max_lines = self._range[filename];
+	return self.fileYTop(filename) + (max_lines * self._height)/self._maxLineCount;
+};
+
+CanvasRenderer.prototype.fileYMiddle = function(filename) {
+	var self = this;
+	return (self.fileYBottom(filename) + self.fileYTop(filename))/2;
+};
+
 CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	var self = this;
 
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var total_height = (self._range[filename] * self._height)/self._maxLineCount;
 
-	var y = (self._yAxis[filename]*self._height)/self._maxLineCount;
+	var y = self.fileYTop(filename);
 
 	self._context.fillStyle = '#A2BCCD';
 	self._context.fillRect(0,y, self._width, total_height);
@@ -319,15 +339,18 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		var index = self.commitIndexFromXCoord(event.offsetX);
 		if (index != self._selectedCommitIndex) {
 			var previous = self._selectedCommitIndex;
+			var msg = "";
 			self._selectedCommitIndex = index;
-
-			$("#commit_info").text(self._diffs[self._selectedCommitIndex].commit.commit_msg);
+			if (index >= 0 && index < self._diffs.length) {
+				msg = self._diffs[self._selectedCommitIndex].commit.commit_msg;
+			}
+			$("#commit_info").text(msg);
 			
-			self.renderFilenames();
 			if (previous >= 0) {
 				self.renderDiff(previous);
 			}
 			self.renderDiff(index);
+			self.renderFilenames();
 			self.highlightFilenames();
 		}
 	}
@@ -356,13 +379,13 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 		var previous = self._selectedFile;
 		self._selectedFile = file;
 
-		self.renderFilenames();
 		if (previous) {
 			self.renderFileHistory(previous);
 			self.renderFileDiffs(previous);
 		}
 		self.renderFileHistory(file);
 		self.renderFileDiffs(file);
+		self.renderFilenames();
 		self.highlightFilenames();
 		self.renderDiffContent();
 	}
