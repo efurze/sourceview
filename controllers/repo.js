@@ -88,11 +88,11 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 			var initial_commit = current_rev.id;
 			history.reverse();
 
-			return self.fileSizesForRevision(current_rev.tree)
+			return self.fileSizesForRevision(current_rev.id)
 				.then(function(files) { // {filepath => filelength}
 					status("Building diff history");
 					var initial_files = Clone(files); // for first rev
-					Logger.INFO("Initial file sizes", JSON.stringify(initial_files), Logger.CHANNEL.REPO);
+					Logger.DEBUG("Initial file sizes", JSON.stringify(initial_files), Logger.CHANNEL.REPO);
 					self._initialTrees[branch_name] = initial_files;
 					return Promise.mapSeries(history, function(rev, index) {
 						status("Revision", index + " / " + history.length);
@@ -121,26 +121,10 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 };
 
 // returns hash of: {filepath => filelength}
-Repo.prototype.fileSizesForRevision = function(tree_id) {
+Repo.prototype.fileSizesForRevision = function(commit_id) {
 	status("Building initial tree");
 	var self = this;
-	return self._util.buildTree(tree_id)
-				.then(getAllFileIds)
-				.then(function(files) { // {filepath => sha1}
-					var filecount = Object.keys(files).length;
-					status("Built tree. Getting file info for", filecount, "files");
-					return Promise.each(Object.keys(files), function(filepath, index) {
-						if (index % 100 == 0) {
-							status(index + " / " + filecount);
-						}
-						return self._git.catFile(files[filepath])
-							.then(function(filedata) {
-								files[filepath] = filedata.length;
-							});
-					}).then(function() {
-						return files;
-					});
-				});
+	return self._git.commitStat(commit_id);
 };
 
 

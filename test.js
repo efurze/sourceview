@@ -1,5 +1,5 @@
 var Git = require('./controllers/git.js');
-var git = new Git('/Users/efurze/repos/linux');
+var git = new Git('/Users/efurze/repos/sourceview');
 var Util = require('./controllers/git_util.js');
 var util = new Util(git);
 var repo = require('./controllers/repo.js');
@@ -8,20 +8,10 @@ var Diff = require('./controllers/types/diff.js');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
 
-var first_commit = { 
-    'Gruntfile.js': 85,
-   'README.md': 2,
-   'index.js': 57,
-   'package.json': 43,
-   'views/index.hbs': 6,
-   'views/main.hbs': 7,
-   'views/layouts/single.hbs': 14,
-   'views/partials/head.hbs': 17,
-   'views/partials/includes.hbs': 18,
-   'views/partials/nav.hbs': 12 
-};
-
-var diff = new Diff(first_commit);
+git.commitStat('1cce552cc2a7b0d2ed4a9941c233493810dfb4b5')
+	.then(function(stat) {
+		console.log(stat);
+	});
 
 /*
 util.buildTree('cbcdc7c66f7af2839314acdc54c74f8d945ea0bc')

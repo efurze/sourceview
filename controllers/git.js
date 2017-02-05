@@ -100,6 +100,40 @@ Git.prototype.diff = function(sha1, sha2) {
 		});
 };
 
+/*
+	Pass in a commit id, returns filesize hash:
+{
+  'Gruntfile.js': 84,
+  'README.md': 1,
+  'controllers/git.js': 142,
+  'controllers/git_util.js': 172,
+  'controllers/persist.js': 76,
+  'controllers/repo.js': 254,
+  'controllers/types.js': 18,
+  'controllers/types/diff.js': 284,
+}
+*/
+Git.prototype.commitStat = function(commit_sha) {
+	var self = this;
+	var args = [];
+	args.push('4b825dc642cb6eb9a060e54bf8d69288fbee4904'); // null tree
+	args.push(commit_sha);
+	args.push('--stat');
+	return self._git.diffAsync(args)
+		.then(function(stat_str) {
+			let file_sizes = {};
+			stat_str.split('\n').forEach(function(line) { 
+				// tools/testing/nvdimm/Kbuild   |    71 +
+				let parts = line.trim().split('|');
+				if (parts && parts.length > 1) {
+					parts[1] = parts[1].replace('+', '').trim();
+					file_sizes[parts[0].trim()] = parseInt(parts[1]);
+				}
+			});
+			return file_sizes;
+		});
+};
+
 
 // @ref: SHA or branch/tag name ('master', 'HEAD', etc)
 Git.prototype.revList = function(ref) {
