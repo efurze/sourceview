@@ -1,7 +1,8 @@
 
 
-Node = function(name) {
+Node = function(name, id) {
 	this.name = name;
+	this.id = id;
 	this.children = null;
 };
 

@@ -100,14 +100,6 @@ Git.prototype.diff = function(sha1, sha2) {
 		});
 };
 
-Git.prototype.show = function(sha1) {
-	var self = this;
-	var args = [sha1];
-	return self._git.showAsync(args)
-		.then(function(diffstr) {
-			return new diff(diffstr);
-		});
-};
 
 // @ref: SHA or branch/tag name ('master', 'HEAD', etc)
 Git.prototype.revList = function(ref) {
@@ -125,6 +117,7 @@ Git.prototype.revList = function(ref) {
 			.then(function(commit) { // commit object
 				if (commit) {
 					history_ary.push(commit.id);
+					status("Added commit #", history_ary.length, 'id:', commit.id);
 				}
 				if (commit && commit.parents && commit.parents.length) {
 					// recurse via timer so we don't blow the stack
@@ -140,6 +133,10 @@ Git.prototype.revList = function(ref) {
 	doRevList(ref, history);
 
 	return promise;
+};
+
+var status = function() {
+	console.log.apply(console, arguments);
 };
 
 module.exports = Git;

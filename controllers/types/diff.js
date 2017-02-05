@@ -34,14 +34,16 @@ var Diff = function(diffstr) { // git diff output
 
 	Logger.TRACE("RAW diff str", diffstr, Logger.CHANNEL.DIFF);
 
-	self._parsed = self.parse(diffstr);
-	Object.keys(self._parsed).forEach(function(filename) {
-		Logger.INFO("Summary", filename, 
-			self._parsed[filename]['summary'], 
-			"delta",
-			self.delta(filename),
-			Logger.CHANNEL.DIFF);
-	});
+	if (diffstr) {
+		self._parsed = self._parse(diffstr);
+		Object.keys(self._parsed).forEach(function(filename) {
+			Logger.INFO("Summary", filename, 
+				self._parsed[filename]['summary'], 
+				"delta",
+				self.delta(filename),
+				Logger.CHANNEL.DIFF);
+		});
+	}
 
 
 
@@ -79,12 +81,39 @@ var Diff = function(diffstr) { // git diff output
 	*/
 };
 
+
+Diff.prototype._parse = function(diff) {
+	let self = this;
+	if (typeof diff === 'string') {
+		return self._parseStr(diff);
+	} else if (typeof diff == 'object') {
+		return self._parseFromFilesizes(diff);
+	}
+};
+
+
+Diff.prototype._parseFromFilesizes = function(first_rev) {
+	let self = this;
+	let files = {}
+	if (first_rev) {
+		Object.keys(first_rev).forEach(function(filename) {
+			files[filename] = {
+				"summary": ["-0,0", "+1," + first_rev[filename]],
+				"raw": {}
+			};
+			Logger.INFO(filename, files[filename].summary, Logger.CHANNEL.DIFF);
+		});
+	}
+	return files;
+}
+
+
 /*
 returns:
 {
  'controllers/repo.js': 
  {
-  summary: ['-169,7 +169,7', ],
+  summary: ['-169,7', '+169,7', ],
   chunks: { '-169,7 +169,7': 
       [ '                                        return self._git.diff(history[index+1].id, commit.id)',
         '                                                .then(function(diff) {',
@@ -102,7 +131,7 @@ returns:
  } 
 },
 */
-Diff.prototype.parse = function(diffstr) {
+Diff.prototype._parseStr = function(diffstr) {
 	var self = this;
 	var lines = diffstr.split('\n');
 

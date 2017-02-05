@@ -16,7 +16,7 @@ var diff = function(dir) {
 
 // process.argv[0] == node
 // process.argv[1] == process.js
-Logger.disable_logging();
+//Logger.disable_logging();
 var repo = process.argv[2];
 console.log("Reading repository at " + repo);
 

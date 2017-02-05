@@ -53,7 +53,11 @@ app.get('/', function(req, res) {
 			return fs.readFileAsync(dir + "/master.filesizerange.json");	
 		}).then(function(range) {
 			data['range_data'] = range;
-			return fs.readFileAsync(dir + "/master.diffhistory.json");	
+			if (fs.existsSync(dir + "/master.diffhistory.json")) {
+				return fs.readFileAsync(dir + "/master.diffhistory.json");	
+			} else {
+				return {};
+			}
 		}).then(function(diffs) {
 			data['diffs'] = diffs;
 			res.render("index", {

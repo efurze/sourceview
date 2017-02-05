@@ -4,6 +4,8 @@ var expect = chai.expect;
 var Diff = require('../controllers/types/diff.js');
 var Git = require('../controllers/git.js');
 git = new Git('/Users/efurze/repos/sourceview');
+var Util = require('../controllers/git_util.js');
+var util = new Util(git);
 var Repo = require('../controllers/repo.js');
 var repo = new Repo(__dirname + '/..');
 
@@ -12,6 +14,19 @@ let first_diff = {
 "views/layouts/single.hbs": -1,
 "views/main.hbs": -1,
 "views/partials/includes.hbs": 0,
+};
+
+var first_commit = { 
+    'Gruntfile.js': 85,
+   'README.md': 2,
+   'index.js': 57,
+   'package.json': 43,
+   'views/index.hbs': 6,
+   'views/main.hbs': 7,
+   'views/layouts/single.hbs': 14,
+   'views/partials/head.hbs': 17,
+   'views/partials/includes.hbs': 18,
+   'views/partials/nav.hbs': 12 
 };
 
 describe('diff test', function() {
@@ -25,15 +40,13 @@ describe('diff test', function() {
         });
   });
 
-  it('should parse git show() output', function(done) {
-    git.show('a95b74d50734f36458cef910edc7badf38b49fec')
-        .then(function(diff) { 
-          diff.filenames().forEach(function(filename) {
-            console.log(filename, diff.delta(filename));
-          });
-          console.log(diff.toString());
-          done();
-        });
+  it('should parse filesize snapshot', function(done) {
+    var diff = new Diff(first_commit);
+    var first_diff = diff_history[diff_history.length-1].diffs;
+    Object.keys(first_diff).forEach(function(filename) {
+      expect(diff.summary(filename)).to.deep.equal(first_diff[filename]);
+    });
+    done();
   });
 
   it('should calculate first 8 diffs', function(done) {

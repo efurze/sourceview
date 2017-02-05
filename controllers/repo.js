@@ -7,6 +7,7 @@ var Git = require('./git.js');
 var Persist = require('./persist.js');
 var Resolve = require('path').resolve;
 var Logger = require('../lib/logger.js');
+var Diff = require('./types/diff.js');
 
 var Repo = function(path) {
 	path = Resolve(path);
@@ -82,7 +83,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits, most recent first
 			status("Creating FizeSizeHistory for", history.length, "revisions");
-			Logger.INFO("revList", JSON.stringify(history), Logger.CHANNEL.REPO);
+			Logger.DEBUG("revList", JSON.stringify(history), Logger.CHANNEL.REPO);
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
 			history.reverse();
@@ -164,9 +165,27 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'
 			status("Creating diff history for", history.length, "revisions");
 			return Promise.mapSeries(history, function(commit, index) {
 				status("Diff for revision", index + " / " + history.length);
+				Logger.INFO("Diff for commit", commit.id, Logger.CHANNEL.REPO);
 				return (function() {
 					if (index == history.length-1) {
-						return self._git.show(commit.id);
+						Logger.INFO("Constructing first diff", Logger.CHANNEL.REPO);
+						if (self._initialTrees.hasOwnProperty(branch_name)) {
+							Logger.INFO("Initial tree already built", Logger.CHANNEL.REPO);
+							return Promise.resolve(new Diff(self._initialTrees[branch_name]));
+						} else {
+							return self._persist.getFileSizeHistory(branch_name)
+								.then(function(filesize_history) {
+									if (filesize_history && filesize_history.length > 0) {
+										Logger.INFO("Got initial tree from persist", 
+											Logger.CHANNEL.REPO);
+										return new Diff(filesize_history[0].tree);
+									} else {
+										Logger.INFO("Constructing first diff from show()", 
+											Logger.CHANNEL.REPO);
+										return self._util.show(commit.id);
+									}
+								});
+						}
 					} else {
 						return self._git.diff(history[index+1].id, commit.id);
 					}
@@ -193,7 +212,7 @@ Repo.prototype._updateFileSizes = function(files, diff) {
 		}
 		files[filename] = files[filename] + diff.delta(filename);
 	});
-	Logger.INFO("Updated filesizes", JSON.stringify(files), Logger.CHANNEL.REPO);
+	Logger.DEBUG("Updated filesizes", JSON.stringify(files), Logger.CHANNEL.REPO);
 	return files;
 };
 
