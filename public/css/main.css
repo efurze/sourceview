@@ -12,7 +12,7 @@
   margin-bottom: 10px;
 }
 
-#canvas_div, #diff_container, #code_div, #filenames {
+#canvas_div, #diff_container, #code_div, #filenames, #directories {
   height: 100%;
 }
 

@@ -67,6 +67,7 @@ app.get('/', function(req, res) {
 					{ path: "/js/canvas_renderer.js" },
 					{ path: "/js/renderer.js" },
 					{ path: "/js/directory_view.js" },
+					{ path: "/js/file_view.js" },
 					{ path: "/js/view.js" }
 				]
 			});

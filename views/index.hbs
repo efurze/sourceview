@@ -1,13 +1,19 @@
 <div class="row, main-row">
-    <div class="col-md-2 text-center small-padding">
+    <div class="col-md-1 text-center small-padding">
+        <canvas id="directories" class="canvas"></canvas>
+    </div>
+
+    <div class="col-md-1 text-center small-padding">
         <canvas id="filenames" class="canvas"></canvas>
     </div>
-    <div class="col-md-7 text-center small-padding" id="canvas_div">
+    <div class="col-md-10 text-center small-padding" id="canvas_div">
         <canvas id="repo_canvas" class="canvas"></canvas>
     </div>
+    <!--
     <div class="col-md-2 text-center small-padding" id="code_div">
         <div id="diff_div""></div>
     </div>
+    -->
 </div>
 <div class="row">
     <div class="col-md-2 text-left small-padding">
@@ -30,6 +36,11 @@
         c.attr('height', $(container).height());
 
         c = $("#filenames");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
+        c = $("#directories");
         var container = $(c).parent();
         c.attr('width', $(container).width());
         c.attr('height', $(container).height());
