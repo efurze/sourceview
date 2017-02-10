@@ -25,64 +25,97 @@ var FONT_LARGE = {
 	'history': []
 	}
 */
-var DirectoryView = function(name, filesizes, diffs, parent, isDir) {
+var DirectoryView = function(name, parent) {
+	LOG("New DirView", name);
 	var self = this;
-	self._name = name;
-	self._filesizes = filesizes;
-	self._diffs = diffs;
-	self._isDir = isDir || false;
 	self._parent = parent;
-	self._children = {};
-	self._isOpen = true;
+	self._name = name;
+	self._childDirs = {};
+	self._children = [];
 	self._x = 0;
 	self._y = 0;
 	self._dx = 0;
 	self._dy = 0;
-
-	self._childNames = [];
 };
 
-DirectoryView.prototype.path = function() {
+
+DirectoryView.prototype.setModel = function(model) {
 	var self = this;
-	if (!self._parent) {
-		return ""; // for root dir
-	}
-	else if (self._parent.path()) {
-		return self._parent.path() + '/' + self._name;
-	} else {
-		return self._name;
-	}
-};
-
-DirectoryView.prototype.isDir = function() {
-	return this._isDir;
-};
-
-DirectoryView.prototype.visibleLineCount = function() {
-	var self = this;
-	var total = 0;
-	if (self._isOpen) {
-		if (self._filesizes.range.hasOwnProperty(self.path())) {
-			total += self._filesizes.range[self.path()];
+	self._model = model;
+	model.getChildren(self._name).forEach(function(child) {
+		if (model.isDir(child)) {
+			self._childDirs[child] = new DirectoryView(child, self);
+			self._childDirs[child].setModel(model);
 		}
-		self._childNames.forEach(function(name) {
-			total += self._children[name].visibleLineCount();
-		});
+		self._children.push(child);
+	});
+
+	self._children.sort(function (a, b) {
+		return a.toLowerCase().localeCompare(b.toLowerCase());
+	});
+}
+
+DirectoryView.prototype.layout = function() {
+	var self = this;
+	var y = 0;
+	var lineCount = self._model.visibleLineCount(self._name);
+
+	self._children.forEach(function(name) {
+		var childLineCount = self._model.visibleLineCount(name);
+		var dy = (childLineCount * self._dy) / lineCount;
+		if (!self._model.isOpen(name)) {
+			dy = 0;
+		}
+		if (self._model.isDir(name)) {
+			var child = self._childDirs[name];
+			child.setClip(self._x + MARGIN, y, self._dx, dy);
+			child.layout();
+			y += child._dy;
+		} else {
+			y += dy;
+		}
+	});
+
+	var lastY = 0;
+	if (!self._parent) {
+		lastY = -100;
 	}
-	return total;
-};
+	var lastChild = null;
+	self._children.forEach(function(name) {
+		if (self._model.isDir(name)) {
+			var child = self._childDirs[name];
+			y = child._y;
+			if (y < lastY + FONT_NORMAL.height) {
+				var delta = lastY + FONT_NORMAL.height - y;
+				LOG("adjust", name,"by", delta);
+				child._y += delta;
+				if (lastChild) {
+					lastChild.dy += delta;
+				}
+			}
+			if (!self._model.isOpen(name)) {
+				child._dy = FONT_NORMAL.height;
+			}
+			lastY = child._y;
+			lastChild = child;
+		}
+	});
+
+}
+
+
 
 DirectoryView.prototype.handleFilesClick = function(event) {
 	var self = this;
 	//console.log("click", event.offsetY);
 	var handled = false;
 
-	if (self._isDir) {
-		if (self._isOpen) {
-			var subdirs = Object.keys(self._children);
+	if (self._model.isDir(self._name)) {
+		if (self._model.isOpen(self._name)) {
+			var subdirs = Object.keys(self._childDirs);
 			var index = 0;
 			while (!handled && index < subdirs.length) {
-				handled = self._children[subdirs[index]].handleFilesClick(event);
+				handled = self._childDirs[subdirs[index]].handleFilesClick(event);
 				index ++;
 			}
 		}
@@ -92,7 +125,7 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 			if (event.offsetY >= y && event.offsetY <= (y + FONT_NORMAL.height)) {
 				//console.log("event handled by", self._name);
 				handled = true;
-				self.toggleOpen();
+				self._model.toggleOpen(self._name);
 			}
 		}
 	}
@@ -101,100 +134,43 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 };
 
 
-DirectoryView.prototype.addChildren = function(filenames) {
-	var self = this;
-
-	filenames.forEach(function(filename) {
-		self.addChild(filename);		
-	});
-};
-
-DirectoryView.prototype.addChild = function(filename) {
-	var self = this;
-
-	var parts = filename.split('/');
-	var dirname = parts[0];
-	var dir = self._children[dirname] 
-		|| new DirectoryView(dirname, 
-			self._filesizes, 
-			self._diffs, 
-			self,
-			parts.length > 1);
-	if (!self._children.hasOwnProperty(dirname)) {
-		self._children[dirname] = dir;
-		self._childNames.push(dirname);
-	}
-	if (parts.length > 1) {
-		// pop off the directory name
-		parts.shift();
-		dir.addChild(parts.join('/'));
-	}
-};
 
 
-DirectoryView.prototype.layout = function() {
-	var self = this;
-	var lastY = 0;
-	var y = 0;
-	var lineCount = self.visibleLineCount();
-
-	self._childNames.forEach(function(name) {
-		var child = self._children[name];
-		var childLineCount = child.visibleLineCount();
-		var dy = (childLineCount * self._dy) / lineCount;
-		if (!child._isOpen) {
-			dy = 0;
-		}
-		if (child.isDir()) {
-			y = Math.max(y, lastY + FONT_NORMAL.height);
-			dy = Math.max(dy, FONT_NORMAL.height);
-			lastY = y + FONT_NORMAL.height;
-		}
-		child.setClip(self._x + MARGIN, y, self._dx, dy);
-		child.layout();	
-		y += dy;
-	});
-};
-
-
-DirectoryView.prototype.renderRepo = function(context) {
-	var self = this;
-	if (self._isOpen) {
-
-	} else {
-
-	}
-};
 
 DirectoryView.prototype.renderDirectories = function(context) {
 	var self = this;
 	var x = self.x();
 	var y = self.y();
-	var offset_y = 0;
+
+	//context.save();
+	//context.beginPath();
+	//context.rect(x, y, self._dx, self._dy);
+	//context.clip();
 
 	// our name
 	if (self._parent) { // don't draw root dir
-		if (self._isDir) {
-			var handle = self._isOpen ? '- ' : '+ ';
+		if (self._model.isDir(self._name)) {
+			var handle = self._model.isOpen(self._name) ? '- ' : '+ ';
 			self._renderText(handle + self._name + '/', x, y, FONT_NORMAL, context);
 		}
 	}
 
-	if (self._isOpen) {
+	if (self._model.isOpen(self._name)) {
 		// children
-		self._childNames.forEach(function(name) {
-			var child = self._children[name];
-			if (child.isDir()) {
+		Object.keys(self._childDirs).forEach(function(name) {
+			var child = self._childDirs[name];
+			if (self._model.isDir(name)) {
 				child.renderDirectories(context);
 			}
 		});
 	}
+
+	//context.restore();
 }
 
 
 DirectoryView.prototype._renderText = function(text, x, y, font, context) {
 	var self = this;
-
 
 	context.beginPath();
 	context.fillStyle = FILES_BACKGROUND_COLOR;
@@ -207,17 +183,6 @@ DirectoryView.prototype._renderText = function(text, x, y, font, context) {
 
 	return font.height;
 }
-
-DirectoryView.prototype.setOpen = function(isOpen) {
-	var self = this;
-	self._isOpen = isOpen;
-};
-
-DirectoryView.prototype.toggleOpen = function() {
-	var self = this;
-	self._isOpen = !self._isOpen;
-	console.log(self._name, "open:", self._isOpen);
-};
 
 // absolute x relative to canvas
 DirectoryView.prototype.x = function() {
@@ -263,13 +228,17 @@ DirectoryView.prototype.setHeight = function(h) {
 
 DirectoryView.prototype.setClip = function(x,y,dx,dy) {
 	var self = this;
-	//console.log("setClip", self._name, x, y, dx, dy);
 	self._x = x;
 	self._y = y;
 	self._dx = dx;
 	self._dy = dy;
+	//LOG("relative setClip", self._name, x, y, dx, dy);
+	LOG("setClip", self._name, self.y(), dy);
 }
 
+function LOG() {
+	console.log.apply(console, arguments);
+}
 
 function ASSERT(cond) {
 	if (!cond) {

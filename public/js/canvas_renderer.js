@@ -1,5 +1,27 @@
 'use strict'
 
+var COLORS = {
+ FILES_BACKGROUND: 	'#F0DAA4', 	// goldenrod
+ REPO_BACKGROUND: 	'#A2BCCD', 	// light blue
+ REPO: 				'#8296A4', 	// medium blue
+ DIFF: 				'#424D54',	// blue-black
+ DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
+};
+
+var MARGIN = 5;
+
+var FONT_NORMAL = {
+	'name': '8px Helvetica',
+	'height': 8,
+	'color': 'black'
+};
+
+var FONT_LARGE = {
+	'name': '12px Helvetica',
+	'height': 12,
+	'color': 'black'
+};
+
 var CanvasRenderer = function(range_data, history_data, diffs) {
 	var self = this;
 	this._range = range_data; // {'filename': size, }
@@ -19,19 +41,21 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
-	this._yAxis = {}; // filename to offset in lines
-	this._maxLineCount = 0;
+	this._yAxis = {}; // filename => y-coord in pixels of top of file
+	this._pixelsPerLine = 1;
 
 	this._fromCommit = 0;
 	this._toCommit = diffs.length-1;
 	this._files = Object.keys(range_data); // sorted in display order, top-to-bottom
 	this._selectedFile = "";
 	this._filter = "";
+	this._closedDirs = {};
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	$("#filenames").dblclick(this.filesDoubleClick.bind(this));
+	//$("#filenames").click(this.filesClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
 
 	console.log("calculateLayout");
@@ -64,37 +88,74 @@ CanvasRenderer.prototype.onFilterClick = function() {
 CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
 
-	this._files.sort(function (a, b) {
+	self._files.sort(function (a, b) {
 		return a.toLowerCase().localeCompare(b.toLowerCase());
 	});
 
+	var visibleLines = 0;
 
-	self._maxLineCount = 0;
-	
-	this._files.forEach(function(file) {
-		self._yAxis[file] = self._maxLineCount;
-		self._maxLineCount += self._range[file];
+	self._files.forEach(function(file) {
+		if (self.isVisible(file) && !self.isDir(file)) {
+			visibleLines += self._range[file];
+		}
 	});
 
+	// count up the rolled-up directories that are visible
+	var closedDirs = [];
+	Object.keys(self._closedDirs).forEach(function(dir) {
+		if (self.isVisible(dir)) {
+			closedDirs.push(dir);
+		}
+	});
+
+	var pixelsPerDir = FONT_NORMAL.height;
+	self._pixelsPerLine = (self._height - closedDirs.length * pixelsPerDir)/visibleLines;
+
+	var yCoord = 0;
+	self._yAxis = {};
+	self._files.forEach(function(file) {
+		self._yAxis[file] = yCoord;
+		if (self.isDir(file)) {
+			yCoord += pixelsPerDir;
+			//self._range[file] = pixelsPerDir;
+		} else {
+			yCoord += self._range[file] * self._pixelsPerLine;
+		}
+	});
 };
+
+
+CanvasRenderer.prototype.isDir = function(filename) {
+	return filename.endsWith('/');
+}
+
+CanvasRenderer.prototype.isVisible = function(filename) {
+	var self = this;
+	var parts = filename.split('/');
+	var dirname = "";
+	for (var i=0; i < parts.length; i++) {
+		dirname += parts[i] + '/';
+		if (self._closedDirs.hasOwnProperty(dirname)) {
+			return false;
+		}
+	}
+	return true;
+}
 
 CanvasRenderer.prototype.render = function() {
 	var self = this;
-	console.log("renderFilenames");
 	self.renderFilenames();
-	console.log("renderHistory");
 	self.renderHistory();
-	console.log("done");
 };
 
 CanvasRenderer.prototype.renderFilenames = function() {
 	var self = this;
-	self._filesContext.fillStyle = '#F0DAA4';
-	self._filesContext.strokeStyle = '#F0DAA4';
+	self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
+	self._filesContext.strokeStyle = COLORS.FILES_BACKGROUND;
 	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
 	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
-	var fontHeight = 8; // TODO: initialize this somehow
+	var fontHeight = FONT_NORMAL.height; // TODO: initialize this somehow
 	var y = self._height + fontHeight;
 	var filecount = self._files.length;
 
@@ -106,7 +167,7 @@ CanvasRenderer.prototype.renderFilenames = function() {
 			y = nextShouldBeAt;
 			self._filesContext.strokeStyle = 'black';
 			self._filesContext.fillStyle = 'black';
-			self._filesContext.font = "8px Helvetica";
+			self._filesContext.font = FONT_NORMAL.name;
 			self._filesContext.fillText(filename, 5, y);
 		}
 	}		
@@ -120,33 +181,33 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 	if (self._selectedCommitIndex >= 0 && self._fromCommit != self._toCommit) {
 		var diff = self._diffs[self._selectedCommitIndex];
 		Object.keys(diff.diffs).forEach(function(filename) {
-			fontHeight = 8;
+			fontHeight = FONT_NORMAL.height;
 			var y = self.fileYMiddle(filename) - fontHeight/2 - 2;
 
 			self._filesContext.beginPath();
-			self._filesContext.fillStyle = '#F0DAA4';
+			self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
 			self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 4);
 
 			self._filesContext.beginPath();
 			self._filesContext.fillStyle = 'red';
-			self._filesContext.font = "8px Helvetica";
+			self._filesContext.font = FONT_NORMAL.height;
 			self._filesContext.fillText(filename, 10, y);
 		});
 	}
 
 	var filename = self._selectedFile;
 	if (filename) {
-		fontHeight = 12; // TODO: initialize this somehow
+		fontHeight = FONT_LARGE.height; // TODO: initialize this somehow
 		var y = self.fileYMiddle(filename) - fontHeight/2 - 4;
 		self._filesContext.beginPath();
-		self._filesContext.fillStyle = '#F0DAA4';
+		self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
 		self._filesContext.strokeStyle = 'black';
 		self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 8);
 		self._filesContext.rect(0, y, self._filesWidth, fontHeight + 8);
 		self._filesContext.stroke();
 
 		self._filesContext.fillStyle = 'black';
-		self._filesContext.font = "12px Helvetica";
+		self._filesContext.font = FONT_LARGE.name;
 		self._filesContext.fillText(filename, 5, self.fileYMiddle(filename) + fontHeight/2);
 	}
 }
@@ -160,17 +221,29 @@ CanvasRenderer.prototype.renderHistory = function() {
 	});
 };
 
+// in pixels
 CanvasRenderer.prototype.fileYTop = function(filename) {
 	var self = this;
-	return (self._yAxis[filename]*self._height)/self._maxLineCount;
+	return self._yAxis[filename];
 };
 
+// in pixels
 CanvasRenderer.prototype.fileYBottom = function(filename) {
 	var self = this;
-	var max_lines = self._range[filename];
-	return self.fileYTop(filename) + (max_lines * self._height)/self._maxLineCount;
+	return self.fileYTop(filename) + self.fileHeight(filename);
 };
 
+// in pixels
+CanvasRenderer.prototype.fileHeight = function(filename) {
+	var self = this;
+	if (self.isDir(filename)) {
+		return FONT_NORMAL.height;
+	} else {
+		return (self._range[filename] * self._pixelsPerLine);
+	}
+};
+
+// in pixels
 CanvasRenderer.prototype.fileYMiddle = function(filename) {
 	var self = this;
 	return (self.fileYBottom(filename) + self.fileYTop(filename))/2;
@@ -180,27 +253,28 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	var self = this;
 
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
-	var total_height = (self._range[filename] * self._height)/self._maxLineCount;
 
-	var y = self.fileYTop(filename);
+	var fileTop = self.fileYTop(filename);
+	var maxFileHeight = self.fileHeight(filename);
 
-	self._context.fillStyle = '#A2BCCD';
-	self._context.fillRect(0,y, self._width, total_height);
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._context.fillRect(0, fileTop, self._width, maxFileHeight);
 
+	var maxFileLen = self._range[filename];
 	var x = self._width - commit_width;
 
 	for (var index=self._fromCommit; index <= self._toCommit; index++) {
 		var commit = self._history[index]; // {commit:, tree: {'file':32, ...}}
-		var size = commit.tree.hasOwnProperty(filename) 
+		var fileLenAtCommit = commit.tree.hasOwnProperty(filename) 
 						? commit.tree[filename] : 0;
-		var dy = (size*self._height)/self._maxLineCount;
+		var dy = (fileLenAtCommit*maxFileHeight)/maxFileLen;
 		if (filename === self._selectedFile) {
 			self._context.fillStyle = "grey";
 		} else {
-			self._context.fillStyle = '#8296A4';
+			self._context.fillStyle = COLORS.REPO;
 		}
 		self._context.fillRect(x,
-			y,
+			fileTop,
 			commit_width,
 			dy
 		);
@@ -247,27 +321,29 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 	var diff = self._diffs[diff_index];
 
-	self._context.fillStyle = '#424D54';
+	self._context.fillStyle = COLORS.DIFF;
 	if (self._selectedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
-		self._context.fillStyle = '#FFFFD5';
+		self._context.fillStyle = COLORS.DIFF_HIGHLIGHT;
 		//self.renderDiffContent();
 	}
+
+	var fileTop = self.fileYTop(filename);
+	var file_y = self.fileYTop(filename);
+	var fileHeight = self.fileHeight(filename);
+	var fileLen = self._range[filename];
 
 	var x = commit_width * (self._toCommit - diff_index);
 
 	if (diff.diffs.hasOwnProperty(filename)) {
 		var edits = diff.diffs[filename].summary;
-		var file_begin = self._yAxis[filename];
-		var filelen = self._range[filename];
-		var file_y = (file_begin*self._height)/self._maxLineCount;
-		var file_dy = filelen/self._maxLineCount;
+
 		edits.forEach(function(edit) { // "+1,9"
 			var parts = edit.split(",");
 			var linenum = parseInt(parts[0].slice(1));
-			var len = parseInt(parts[1]);
-			var dy =  (len*self._height)/self._maxLineCount;
-			var y = ((file_begin+linenum)*self._height)/self._maxLineCount;
+			var editLen = parseInt(parts[1]);
+			var dy =  (editLen*fileHeight)/fileLen;
+			var y = fileTop + (linenum * fileHeight)/fileLen;
 
 			self._context.fillRect(x,
 				y,
@@ -325,6 +401,32 @@ CanvasRenderer.prototype.filesDoubleClick = function(event) {
 		$("#filter_input").val(self._selectedFile);
 		self.onFilterClick();
 	}
+};
+
+CanvasRenderer.prototype.filesClick = function(event) {
+	var self = this;
+	if (self._selectedFile) {
+		var parts = self._selectedFile.split('/');
+		parts.pop();
+		var dir = parts.join('/') + '/';
+		self._closedDirs[dir] = true;
+
+		var dirIndex=-1;
+		self._files = self._files.filter(function(file, index) {
+			if (!self.isVisible(file)) {
+				if (dirIndex < 0) {
+					dirIndex = index;
+				}
+				return false;
+			}
+			return true;
+		});
+		self._files.splice(dirIndex, 0, dir);
+
+		self.calculateLayout();
+		self.render();
+	}
+
 };
 
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
@@ -391,11 +493,6 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 	}
 };
 
-CanvasRenderer.prototype.filePixelOffset = function(filename) {
-	var self = this;
-	return (self._yAxis[filename] * self._height) / self._maxLineCount;
-};
-
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var self = this;
@@ -406,7 +503,7 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 
 	while (next_index - index > 1) {
 		var bisect_index = Math.round((next_index+index)/2);
-		var bisect_offset = self.filePixelOffset(self._files[bisect_index]);
+		var bisect_offset = self.fileYTop(self._files[bisect_index]);
 
 		if (y <= bisect_offset) {
 			next_index = bisect_index;

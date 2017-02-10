@@ -65,9 +65,10 @@ app.get('/', function(req, res) {
 				repo_data: data,
 				scripts: [
 					{ path: "/js/canvas_renderer.js" },
-					{ path: "/js/renderer.js" },
-					{ path: "/js/directory_view.js" },
-					{ path: "/js/file_view.js" },
+					//{ path: "/js/renderer.js" },
+					//{ path: "/js/repoModel.js" },
+					//{ path: "/js/directory_view.js" },
+					//{ path: "/js/file_view.js" },
 					{ path: "/js/view.js" }
 				]
 			});
