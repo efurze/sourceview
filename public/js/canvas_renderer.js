@@ -7,8 +7,8 @@ var COLORS = {
  DIFF: 				'#424D54',	// blue-black
  DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
 
- REPO_DIR: 			'#efa764', 	// medium blue
- DIFF_DIR: 			'#cc6506',	// blue-black
+ REPO_DIR: 			'#AD3232', 	// 
+ DIFF_DIR: 			'#561919',	// 
 };
 
 var MARGIN = 5;
@@ -25,7 +25,14 @@ var FONT_LARGE = {
 	'color': 'black'
 };
 
+var FONT_DIR = {
+	'name': '12px Helvetica',
+	'height': 12,
+	'color': 'BLUE'
+};
+
 var CanvasRenderer = function(range_data, history_data, diffs) {
+	console.log("CanvasRenderer()");
 	var self = this;
 	this._range = range_data; // {'filename': size, }
 	this._history = history_data; // indexed by commit
@@ -61,6 +68,13 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	$("#filenames").click(this.filesClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
 
+
+	// collapse all dirs
+	self._files.forEach(function(filename) {
+		self.closeFile(filename);
+	});
+
+
 	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
@@ -76,6 +90,15 @@ CanvasRenderer.prototype.onFilterClick = function() {
 
 	
 	self._filter = $("#filter_input").val();
+	self.calculateLayout();
+	self.render();
+	
+};
+
+CanvasRenderer.prototype.calculateLayout = function() {
+	console.log("calculateLayout()");
+	var self = this;
+
 	self._files = Object.keys(self._range)
 					.filter(function(filename) {
 						if (!self._filter || self._filter === "") {
@@ -83,17 +106,10 @@ CanvasRenderer.prototype.onFilterClick = function() {
 						}
 						return filename.startsWith(self._filter);
 					});
-	self.calculateLayout();
-	self.render();
-	
-};
-
-CanvasRenderer.prototype.calculateLayout = function() {
-	var self = this;
 
 	// filter out descendants of closed dirs
 	var closedDirsHash = {};
-	self._files = Object.keys(self._range).filter(function(file) {
+	self._files = self._files.filter(function(file) {
 		if (!self.isVisible(file)) {
 			var visibleDir = self.visibleAncestor(file);
 			if (!closedDirsHash.hasOwnProperty(visibleDir)) {
@@ -123,7 +139,7 @@ CanvasRenderer.prototype.calculateLayout = function() {
 		}
 	});
 
-	var pixelsPerDir = FONT_NORMAL.height;
+	var pixelsPerDir = FONT_DIR.height;
 	self._pixelsPerLine = (self._height - closedDirs.length * pixelsPerDir)/visibleLines;
 
 	var yCoord = 0;
@@ -182,25 +198,34 @@ CanvasRenderer.prototype.render = function() {
 };
 
 CanvasRenderer.prototype.renderFilenames = function() {
+	console.log("renderFilenames");
 	var self = this;
 	self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
 	self._filesContext.strokeStyle = COLORS.FILES_BACKGROUND;
 	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
 	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
-	var fontHeight = FONT_NORMAL.height; // TODO: initialize this somehow
-	var y = self._height + fontHeight;
+
+	var y = self._height + FONT_NORMAL.height;
 	var filecount = self._files.length;
 
 	// Draw bottom-to-top so we elide the small files instead of the big ones
 	for (var i=1; i <= filecount; i++) {
 		var filename = self._files[filecount - i];
-		var nextShouldBeAt = self.fileYMiddle(filename) + fontHeight/2;
-		if (nextShouldBeAt <= y - fontHeight) {
+		var font = self.isDir(filename) ? FONT_DIR : FONT_NORMAL;
+		var nextShouldBeAt = self.fileYMiddle(filename) + font.height/2;
+		if (nextShouldBeAt <= y - font.height || self.isDir(filename)) {
 			y = nextShouldBeAt;
-			self._filesContext.strokeStyle = 'black';
-			self._filesContext.fillStyle = 'black';
-			self._filesContext.font = FONT_NORMAL.name;
+
+			if (self.isDir(filename)) {
+				self._filesContext.beginPath();
+				self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
+				self._filesContext.fillRect(0, y, self._filesWidth, font.height + 4);
+			}
+
+			self._filesContext.strokeStyle = font.color;
+			self._filesContext.fillStyle = font.color;
+			self._filesContext.font = font.name;
 			self._filesContext.fillText(filename, 5, y);
 		}
 	}		
@@ -209,7 +234,7 @@ CanvasRenderer.prototype.renderFilenames = function() {
 CanvasRenderer.prototype.highlightFilenames = function() {
 	var self = this;
 	var fontHeight;
-
+/*
 	// files in this diff
 	if (self._selectedCommitIndex >= 0 && self._fromCommit != self._toCommit) {
 		var diff = self._diffs[self._selectedCommitIndex];
@@ -227,25 +252,26 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 			self._filesContext.fillText(filename, 10, y);
 		});
 	}
-
+*/
 	var filename = self._selectedFile;
 	if (filename) {
-		fontHeight = FONT_LARGE.height; // TODO: initialize this somehow
-		var y = self.fileYMiddle(filename) - fontHeight/2 - 4;
+		var font = self.isDir(filename) ? FONT_DIR : FONT_LARGE;
+		var y = self.fileYMiddle(filename) - font.height/2 - 4;
 		self._filesContext.beginPath();
 		self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
-		self._filesContext.strokeStyle = 'black';
-		self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 8);
-		self._filesContext.rect(0, y, self._filesWidth, fontHeight + 8);
+		self._filesContext.strokeStyle = font.color;
+		self._filesContext.fillRect(0, y, self._filesWidth, font.height + 8);
+		self._filesContext.rect(0, y, self._filesWidth, font.height + 8);
 		self._filesContext.stroke();
 
-		self._filesContext.fillStyle = 'black';
-		self._filesContext.font = FONT_LARGE.name;
-		self._filesContext.fillText(filename, 5, self.fileYMiddle(filename) + fontHeight/2);
+		self._filesContext.fillStyle = font.color;
+		self._filesContext.font = font.name;
+		self._filesContext.fillText(filename, 5, self.fileYMiddle(filename) + font.height/2);
 	}
 }
 
 CanvasRenderer.prototype.renderHistory = function() {
+	console.log("renderHistory");
 	var self = this;
 
 	self._files.forEach(function(filename) {
@@ -270,7 +296,7 @@ CanvasRenderer.prototype.fileYBottom = function(filename) {
 CanvasRenderer.prototype.fileHeight = function(filename) {
 	var self = this;
 	if (self.isDir(filename)) {
-		return FONT_NORMAL.height;
+		return FONT_DIR.height;
 	} else {
 		return (self._range[filename] * self._pixelsPerLine);
 	}
@@ -281,7 +307,7 @@ CanvasRenderer.prototype.fileHeight = function(filename) {
 CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	var self = this;
 	if (self.isDir(filename)) {
-		return FONT_NORMAL.height;
+		return FONT_DIR.height;
 	} else {
 		if (self._history[commit_index].tree.hasOwnProperty(filename)) {
 			return (self._history[commit_index].tree[filename] * self._pixelsPerLine);
@@ -469,22 +495,27 @@ CanvasRenderer.prototype.filesDoubleClick = function(event) {
 CanvasRenderer.prototype.filesClick = function(event) {
 	var self = this;
 	if (self._selectedFile) {
-		if (self.isDir(self._selectedFile)) {
-			if (self._closedDirs.hasOwnProperty(self._selectedFile)) {
-				delete self._closedDirs[self._selectedFile];
-			}
+		if (self.isDir(self._selectedFile)
+			&& self._closedDirs.hasOwnProperty(self._selectedFile)) {
+			delete self._closedDirs[self._selectedFile];
 		} else {
-			var parts = self._selectedFile.split('/');
-			parts.pop();
-			var dir = parts.join('/') + '/';
-			self._closedDirs[dir] = true;
+			self.closeFile(self._selectedFile);
 		}
-
 		self.calculateLayout();
 		self.render();
 	}
 
 };
+
+CanvasRenderer.prototype.closeFile = function(filename) {
+	var self = this;
+	if (!self.isDir(filename)) {
+		var parts = filename.split('/');
+		parts.pop();
+		var dir = parts.join('/') + '/';
+		self._closedDirs[dir] = true;
+	}
+}
 
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
