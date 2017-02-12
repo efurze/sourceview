@@ -1,17 +1,25 @@
 var Git = require('./controllers/git.js');
-var git = new Git('/Users/efurze/repos/sourceview');
+var git = new Git('/Users/efurze/repos/git');
 var Util = require('./controllers/git_util.js');
 var util = new Util(git);
-var repo = require('./controllers/repo.js');
-var Repo = new repo('/Users/efurze/repos/sourceview');
+var Repo = require('./controllers/repo.js');
+var repo = new Repo('/Users/efurze/repos/git');
 var Diff = require('./controllers/types/diff.js');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
 
+repo.fileSizesForRevision('e83c5163316f89bfbde7d9ab23ca2e25604af290')
+	.then(function(res) {
+		console.log(res);
+	});
+
+/*
 git.commitStat('1cce552cc2a7b0d2ed4a9941c233493810dfb4b5')
 	.then(function(stat) {
 		console.log(stat);
 	});
+*/
+
 
 /*
 util.buildTree('cbcdc7c66f7af2839314acdc54c74f8d945ea0bc')

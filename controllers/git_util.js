@@ -19,11 +19,16 @@ var Util = function (git) {
 
 	Oldest revision last
 */
+var MAX_REVSISIONS = 1000;
 Util.prototype.revWalk = function (branch_name) { 
 	var self = this;
 	return this.git.revList(branch_name)
 		.then(function(history) { // array of commit shas
-			return Promise.map(history, function(commit) {
+			if (history.length > MAX_REVSISIONS) {
+				history = history.slice(0, MAX_REVSISIONS);
+			}
+			return Promise.mapSeries(history, function(commit, index) {
+				status("Adding commit", index, '/', history.length);
 				return self.git.catFile(commit);
 			});
 		});

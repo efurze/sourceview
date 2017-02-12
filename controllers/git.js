@@ -1,5 +1,6 @@
 var Promise = require('bluebird');
 var diff = require('./types/diff.js');
+var Logger = require('../lib/logger.js');
 
 
 var parseCatFile = function(data, type, sha) {
@@ -114,6 +115,7 @@ Git.prototype.diff = function(sha1, sha2) {
 }
 */
 Git.prototype.commitStat = function(commit_sha) {
+	Logger.DEBUG("commitStat", commit_sha, Logger.CHANNEL.GIT);
 	var self = this;
 	var args = [];
 	args.push('4b825dc642cb6eb9a060e54bf8d69288fbee4904'); // null tree
@@ -134,7 +136,19 @@ Git.prototype.commitStat = function(commit_sha) {
 		});
 };
 
+Git.prototype.revList = function() {
+	var self = this;
 
+	return self._git.logAsync()
+		.then(function(log) {
+			status("Found " + log.all.length + " commits");
+			return log.all.map(function(commit) {
+				return commit.hash;
+			});
+		});
+};
+
+/*
 // @ref: SHA or branch/tag name ('master', 'HEAD', etc)
 Git.prototype.revList = function(ref) {
 	var self = this;
@@ -167,7 +181,7 @@ Git.prototype.revList = function(ref) {
 	doRevList(ref, history);
 
 	return promise;
-};
+};*/
 
 var status = function() {
 	console.log.apply(console, arguments);

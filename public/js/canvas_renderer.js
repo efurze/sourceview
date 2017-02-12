@@ -74,8 +74,6 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 		self.closeFile(filename);
 	});
 
-
-	console.log("calculateLayout");
 	this.calculateLayout();
 	this.render();
 };

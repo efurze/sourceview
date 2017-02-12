@@ -83,7 +83,6 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 	return self._util.revWalk(branch_name)
 		.then(function(history) { // array of commits, most recent first
 			status("Creating FizeSizeHistory for", history.length, "revisions");
-			Logger.DEBUG("revList", JSON.stringify(history), Logger.CHANNEL.REPO);
 			var current_rev = history.pop();
 			var initial_commit = current_rev.id;
 			history.reverse();
@@ -123,6 +122,7 @@ Repo.prototype.fileSizeHistory = function(branch_name) { // eg 'master'
 // returns hash of: {filepath => filelength}
 Repo.prototype.fileSizesForRevision = function(commit_id) {
 	status("Building initial tree");
+	Logger.DEBUG("fileSizesForRevision", commit_id, Logger.CHANNEL.REPO);
 	var self = this;
 	return self._git.commitStat(commit_id);
 };
