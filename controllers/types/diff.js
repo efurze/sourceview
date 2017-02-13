@@ -230,7 +230,7 @@ Diff.prototype._parseStr = function(diffstr) {
 }
 
 Diff.prototype.filenames = function() {
-	return Object.keys(this._parsed);
+	return this._parsed ? Object.keys(this._parsed) : [];
 }
 
 Diff.prototype.summary = function(filename) {
