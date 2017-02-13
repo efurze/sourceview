@@ -97,18 +97,54 @@ Git.prototype.diff = function(sha1, sha2) {
 		sha1 = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 	}
 
-	var resolve;
+	return self._exec("diff", sha1, sha2);
+/*
+
+exec: git diff --gir-dir=/Users/efurze/repos/git/.git --work-tree=/Users/efurze/repos/git 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
+exec: git --git-dir="/Users/efurze/repos/git/.git" diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
+      git --git-dir="/Users/efurze/repos/git/.git" diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
+
+	var resolve, reject;
 	var promise = new Promise(function(res, rej) {
 		resolve = res;
+		reject = rej;
 	});
 
-	exec('git --git-dir="' + self._path + '/.git" diff '
-			+ sha1 + " " + sha2, function(err, stdout, stderr) {
-				resolve(new diff(stdout));
+	var cmd = 'git --git-dir="' + self._path + '/.git" diff '
+                       + sha1 + " " + sha2;
+    console.log(cmd);
+	exec(cmd, function(err, stdout, stderr) {
+                              resolve(new diff(stdout));
+                          });
+
+	return promise;
+*/
+};
+
+Git.prototype._exec = function(command, args) {
+	var self = this;
+	var cmd = 'git' + ' --git-dir="' + self._path + '/.git" '  + command; //" --work-tree='" + self._path + "'";
+	for(var i=1; i < arguments.length; i++) {
+		cmd += ' ' + arguments[i];
+	}
+
+	var resolve, reject;
+	var promise = new Promise(function(res, rej) {
+		resolve = res;
+		reject = rej;
+	});
+
+	console.log("exec:", cmd);
+	exec(cmd, function(err, stdout, stderr) {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(new diff(stdout));
+				}
 			});
 
 	return promise;
-};
+}
 
 /*
 exec('git --git-dir="/Users/efurze/repos/git/.git" diff '
@@ -162,6 +198,32 @@ Git.prototype.revList = function() {
 			return log.all.map(function(commit) {
 				return commit.hash;
 			});
+		});
+};
+
+/*
+log = {
+  all: 
+   [ ListLogLine {
+       hash: 'a4f45465339f1d17c662d26758367f8231dd1726',
+       date: '2017-02-13 12:25:56 -0800',
+       message: 'Diff using exec() instead of simple-git. Much faster. (HEAD, master)',
+       author_name: 'Eric Furze',
+       author_email: 'efurze@yahoo-inc.com' },
+     ListLogLine {
+       hash: '86fdfb693db779dd199aa612e404544503da3619',
+       date: '2017-02-11 19:24:23 -0800',
+       message: 'Use git log to build revision history',
+       author_name: 'Eric Furze',
+       author_email: 'efurze@yahoo-inc.com' },
+*/
+Git.prototype.log = function() {
+	var self = this;
+
+	return self._git.logAsync(["--date=raw"])
+		.then(function(log) {
+			status("Found " + log.all.length + " commits");
+			return log;
 		});
 };
 

@@ -4,15 +4,39 @@ var Util = require('./controllers/git_util.js');
 var util = new Util(git);
 var Repo = require('./controllers/repo.js');
 var repo = new Repo('/Users/efurze/repos/git');
+
+var Digest = require('./controllers/digest.js');
+var digest = new Digest('/Users/efurze/repos/git');
+
 var Diff = require('./controllers/types/diff.js');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
+var Promise = require('bluebird');
+var exec = require('child_process').exec;
 
-repo.fileSizesForRevision('e83c5163316f89bfbde7d9ab23ca2e25604af290')
-	.then(function(res) {
-		console.log(res);
+/*
+git.revList('master')
+	.then(function(history) {
+		history = history.slice(0, 100);
+		Promise.each(history, function(id, index) {
+			if (index == 0) {
+				return;
+			}
+			console.log(index+1, '/100', id);
+			return git.diff(history[index-1], id)
+				.then(function(diff) {
+					console.log(diff._summary);
+				});
+		});
 	});
-
+*/
+digest.buildBranchInfo('master');
+/*
+git.log()
+	.then(function(log) {
+		console.log(log);
+	});
+*/
 /*
 git.commitStat('1cce552cc2a7b0d2ed4a9941c233493810dfb4b5')
 	.then(function(stat) {
