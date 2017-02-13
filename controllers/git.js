@@ -1,7 +1,7 @@
 var Promise = require('bluebird');
 var diff = require('./types/diff.js');
 var Logger = require('../lib/logger.js');
-
+var exec = require('child_process').exec;
 
 var parseCatFile = function(data, type, sha) {
 	var ret = {
@@ -60,6 +60,7 @@ var parseCatFile = function(data, type, sha) {
 
 var Git = function(path) {
 	var gitSync = require('simple-git')(path);
+	this._path = path;
 	this._git = Promise.promisifyAll(gitSync);
 };
 
@@ -77,6 +78,7 @@ Git.prototype.catFile = function(id) {
 			return self._git.catFileAsync(['-t', sha])
 				.then(function(obj_type) {
 					type = obj_type.trim();
+
 					return self._git.catFileAsync(['-p', sha]);
 				}).then(function(data) {
 					return parseCatFile(data, type, sha);
@@ -90,16 +92,31 @@ Git.prototype.catFile = function(id) {
 
 Git.prototype.diff = function(sha1, sha2) {
 	var self = this;
-	var args = [sha1];
-	if (sha2) {
-		args.push(sha2);
+	if (!sha2) {
+		sha2 = sha1;
+		sha1 = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 	}
-	args.push('-U0');
-	return self._git.diffAsync(args)
-		.then(function(diffstr) {
-			return new diff(diffstr);
-		});
+
+	var resolve;
+	var promise = new Promise(function(res, rej) {
+		resolve = res;
+	});
+
+	exec('git --git-dir="' + self._path + '/.git" diff '
+			+ sha1 + " " + sha2, function(err, stdout, stderr) {
+				resolve(new diff(stdout));
+			});
+
+	return promise;
 };
+
+/*
+exec('git --git-dir="/Users/efurze/repos/git/.git" diff '
+				+ history[index-1] + " " + id, function(err, stdout, stderr) {
+					//console.log(stdout);
+					resolve();
+				});
+*/
 
 /*
 	Pass in a commit id, returns filesize hash:
