@@ -97,13 +97,6 @@ Git.prototype.diff = function(sha1, sha2) {
 		sha1 = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 	}
 
-	return self._exec("diff", sha1, sha2);
-/*
-
-exec: git diff --gir-dir=/Users/efurze/repos/git/.git --work-tree=/Users/efurze/repos/git 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
-exec: git --git-dir="/Users/efurze/repos/git/.git" diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
-      git --git-dir="/Users/efurze/repos/git/.git" diff 4b825dc642cb6eb9a060e54bf8d69288fbee4904 b1421a43d5e28d71dc89b99877c3fbcb845aae08
-
 	var resolve, reject;
 	var promise = new Promise(function(res, rej) {
 		resolve = res;
@@ -112,13 +105,11 @@ exec: git --git-dir="/Users/efurze/repos/git/.git" diff 4b825dc642cb6eb9a060e54b
 
 	var cmd = 'git --git-dir="' + self._path + '/.git" diff '
                        + sha1 + " " + sha2;
-    console.log(cmd);
 	exec(cmd, function(err, stdout, stderr) {
                               resolve(new diff(stdout));
                           });
 
 	return promise;
-*/
 };
 
 Git.prototype._exec = function(command, args) {
@@ -139,7 +130,7 @@ Git.prototype._exec = function(command, args) {
 				if (err) {
 					reject(err);
 				} else {
-					resolve(new diff(stdout));
+					resolve(stdout);
 				}
 			});
 
@@ -220,10 +211,9 @@ log = {
 Git.prototype.log = function() {
 	var self = this;
 
-	return self._git.logAsync(["--date=raw"])
+	return self._git.logAsync()
 		.then(function(log) {
-			status("Found " + log.all.length + " commits");
-			return log;
+			return log.all;
 		});
 };
 
