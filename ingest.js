@@ -1,18 +1,14 @@
 var git = require('./controllers/git.js');
-var Repo = require('./controllers/repo.js');
+var Digest = require('./controllers/digest.js');
 let Logger = require('./lib/logger.js');
 
 
 
-var ingest = function(dir) {
-	var repo = new Repo(dir);
-	repo.buildCommitHistory('master');
+var ingest = function(dir, max) {
+	var digest = new Digest(dir);
+	digest.buildBranchInfo('master', max);
 };
 
-var diff = function(dir) {
-	var repo = new Repo(dir);
-	repo.buildDiffHistory('master');
-};
 
 // process.argv[0] == node
 // process.argv[1] == process.js
@@ -20,10 +16,14 @@ var diff = function(dir) {
 var repo = process.argv[2];
 console.log("Reading repository at " + repo);
 
-if (process.argv.length > 3 && process.argv[3] === "-diff") {
-	console.log("building diff history only")
-	diff(repo);
-} else {
-	ingest(repo);
+var max = 0;
+if (process.argv.length > 3 && process.argv[3].startsWith("-max")) {
+	var parts = process.argv[3].split('=')
+	if (parts.length > 1) {
+		max = parseInt(parts[1]);
+		console.log("Limiting ingestion to", max, "commits");
+	}
 }
+
+ingest(repo, max);
 

@@ -6,8 +6,6 @@ var Git = require('../controllers/git.js');
 git = new Git('/Users/efurze/repos/sourceview');
 var Util = require('../controllers/git_util.js');
 var util = new Util(git);
-var Repo = require('../controllers/repo.js');
-var repo = new Repo(__dirname + '/..');
 
 let first_diff = {
     "views/index.hbs": 8,
@@ -48,7 +46,7 @@ describe('diff test', function() {
     });
     done();
   });
-
+/*
   it('should calculate first 8 diffs', function(done) {
     repo.diffHistory('88d3a143dd95071ad609d76d97c5c036a2d1673a')
         .then(function(history) { 
@@ -63,6 +61,7 @@ describe('diff test', function() {
             done();
         });
   });
+*/
 });
 
 

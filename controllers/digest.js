@@ -19,9 +19,9 @@ var Digest = function(path) {
 	this._persist = new Persist(this._repoName);
 };
 
-Digest.prototype.buildBranchInfo = function(branch_name) {
+Digest.prototype.buildBranchInfo = function(branch_name, max) {
 	var self = this;
-	self.getRevisionHistory(branch_name)
+	self.getRevisionHistory(branch_name, max)
 		.then(function(history) {
 			history.reverse();
 			return self.crawlHistory(branch_name, history);
@@ -80,13 +80,17 @@ Digest.prototype.crawlHistory = function(branch_name, history) { // eg 'master'
 
 
 // returns array of commit ids
-Digest.prototype.getRevisionHistory = function(branch_name) {
+Digest.prototype.getRevisionHistory = function(branch_name, max) {
 	var self = this;
 	status("Building revision history for", branch_name);
 	return self._git.log(branch_name)
 		.then(function(history) { // array of commits, most recent first
 			status("Persisting revision history");
-			var max = Math.min(history.length, 100);
+			if (max > 0) {
+				max = Math.min(history.length, max);
+			} else {
+				max = history.length;
+			}
 			history = history.slice(history.length-max, history.length);
 			return self._persist.saveRevisionHistory(branch_name, history)
 				.then(function() {

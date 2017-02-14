@@ -1,8 +1,6 @@
 var chai = require('chai');
 var assert = chai.assert;
 var expect = chai.expect;
-var Repo = require('../controllers/repo.js');
-var repo = new Repo(__dirname + '/..');
 var Persist = require('../controllers/persist.js');
 var persist = new Persist('unittest');
 
@@ -38,7 +36,7 @@ var eighth_commit =  {
    'public/js/renderer.js': 36,
    'test.js': 35 
 };
-
+/*
 describe('saveFileSizeHistory', function() {
 	var loadedHistory;
 	it('should save and load fileSizeHistory', function(done) {
@@ -70,3 +68,4 @@ describe('saveFileSizeHistory', function() {
         });
     });
 });
+*/

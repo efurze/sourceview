@@ -16,7 +16,7 @@ module.exports = {
 		var data = {};
 		persist.getRevList(repo, 'master')
 			.then(function(history) {
-				data.commits = history.slice(0, 100);
+				data.commits = history;
 				return persist.sizeSnapshot(repo, data.commits);
 			}).then(function(sizes) {
 				data.size_history = sizes;
