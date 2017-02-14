@@ -1,0 +1,41 @@
+<div class="row, main-row">
+    <div class="col-md-2 text-center small-padding">
+        <canvas id="filenames" class="canvas"></canvas>
+    </div>
+    <div class="col-md-10 text-center small-padding" id="canvas_div">
+        <canvas id="repo_canvas" class="canvas"></canvas>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-2 text-left small-padding">
+        <input type="text" id="filter_input">  
+        <button id="filter_button" type="button">Filter</button>
+    </div>
+    <div class="col-md-10 text-center small-padding">
+        <div id="commit_info"></div>
+    </div>
+</div>
+<textarea id="code_textarea"></textarea>
+<script>
+	$(document).ready(function() {
+
+        // this is required to make the canvas fill the entire div
+
+        var c = $("#repo_canvas");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
+        c = $("#filenames");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
+        c = $("#directories");
+        var container = $(c).parent();
+        c.attr('width', $(container).width());
+        c.attr('height', $(container).height());
+
+		RangeView.init({{{commits}}}, {{{size_history}}}, {{{diff_summaries}}});
+	});
+</script>

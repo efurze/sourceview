@@ -11,7 +11,14 @@ $(function() {
 			diffs.forEach(function(diff) {
 				diff.diffs = JSON.parse(diff.diffs);
 			});
-			View._renderer = new CanvasRenderer(range_data, history_data, diffs);
+
+			var revList = diffs.map(function(diff) {
+				return diff.commit.id;
+			});
+			var model = new RepoModel();
+			model.setData(history_data, diffs);	
+
+			View._renderer = new CanvasRenderer(revList, model);
 		},
 
 	};

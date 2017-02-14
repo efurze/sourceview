@@ -1,6 +1,14 @@
 'use strict';
 
 
+var RepoModel = function() {
+	var self = this;
+	self._filesizes = {}; // commit_sha: {filename: length}
+	self._diffs = {}; // commit_sha: {filename: diff_summary}
+	self._commits = {}; // sha: {message:, date:, author_name:}
+	self._range = {}; // filname: length
+};
+
 /*
 @filesizes: [
 	{
@@ -31,20 +39,19 @@
 ...
 ]
 */
-var RepoModel = function(filesizes, diffs) {
+RepoModel.prototype.setData = function(filesizes, diffs) {
 	var self = this;
-	self._filesizes = {}; // commit_sha: {filename: length}
-	self._diffs = {}; // commit_sha: {filename: diff_summary}
-	self._commits = {}; // sha: {message:, date:, committer:}
-	self._range = {}; // filname: length
 
 	// make diffs commit indexed
 	diffs.forEach(function(diff) {
-		self._diffs[diff.commit.id] = diff.diffs;
+		self._diffs[diff.commit.id] = {};
+		Object.keys(diff.diffs).forEach(function(filename) {
+			self._diffs[diff.commit.id][filename] = diff.diffs[filename].summary;
+		});
 		self._commits[diff.commit.id] = {
 			'message': diff.commit.commit_msg,
 			'date': '',
-			'committer': ''
+			'author_name': ''
 		};
 	});
 
@@ -66,6 +73,65 @@ var RepoModel = function(filesizes, diffs) {
 
 	//self._data = new ModelNode('/', true, null);
 	//self._data.addChildren(Object.keys(filesizes.range));
+};
+
+
+/*
+
+	@commits: [
+		{
+			hash: <sha>,
+			date:
+			message:
+			author_name:
+			author_email:
+		},
+		...
+	]
+	
+	@size_history: {
+		commit_id: {
+			filename: length,
+			...
+		}
+		...
+	}
+	
+	@diff_summaries: {
+		commit_id: {
+			filename: ["-0,0", "+1, 23"],
+			...
+		}
+		...
+	}
+*/
+RepoModel.prototype.setRangeData = function(commits, size_history, diff_summaries) {
+	var self = this;
+	self._filesizes = size_history; // commit_sha: {filename: length}
+	self._diffs = diff_summaries; // commit_sha: {filename: diff_summary}
+	self._commits = {}; // sha: {message:, date:, author_name:}
+	self._range = {}; // filname: length
+
+	commits.forEach(function(commit) {
+		self._commits[commit.hash] = {
+			'message': commit.message,
+			'date:': commit.date,
+			'author_name': commit.author_name
+		};
+	});
+
+	// initialize range
+	Object.keys(self._filesizes).forEach(function(sha) {
+		var info = self._filesizes[sha];
+		Object.keys(info).forEach(function(filename) {
+			if (!self._range.hasOwnProperty(filename)) {
+				self._range[filename] = 0;
+			}
+			self._range[filename] = Math.max(self._range[filename], 
+											 info[filename]);
+		});
+	});
+
 };
 
 // returns full path of all filenames

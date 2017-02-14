@@ -4,6 +4,7 @@ var session = require('express-session');
 var bodyParser = require('body-parser');
 var path = require('path');
 var fs = require('fs');
+var dataController = require('./controllers/data_controller');
 var Promise = require('bluebird');
 Promise.promisifyAll(fs);
 
@@ -77,6 +78,7 @@ app.get('/', function(req, res) {
 		});	    
 });
 
+app.get('/range', dataController.requestRange);
 
 app.get('/diff', function(req, res) { 
 	res.render("diff");

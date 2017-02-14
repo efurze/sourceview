@@ -60,14 +60,12 @@ var FONT_DIR = {
 ...
 ]
 */
-var CanvasRenderer = function(range_data, history_data, diffs) {
+var CanvasRenderer = function(revList, model) {
 	console.log("CanvasRenderer()");
 	var self = this;
 	
-	this._revList = diffs.map(function(diff) {
-		return diff.commit.id;
-	});
-	this._model = new RepoModel(history_data, diffs);	
+	this._revList = revList;
+	this._model = model;
 
 	this._canvas = document.getElementById("repo_canvas");
 	this._context = this._canvas.getContext('2d');
@@ -86,7 +84,7 @@ var CanvasRenderer = function(range_data, history_data, diffs) {
 	this._pixelsPerLine = 1;
 
 	this._fromCommit = 0;
-	this._toCommit = diffs.length-1;
+	this._toCommit = this._revList.length-1;
 	this._files = this._model.getFilenames(); // sorted in display order, top-to-bottom
 	this._selectedFile = "";
 	this._filter = "";
@@ -451,7 +449,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 		var fileLen = self._model.fileMaxSize(filename);
 
 		if (diff_summary.hasOwnProperty(filename)) {
-			var edits = diff_summary[filename].summary;
+			var edits = diff_summary[filename];
 
 			edits.forEach(function(edit) { // "+1,9"
 				var parts = edit.split(",");

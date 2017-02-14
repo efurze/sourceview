@@ -6,13 +6,15 @@ var Repo = require('./controllers/repo.js');
 var repo = new Repo('/Users/efurze/repos/git');
 
 var Digest = require('./controllers/digest.js');
-var digest = new Digest('/Users/efurze/repos/git');
+var digest = new Digest('/Users/efurze/repos/linux');
 
 var Diff = require('./controllers/types/diff.js');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
 var Promise = require('bluebird');
 var exec = require('child_process').exec;
+
+var persist = require('./lib/persist.js');
 
 /*
 git.revList('master')
@@ -30,13 +32,26 @@ git.revList('master')
 		});
 	});
 */
+
 digest.buildBranchInfo('master');
+
+/*
+persist.getRevList('git', 'master')
+	.then(function(history) {
+		history.reverse();
+		history = history.slice(0, 1);
+		return persist.diffSummary('git', history);
+	}).then(function(history) {
+		console.log(history);
+	});
+*/
 /*
 git.log()
 	.then(function(log) {
 		console.log(log);
 	});
 */
+
 /*
 git.commitStat('1cce552cc2a7b0d2ed4a9941c233493810dfb4b5')
 	.then(function(stat) {
