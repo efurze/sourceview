@@ -16,6 +16,7 @@ var DIFF_FILE = 'diffhistory.json';
 var COMMIT_DIR = "/commits";
 var DIFF_DIR = "/diffs";
 var DIFF_SUMMARY_DIR = "/diff_summaries";
+var SIZE_DIR = "/sizes";
 
 var Persist = function(repo_name) {
 	var self = this;
@@ -33,6 +34,11 @@ var Persist = function(repo_name) {
     self._summaryDir = dir + DIFF_SUMMARY_DIR;
     if (!fs.existsSync(self._summaryDir)){
     	fs.mkdirSync(self._summaryDir);
+    }
+
+    self._sizeDir = dir + SIZE_DIR;
+    if (!fs.existsSync(self._sizeDir)){
+    	fs.mkdirSync(self._sizeDir);
     }
 };
 
@@ -55,6 +61,18 @@ Persist.prototype.saveCommit = function(id, commit) {
 	var filename = self._commitDir + '/' + id;
 	return fs.writeFileAsync(filename, JSON.stringify(commit));
 };
+
+Persist.prototype.saveFileSizeSnapshot = function(commit_id, sizes) {
+	var filename = this._sizeDir + '/' + commit_id;
+	return fs.writeFileAsync(filename, JSON.stringify(sizes));
+};
+
+
+
+
+
+//=====================================
+
 
 Persist.prototype.saveFileSizeHistory = function(branch, history) {
 	var filename = DATA_DIR + this._repoName + "/" + branch + "." + FILESIZE_FILE;
@@ -95,6 +113,9 @@ Persist.prototype.getFileSizeRange = function(branch) {
 */
 Persist.prototype.saveDiffHistory = function(branch, history) {
 	var filename = DATA_DIR + this._repoName + "/" + branch + "." + DIFF_FILE;
+	history.forEach(function(diff) {
+		diff.diffs = diff.diffs.toString();
+	});
 	return fs.writeFileAsync(filename, JSON.stringify(history));
 };
 
