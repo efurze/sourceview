@@ -1,0 +1,268 @@
+'use strict';
+
+
+/*
+@filesizes: [
+	{
+		commit: <sha>
+		tree: {
+			filename: length,
+			...
+		}
+	},
+	...
+]
+
+@diffs: [
+	{
+		commit: {
+			id: <sha>,
+			tree: <sha>,
+			commit_msg: <string>
+		},
+		diffs: {
+			filename: {
+				summary: ["-119,6","+119,7"],
+				raw: <diffstr>
+			}
+			...
+		}
+	},
+...
+]
+*/
+var RepoModel = function(filesizes, diffs) {
+	var self = this;
+	self._filesizes = filesizes;
+	self._diffs = diffs;
+	self._range = {};
+
+	// initialize range
+	filesizes.forEach(function(info) {
+		Object.keys(info.tree).forEach(function(filename) {
+			if (!self._range.hasOwnProperty(filename)) {
+				self._range[filename] = 0;
+			}
+			self._range[filename] = Math.max(self._range[filename], 
+											 info.tree[filename]);
+		});
+	});
+
+	//self._data = new ModelNode('/', true, null);
+	//self._data.addChildren(Object.keys(filesizes.range));
+};
+
+// returns full path of all filenames
+RepoModel.prototype.getFilenames = function() {
+	var self = this;
+	return Object.keys(self._range);
+}
+/*
+returns: {
+	filename: ["-119,6","+119,7" ...],
+	...
+}
+*/
+RepoModel.prototype.getDiffSummary = function(commit_index) {
+	var self = this;
+	return self._diffs[commit_index].diffs;
+}
+
+RepoModel.prototype.getCommitMsg = function(commit_index) {
+	var self = this;
+	return self._diffs[commit_index].commit.commit_msg;
+}
+
+RepoModel.prototype.fileMaxSize = function(filename) {
+	return this._range[filename];
+}
+
+RepoModel.prototype.fileSize = function(filename, commit_index) {
+	if (commit_index >= 0 && commit_index < this._filesizes.length
+		&& this._filesizes[commit_index].tree.hasOwnProperty(filename)) {
+		return this._filesizes[commit_index].tree[filename];
+	} else {
+		return 0;
+	}
+}
+
+// returns array of names
+RepoModel.prototype.getChildren = function(name) {
+	var self = this;
+	var children = [];
+	var node = self._getNode(name);
+	if (node) {
+		children = node.childNames();
+	}
+	return children;
+}
+
+RepoModel.prototype.visibleLineCount = function(name) {
+	var self = this;
+	var total = 0;
+
+	var node = self._getNode(name);
+	if (node) {
+		if (node._isOpen) {
+			if (self._filesizes.range.hasOwnProperty(name)) {
+				total += self._filesizes.range[name];
+			}
+
+			node.childNames().forEach(function(child) {
+				total += self.visibleLineCount(child);
+			});
+		}
+	}
+	ASSERT(!isNaN(total));
+	return total;
+};
+
+RepoModel.prototype._getNode = function(name) {
+	var self = this;
+	if (!name || name == "" || name == "/") {
+		// root node
+		return self._data;
+	}
+	var parts = name.split('/');
+	var node = self._data;
+	parts.forEach(function(dirname) {
+		if (node) {
+			node = node.getChild(dirname);
+		}
+	});
+	return node;
+}
+
+RepoModel.prototype.setOpen = function(name, isOpen) {
+	var self = this;
+	var node = self._getNode(name);
+	if (node) {
+		node._isOpen = isOpen;
+	}
+};
+
+RepoModel.prototype.toggleOpen = function(name) {
+	var self = this;
+	var node = self._getNode(name);
+	if (node) {
+		node._isOpen = !node._isOpen;
+	}
+};
+
+RepoModel.prototype.isOpen = function(name) {
+	var self = this;
+	var node = self._getNode(name);
+	if (node) {
+		return node._isOpen;
+	}
+	return false;
+};
+
+RepoModel.prototype.isDir = function(name) {
+	var self = this;
+	var node = self._getNode(name);
+	if (node) {
+		return node._isDir;
+	}
+	return false;
+};
+
+
+RepoModel.prototype.isVisible = function(name) {
+	var self = this;
+	var visible = false;
+	var node = self._getNode(name);
+	while (node) {
+		if (node._isDir && !node._isOpen) {
+			return false;
+		}
+		node = node._parent;
+	}
+	return true;
+};
+
+
+//-------------------------------------
+
+
+
+var ModelNode = function(name, isDir, parent) {
+	var self = this;
+	self._name = name;
+	self._isOpen = true;
+	self._isDir = isDir;
+	self._parent = parent;
+	self._children = {}; // name to ModelNode
+	//LOG("new ModelNode", self.getName());
+}
+
+ModelNode.prototype.getChildren = function() {
+	var self = this;
+	return Object.keys(self._children).map(function(name) {
+		return self._children[name];
+	});
+}
+
+ModelNode.prototype.childNames = function() {
+	var self = this;
+	return Object.keys(self._children).map(function(name) {
+		return self._children[name].getName();
+	});
+}
+
+ModelNode.prototype.getName = function() {
+	var self = this;
+	if (!self._parent) {
+		return "";
+	}
+
+	var name = self._parent.getName();
+	if (name.length) {
+		name += '/' + self._name;
+	} else {
+		name = self._name;
+	}
+	return name;
+}
+
+ModelNode.prototype.getChild = function(name) {
+	var self = this;
+	return self._children[name];
+} 
+
+ModelNode.prototype.addChildren = function(filenames) {
+	var self = this;
+
+	filenames.forEach(function(filename) {
+		self.addChild(filename);		
+	});
+};
+
+ModelNode.prototype.addChild = function(filename) {
+	var self = this;
+
+	var parts = filename.split('/');
+	var dirname = parts[0];
+	var dir = self._children[dirname] 
+		|| new ModelNode(dirname,  
+			parts.length > 1,
+			self);
+	if (!self._children.hasOwnProperty(dirname)) {
+		self._children[dirname] = dir;
+	}
+	if (parts.length > 1) {
+		// pop off the directory name
+		parts.shift();
+		dir.addChild(parts.join('/'));
+	}
+}
+
+function LOG() {
+	//console.log.apply(console, arguments);
+}
+
+function ASSERT(cond) {
+	if (!cond) {
+		debugger
+	}
+}
