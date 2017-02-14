@@ -339,7 +339,7 @@ CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	if (self.isDir(filename)) {
 		return FONT_DIR.height;
 	} else {
-		return (self._model.fileSize(filename, commit_index) 
+		return (self._model.fileSize(filename, self._revList[commit_index]) 
 			* self._pixelsPerLine);
 	}
 };
@@ -394,7 +394,7 @@ CanvasRenderer.prototype.renderDiff = function(diff_index) {
 	if (!diff_index < 0 || !diff_index >= self._revList.length) 
 		return;
 
-	var diff_summary = self._model.getDiffSummary(diff_index);
+	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 	if (diff_summary) {
 		var files = {};
 		self._files.forEach(function(file) {
@@ -416,7 +416,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	if (!diff_index < 0 || !diff_index >= self._revList.length) 
 		return;
 
-	var diff_summary = self._model.getDiffSummary(diff_index);
+	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 
 	self._context.fillStyle = self.isDir(filename) 
 		? COLORS.DIFF_DIR
@@ -500,11 +500,11 @@ CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	// show commit
 	var index = self.commitIndexFromXCoord(event.offsetX);
 	self._selectedCommitIndex = -1;
-	$("#commit_info").text(self._model.getCommitMsg(index));
+	$("#commit_info").text(self._model.getCommitMsg(self._revList[index]));
 	self._fromCommit = index;
 	self._toCommit = index;
 	self._files = self._files.filter(function(filename) {
-		return self._model.fileSize(filename, index) > 0;
+		return self._model.fileSize(filename, self._revList[index]) > 0;
 	});
 	self.calculateLayout();
 	self.render();
@@ -561,7 +561,7 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 			var msg = "";
 			self._selectedCommitIndex = index;
 			if (index >= 0 && index < self._revList.length) {
-				msg = self._model.getCommitMsg(self._selectedCommitIndex);
+				msg = self._model.getCommitMsg(self._revList[self._selectedCommitIndex]);
 			}
 			$("#commit_info").text(msg);
 			

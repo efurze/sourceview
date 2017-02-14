@@ -33,9 +33,25 @@
 */
 var RepoModel = function(filesizes, diffs) {
 	var self = this;
-	self._filesizes = filesizes;
-	self._diffs = diffs;
-	self._range = {};
+	self._filesizes = {}; // commit_sha: {filename: length}
+	self._diffs = {}; // commit_sha: {filename: diff_summary}
+	self._commits = {}; // sha: {message:, date:, committer:}
+	self._range = {}; // filname: length
+
+	// make diffs commit indexed
+	diffs.forEach(function(diff) {
+		self._diffs[diff.commit.id] = diff.diffs;
+		self._commits[diff.commit.id] = {
+			'message': diff.commit.commit_msg,
+			'date': '',
+			'committer': ''
+		};
+	});
+
+	// make size history indexed by commit
+	filesizes.forEach(function(size) {
+		self._filesizes[size.commit] = size.tree;
+	});
 
 	// initialize range
 	filesizes.forEach(function(info) {
@@ -63,24 +79,24 @@ returns: {
 	...
 }
 */
-RepoModel.prototype.getDiffSummary = function(commit_index) {
+RepoModel.prototype.getDiffSummary = function(commit_id) {
 	var self = this;
-	return self._diffs[commit_index].diffs;
+	return self._diffs[commit_id];
 }
 
-RepoModel.prototype.getCommitMsg = function(commit_index) {
+RepoModel.prototype.getCommitMsg = function(commit_id) {
 	var self = this;
-	return self._diffs[commit_index].commit.commit_msg;
+	return self._commits[commit_id].message;
 }
 
 RepoModel.prototype.fileMaxSize = function(filename) {
 	return this._range[filename];
 }
 
-RepoModel.prototype.fileSize = function(filename, commit_index) {
-	if (commit_index >= 0 && commit_index < this._filesizes.length
-		&& this._filesizes[commit_index].tree.hasOwnProperty(filename)) {
-		return this._filesizes[commit_index].tree[filename];
+RepoModel.prototype.fileSize = function(filename, commit_id) {
+	if (this._filesizes.hasOwnProperty(commit_id)
+		&& this._filesizes[commit_id].hasOwnProperty(filename)) {
+		return this._filesizes[commit_id][filename];
 	} else {
 		return 0;
 	}
