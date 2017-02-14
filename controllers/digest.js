@@ -4,7 +4,7 @@ var Promise = require('bluebird');
 var Types = require('./types.js');
 var Util = require('./git_util.js');
 var Git = require('./git.js');
-var Persist = require('./persist.js');
+var Persist = require('../lib/persist.js');
 var Resolve = require('path').resolve;
 var Logger = require('../lib/logger.js');
 var Diff = require('./types/diff.js');
@@ -16,7 +16,6 @@ var Digest = function(path) {
 
 	this._git = new Git(path);
 	this._util = new Util(this._git);
-	this._persist = new Persist(this._repoName);
 };
 
 Digest.prototype.buildBranchInfo = function(branch_name, max) {
@@ -68,10 +67,12 @@ Digest.prototype.crawlHistory = function(branch_name, history) { // eg 'master'
 				status("Calculated diff for commit", index, "/", history.length);
 
 				// save diff
-				return self._persist.saveDiff(commit_id, diff.toString(), summary)
+				return Persist.saveDiff(self._repoName, commit_id, diff.toString(), summary)
 					.then(function() {
 						// save filesizes
-						return self._persist.saveFileSizeSnapshot(commit_id, filesizes);
+						return Persist.saveFileSizeSnapshot(self._repoName, 
+							commit_id, 
+							filesizes);
 					});
 			});
 	});
@@ -92,7 +93,7 @@ Digest.prototype.getRevisionHistory = function(branch_name, max) {
 				max = history.length;
 			}
 			history = history.slice(history.length-max, history.length);
-			return self._persist.saveRevisionHistory(branch_name, history)
+			return Persist.saveRevisionHistory(self._repoName, branch_name, history)
 				.then(function() {
 					return history;
 				});

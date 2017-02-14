@@ -9,14 +9,33 @@ Promise.promisifyAll(fs);
 var DATA_DIR = './model/data/';
 
 var COMMITS_FILE = 'commithistory.json';
-var FILESIZE_FILE = 'filesizehistory.json';
-var SIZERANGE_FILE = 'filesizerange.json';
-var DIFF_FILE = 'diffhistory.json';
 
 var COMMIT_DIR = "/commits";
 var DIFF_DIR = "/diffs";
 var DIFF_SUMMARY_DIR = "/diff_summaries";
 var SIZE_DIR = "/sizes";
+
+function dir(repo) {
+	return DATA_DIR + repo;
+}
+
+function diff_dir(repo) {
+	return dir(repo) + '/' + DIFF_DIR;
+}
+
+function summary_dir(repo) {
+	return dir(repo) + '/' + DIFF_SUMMARY_DIR;
+}
+
+function size_dir(repo) {
+	return dir(repo) + '/' + SIZE_DIR;
+}
+
+function ensure_dir(dir) {
+	if (!fs.existsSync(dir)){
+    	fs.mkdirSync(dir);
+    }
+}
 
 var Persist = function(repo_name) {
 	var self = this;
