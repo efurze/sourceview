@@ -1,7 +1,7 @@
 var chai = require('chai');
 var assert = chai.assert;
 var expect = chai.expect;
-var Git = require('../controllers/git.js');
+var Git = require('../lib/git.js');
 var git = new Git(__dirname + '/..');
 
 describe('diff test', function() {

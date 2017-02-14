@@ -1,5 +1,5 @@
-var git = require('./controllers/git.js');
-var Digest = require('./controllers/digest.js');
+var git = require('./lib/git.js');
+var Digest = require('./lib/digest.js');
 let Logger = require('./lib/logger.js');
 
 

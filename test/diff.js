@@ -1,8 +1,8 @@
 var chai = require('chai');
 var assert = chai.assert;
 var expect = chai.expect;
-var Diff = require('../controllers/types/diff.js');
-var Git = require('../controllers/git.js');
+var Diff = require('../lib/types/diff.js');
+var Git = require('../lib/git.js');
 git = new Git('/Users/efurze/repos/sourceview');
 
 let first_diff = {

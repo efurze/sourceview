@@ -1,7 +1,7 @@
 var chai = require('chai');
 var assert = chai.assert;
 var expect = chai.expect;
-var Persist = require('../controllers/persist.js');
+var Persist = require('../lib/persist.js');
 var persist = new Persist('unittest');
 
 var first_commit = { 

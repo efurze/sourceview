@@ -1,12 +1,10 @@
-var Git = require('./controllers/git.js');
+var Git = require('./lib/git.js');
 var git = new Git('/Users/efurze/repos/git');
-var Repo = require('./controllers/repo.js');
-var repo = new Repo('/Users/efurze/repos/git');
 
-var Digest = require('./controllers/digest.js');
+var Digest = require('./lib/digest.js');
 var digest = new Digest('/Users/efurze/repos/linux');
 
-var Diff = require('./controllers/types/diff.js');
+var Diff = require('./lib/types/diff.js');
 var simple_git = require('simple-git')('/Users/efurze/repos/sourceview');
 
 var Promise = require('bluebird');
