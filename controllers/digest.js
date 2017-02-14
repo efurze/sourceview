@@ -1,8 +1,6 @@
 'use strict'
 var fs = require('fs');
 var Promise = require('bluebird');
-var Types = require('./types.js');
-var Util = require('./git_util.js');
 var Git = require('./git.js');
 var Persist = require('../lib/persist.js');
 var Resolve = require('path').resolve;
@@ -15,7 +13,6 @@ var Digest = function(path) {
 	this._repoName = parts[parts.length-1];
 
 	this._git = new Git(path);
-	this._util = new Util(this._git);
 };
 
 Digest.prototype.buildBranchInfo = function(branch_name, max) {

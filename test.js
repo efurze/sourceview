@@ -1,7 +1,5 @@
 var Git = require('./controllers/git.js');
 var git = new Git('/Users/efurze/repos/git');
-var Util = require('./controllers/git_util.js');
-var util = new Util(git);
 var Repo = require('./controllers/repo.js');
 var repo = new Repo('/Users/efurze/repos/git');
 
@@ -60,13 +58,7 @@ git.commitStat('1cce552cc2a7b0d2ed4a9941c233493810dfb4b5')
 */
 
 
-/*
-util.buildTree('cbcdc7c66f7af2839314acdc54c74f8d945ea0bc')
-	.then(function(tree) {
-		console.log(tree);
-	});
 
-*/
 
 /*
 git.revList('master')
@@ -89,16 +81,4 @@ Git.catFile('7beaa24ba49717419e24d1f6321e8b3c265a719c').then(function(data){
 });
 */
 
-/*
-Util.revWalk('master').then(function(msgs) {
-	console.log(msgs);
-})
-*/
-
-/*
-Util.buildTree('1b4d8b6bdd49783aa93e6aa6e480c6b556bdc38c').then(function(data) {
-	//console.log(JSON.stringify(data));
-	console.log(Util.enumerateFiles(data, ""));
-});
-*/
 

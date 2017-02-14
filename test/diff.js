@@ -4,8 +4,6 @@ var expect = chai.expect;
 var Diff = require('../controllers/types/diff.js');
 var Git = require('../controllers/git.js');
 git = new Git('/Users/efurze/repos/sourceview');
-var Util = require('../controllers/git_util.js');
-var util = new Util(git);
 
 let first_diff = {
     "views/index.hbs": 8,
