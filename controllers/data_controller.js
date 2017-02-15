@@ -5,28 +5,34 @@ var Promise = require('bluebird');
 Promise.promisifyAll(fs);
 
 
+function getData(req) {
+	var repo = req.param('repo');
+	var from = req.param('from') || 0;
+	var to = req.param('to') || 100;
+	
+	var data = {};
+	return persist.getRevList(repo, 'master')
+		.then(function(history) {
+			data.fromRev = from;
+			data.toRev = to;
+			data.revCount = history.length;
+			data.commits = history.slice(from, to);
+			return persist.sizeSnapshot(repo, data.commits);
+		}).then(function(sizes) {
+			data.size_history = sizes;
+			return persist.diffSummary(repo, data.commits);
+		}).then(function(diffs) {
+			data.diff_summaries = diffs;
+
+			return data;
+		});
+}
 
 module.exports = {
 
 	requestRange: function(req, res) {
-		var repo = req.param('repo');
-		var from = req.param('from') || 0;
-		var to = req.param('to') || 100;
-		
-		var data = {};
-		persist.getRevList(repo, 'master')
-			.then(function(history) {
-				data.fromRev = from;
-				data.toRev = to;
-				data.revCount = history.length;
-				data.commits = history.slice(from, to);
-				return persist.sizeSnapshot(repo, data.commits);
-			}).then(function(sizes) {
-				data.size_history = sizes;
-				return persist.diffSummary(repo, data.commits);
-			}).then(function(diffs) {
-				data.diff_summaries = diffs;
-
+		getData(req)
+			.then(function(data) {
 				res.render("range", {
 					title: "Source View",
 					repo_data: JSON.stringify(data),
@@ -41,24 +47,8 @@ module.exports = {
 	},
 
 	requestRangeJSON: function(req, res) {
-		var repo = req.param('repo');
-		var from = req.param('from') || 0;
-		var to = req.param('to') || 100;
-		
-		var data = {};
-		persist.getRevList(repo, 'master')
-			.then(function(history) {
-				data.fromRev = from;
-				data.toRev = to;
-				data.revCount = history.length;
-				data.commits = history.slice(from, to);
-				return persist.sizeSnapshot(repo, data.commits);
-			}).then(function(sizes) {
-				data.size_history = sizes;
-				return persist.diffSummary(repo, data.commits);
-			}).then(function(diffs) {
-				data.diff_summaries = diffs;
-
+		getData(req)
+			.then(function(data) {
 				res.send(data);
 			});
 	}

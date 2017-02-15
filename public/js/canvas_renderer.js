@@ -136,7 +136,7 @@ CanvasRenderer.prototype.onNextClick = function() {
 
 	if (self._toAbs < self._revCount) {
 		var delta = self._toAbs - self._fromAbs;
-		var from = self._toAbs;
+		var from = self._fromAbs + Math.round(delta/3);
 		var to = from + delta;
 		to = Math.min(to, self._revCount);
 		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
@@ -150,7 +150,7 @@ CanvasRenderer.prototype.onPrevClick = function() {
 
 	if (self._fromAbs > 0) {
 		var delta = self._toAbs - self._fromAbs;
-		var from = self._fromAbs - delta;
+		var from = self._fromAbs - Math.round(delta/3);
 		from = Math.max(from, 0);
 		var to = from + delta;
 		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
@@ -403,7 +403,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	var self = this;
 
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
-	var x = self._width - commit_width;
+	var x = 0;
 	var fileTop = self.fileYTop(filename);
 	var maxFileHeight = self.fileHeight(filename);
 
@@ -424,7 +424,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 			commit_width,
 			dy
 		);
-		x -= commit_width;
+		x += commit_width;
 	};
 
 };
@@ -478,7 +478,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 	var fileTop = self.fileYTop(filename);
 	var fileHeight = self.fileHeight(filename);
-	var x = commit_width * (self._toCommit - diff_index);
+	var x = commit_width * diff_index;
 
 	if (self.isDir(filename)) {
 		var changed_files = Object.keys(diff_summary);
@@ -687,7 +687,7 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	var length = self._toCommit - self._fromCommit + 1;
 	var index = Math.floor((length * x) / self._width);
 	if (index >= 0 && index < self._revList.length) {
-		return self._toCommit-index;
+		return self._fromCommit+index;
 	}
 	return -1;
 }

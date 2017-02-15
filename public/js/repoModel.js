@@ -115,7 +115,7 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 	commits.forEach(function(commit) {
 		self._commits[commit.hash] = {
 			'message': commit.message,
-			'date:': commit.date,
+			'date': commit.date,
 			'author_name': commit.author_name
 		};
 	});
@@ -152,7 +152,8 @@ RepoModel.prototype.getDiffSummary = function(commit_id) {
 
 RepoModel.prototype.getCommitMsg = function(commit_id) {
 	var self = this;
-	return self._commits[commit_id].message;
+	console.log(self._commits[commit_id].date);
+	return self._commits[commit_id].date;
 }
 
 RepoModel.prototype.fileMaxSize = function(filename) {
