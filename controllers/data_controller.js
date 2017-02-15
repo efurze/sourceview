@@ -10,13 +10,16 @@ module.exports = {
 
 	requestRange: function(req, res) {
 		var repo = req.param('repo');
-		//var from = req.param('from');
-		//var to = req.param('to');
+		var from = req.param('from') || 0;
+		var to = req.param('to') || 100;
 		
 		var data = {};
 		persist.getRevList(repo, 'master')
 			.then(function(history) {
-				data.commits = history;
+				data.fromRev = from;
+				data.toRev = to;
+				data.revCount = history.length;
+				data.commits = history.slice(from, to);
 				return persist.sizeSnapshot(repo, data.commits);
 			}).then(function(sizes) {
 				data.size_history = sizes;
@@ -26,15 +29,37 @@ module.exports = {
 
 				res.render("range", {
 					title: "Source View",
-					commits: JSON.stringify(data.commits),
-					size_history: JSON.stringify(data.size_history),
-					diff_summaries: JSON.stringify(data.diff_summaries),
+					repo_data: JSON.stringify(data),
 					scripts: [
 						{ path: "/js/canvas_renderer.js" },
 						{ path: "/js/repoModel.js" },
+						{ path: "/js/downloader.js" },
 						{ path: "/js/range_view.js" }
 					]
 				});
+			});
+	},
+
+	requestRangeJSON: function(req, res) {
+		var repo = req.param('repo');
+		var from = req.param('from') || 0;
+		var to = req.param('to') || 100;
+		
+		var data = {};
+		persist.getRevList(repo, 'master')
+			.then(function(history) {
+				data.fromRev = from;
+				data.toRev = to;
+				data.revCount = history.length;
+				data.commits = history.slice(from, to);
+				return persist.sizeSnapshot(repo, data.commits);
+			}).then(function(sizes) {
+				data.size_history = sizes;
+				return persist.diffSummary(repo, data.commits);
+			}).then(function(diffs) {
+				data.diff_summaries = diffs;
+
+				res.send(data);
 			});
 	}
 

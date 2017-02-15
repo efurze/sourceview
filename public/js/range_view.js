@@ -34,13 +34,18 @@ $(function() {
 	}
 }
 */
-		init: function(commits, size_history, diff_summaries) {
-			var revList = commits.map(function(commit) {
+		init: function(data) {
+			var revList = data.commits.map(function(commit) {
 				return commit.hash;
 			});
 			var model = new RepoModel();
-			model.setRangeData(commits, size_history, diff_summaries);
-			RangeView._renderer = new CanvasRenderer(revList, model);
+			model.setRangeData(data.commits, data.size_history, data.diff_summaries);
+			RangeView._renderer = new CanvasRenderer(parseInt(data.revCount));
+			RangeView._renderer.setData(revList,
+				model, 
+				parseInt(data.fromRev), 
+				parseInt(data.toRev)
+			);
 		},
 
 	};

@@ -79,6 +79,7 @@ app.get('/', function(req, res) {
 });
 
 app.get('/range', dataController.requestRange);
+app.get('/rangeJSON', dataController.requestRangeJSON);
 
 app.get('/diff', function(req, res) { 
 	res.render("diff");

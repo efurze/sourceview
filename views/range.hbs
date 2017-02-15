@@ -11,8 +11,14 @@
         <input type="text" id="filter_input">  
         <button id="filter_button" type="button">Filter</button>
     </div>
-    <div class="col-md-10 text-center small-padding">
+    <div class="col-md-1 text-center small-padding">
+        <button id="back_button" type="button">Prev</button>
+    </div>
+    <div class="col-md-8 text-center small-padding">
         <div id="commit_info"></div>
+    </div>
+    <div class="col-md-1 text-center small-padding">
+        <button id="next_button" type="button">Next</button>
     </div>
 </div>
 <textarea id="code_textarea"></textarea>
@@ -36,6 +42,6 @@
         c.attr('width', $(container).width());
         c.attr('height', $(container).height());
 
-		RangeView.init({{{commits}}}, {{{size_history}}}, {{{diff_summaries}}});
+		RangeView.init({{{repo_data}}});
 	});
 </script>

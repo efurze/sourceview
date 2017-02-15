@@ -60,12 +60,9 @@ var FONT_DIR = {
 ...
 ]
 */
-var CanvasRenderer = function(revList, model) {
+var CanvasRenderer = function(revCount) {
 	console.log("CanvasRenderer()");
 	var self = this;
-	
-	this._revList = revList;
-	this._model = model;
 
 	this._canvas = document.getElementById("repo_canvas");
 	this._context = this._canvas.getContext('2d');
@@ -83,9 +80,8 @@ var CanvasRenderer = function(revList, model) {
 	this._yAxis = {}; // filename => y-coord in pixels of top of file
 	this._pixelsPerLine = 1;
 
-	this._fromCommit = 0;
-	this._toCommit = this._revList.length-1;
-	this._files = this._model.getFilenames(); // sorted in display order, top-to-bottom
+	this._revCount = revCount;
+
 	this._selectedFile = "";
 	this._filter = "";
 	this._closedDirs = {};
@@ -96,7 +92,24 @@ var CanvasRenderer = function(revList, model) {
 	$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
 	$("#filter_button").on('click', self.onFilterClick.bind(self));
+	$("#next_button").on('click', self.onNextClick.bind(self));
+	$("#back_button").on('click', self.onPrevClick.bind(self));
 
+
+	this._downloader = new Downloader();	
+};
+
+CanvasRenderer.prototype.setData = function(revList, model, from, to) {
+	var self = this;
+	self._revList = revList;
+	self._model = model;
+	self._fromAbs = from;
+	self._toAbs = to;
+
+	self._fromCommit = 0;
+	self._toCommit = self._revList.length-1;
+
+	self._files = self._model.getFilenames(); // sorted in display order, top-to-bottom
 
 	if (self._files.length > 10000) {
 		// collapse all dirs
@@ -105,23 +118,61 @@ var CanvasRenderer = function(revList, model) {
 		});
 	}
 
-	this.calculateLayout();
-	this.render();
+	self.calculateLayout();
+	self.render();
 };
 
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
-	//$("#filenames").css("transform", "scale(0.5)");
 
-	//$("#canvas_div").removeClass("col-md-10");
-	//$("#canvas_div").addClass("col-md-6");
-
-
-	
 	self._filter = $("#filter_input").val();
 	self.calculateLayout();
 	self.render();
 	
+};
+
+CanvasRenderer.prototype.onNextClick = function() {
+	var self = this;
+
+	if (self._toAbs < self._revCount) {
+		var delta = self._toAbs - self._fromAbs;
+		var from = self._toAbs;
+		var to = from + delta;
+		to = Math.min(to, self._revCount);
+		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
+			self.ajaxDone.bind(self));
+	}
+	
+};
+
+CanvasRenderer.prototype.onPrevClick = function() {
+	var self = this;
+
+	if (self._fromAbs > 0) {
+		var delta = self._toAbs - self._fromAbs;
+		var from = self._fromAbs - delta;
+		from = Math.max(from, 0);
+		var to = from + delta;
+		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
+			self.ajaxDone.bind(self));
+	}
+	
+};
+
+CanvasRenderer.prototype.ajaxDone = function(success, data) {
+	var self = this;
+	if (success) {
+		var revList = data.commits.map(function(commit) {
+			return commit.hash;
+		});
+		var model = new RepoModel();
+		model.setRangeData(data.commits, data.size_history, data.diff_summaries);
+		self.setData(revList,
+			model, 
+			parseInt(data.fromRev), 
+			parseInt(data.toRev)
+		);
+	}
 };
 
 CanvasRenderer.prototype.calculateLayout = function() {
