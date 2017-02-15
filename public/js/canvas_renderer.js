@@ -134,12 +134,14 @@ CanvasRenderer.prototype.onFilterClick = function() {
 CanvasRenderer.prototype.onNextClick = function() {
 	var self = this;
 
+	var repo = urlParam("repo");
+
 	if (self._toAbs < self._revCount) {
 		var delta = self._toAbs - self._fromAbs;
 		var from = self._fromAbs + Math.round(delta/3);
 		var to = from + delta;
 		to = Math.min(to, self._revCount);
-		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
+		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
 			self.ajaxDone.bind(self));
 	}
 	
@@ -148,12 +150,14 @@ CanvasRenderer.prototype.onNextClick = function() {
 CanvasRenderer.prototype.onPrevClick = function() {
 	var self = this;
 
+	var repo = urlParam("repo");
+
 	if (self._fromAbs > 0) {
 		var delta = self._toAbs - self._fromAbs;
 		var from = self._fromAbs - Math.round(delta/3);
 		from = Math.max(from, 0);
 		var to = from + delta;
-		self._downloader.get("/rangeJSON?repo=git&from="+from+"&to="+to,
+		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
 			self.ajaxDone.bind(self));
 	}
 	
@@ -549,7 +553,9 @@ CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	// show commit
 	var index = self.commitIndexFromXCoord(event.offsetX);
 	self._selectedCommitIndex = -1;
-	$("#commit_info").text(self._model.getCommitMsg(self._revList[index]));
+	var text = "[" + self._model.getCommitDate(self._revList[index]) + "]: ";
+	text += self._model.getCommitMsg(self._revList[index]);
+	$("#commit_info").text(text);
 	self._fromCommit = index;
 	self._toCommit = index;
 	self._files = self._files.filter(function(filename) {
@@ -610,7 +616,8 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 			var msg = "";
 			self._selectedCommitIndex = index;
 			if (index >= 0 && index < self._revList.length) {
-				msg = self._model.getCommitMsg(self._revList[self._selectedCommitIndex]);
+				msg = "[" + self._model.getCommitDate(self._revList[index]) + "]: ";
+				msg += self._model.getCommitMsg(self._revList[self._selectedCommitIndex]);
 			}
 			$("#commit_info").text(msg);
 			
@@ -693,4 +700,13 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 }
 
 
+var urlParam = function(name){
+    var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
+    if (results==null){
+       return null;
+    }
+    else{
+       return results[1] || 0;
+    }
+}
 

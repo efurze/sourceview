@@ -152,7 +152,11 @@ RepoModel.prototype.getDiffSummary = function(commit_id) {
 
 RepoModel.prototype.getCommitMsg = function(commit_id) {
 	var self = this;
-	console.log(self._commits[commit_id].date);
+	return self._commits[commit_id].message;
+}
+
+RepoModel.prototype.getCommitDate = function(commit_id) {
+	var self = this;
 	return self._commits[commit_id].date;
 }
 
