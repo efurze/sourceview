@@ -17,6 +17,11 @@ function getData(req) {
 			data.toRev = to;
 			data.revCount = history.length;
 			data.commits = history.slice(from, to);
+			return Promise.map(data.commits, function(commit_id) {
+				return persist.getCommit(repo, commit_id);
+			});
+		}).then(function(commits) {
+			data.commits = commits;
 			return persist.sizeSnapshot(repo, data.commits);
 		}).then(function(sizes) {
 			data.size_history = sizes;
