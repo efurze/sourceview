@@ -32,22 +32,52 @@ var DirectoryView = function(name, parent) {
 	self._name = name;
 	self._childDirs = {};
 	self._children = [];
+	self._childHash = {};
 	self._x = 0;
 	self._y = 0;
 	self._dx = 0;
 	self._dy = 0;
+	self._topMargin = 0;
 };
 
+DirectoryView.prototype.path = function() {
+	var self = this;
+	var path = "";
+	if (self._parent) {
+		path = self._parent.path();
+	} else {
+		return "";
+	}
+	if (path.length) {
+		path += '/';
+	}
+	path += self._name;
+	return path;
+}
+
+DirectoryView.prototype.childPath = function(name) {
+	var self = this;
+	var path = self.path();
+	if (path.length) {
+		path += '/';
+	}
+	return path + name;
+}
 
 DirectoryView.prototype.setModel = function(model) {
 	var self = this;
+	self._childDirs = {};
+	self._children = [];
 	self._model = model;
-	model.getChildren(self._name).forEach(function(child) {
+	model.getChildren(self.path()).forEach(function(child) {
+		var parts = child.split('/');
+		var name = parts[parts.length-1];
 		if (model.isDir(child)) {
-			self._childDirs[child] = new DirectoryView(child, self);
-			self._childDirs[child].setModel(model);
+			self._childDirs[name] = new DirectoryView(name, self);
+			self._childDirs[name].setModel(model);
 		}
-		self._children.push(child);
+		self._children.push(name);
+		self._childHash[name] = true;
 	});
 
 	self._children.sort(function (a, b) {
@@ -58,15 +88,15 @@ DirectoryView.prototype.setModel = function(model) {
 DirectoryView.prototype.layout = function() {
 	var self = this;
 	var y = 0;
-	var lineCount = self._model.visibleLineCount(self._name);
+	var lineCount = self._model.visibleLineCount(self.path());
 
 	self._children.forEach(function(name) {
-		var childLineCount = self._model.visibleLineCount(name);
+		var childLineCount = self._model.visibleLineCount(self.childPath(name));
 		var dy = (childLineCount * self._dy) / lineCount;
-		if (!self._model.isOpen(name)) {
+		if (!self._model.isOpen(self.childPath(name))) {
 			dy = 0;
 		}
-		if (self._model.isDir(name)) {
+		if (self._model.isDir(self.childPath(name))) {
 			var child = self._childDirs[name];
 			child.setClip(self._x + MARGIN, y, self._dx, dy);
 			child.layout();
@@ -76,24 +106,25 @@ DirectoryView.prototype.layout = function() {
 		}
 	});
 
+
 	var lastY = 0;
 	if (!self._parent) {
 		lastY = -100;
 	}
 	var lastChild = null;
 	self._children.forEach(function(name) {
-		if (self._model.isDir(name)) {
+		if (self._model.isDir(self.childPath(name))) {
 			var child = self._childDirs[name];
 			y = child._y;
 			if (y < lastY + FONT_NORMAL.height) {
 				var delta = lastY + FONT_NORMAL.height - y;
-				LOG("adjust", name,"by", delta);
+				//LOG("adjust", name,"by", delta);
 				child._y += delta;
 				if (lastChild) {
-					lastChild.dy += delta;
+					lastChild._dy += delta;
 				}
 			}
-			if (!self._model.isOpen(name)) {
+			if (!self._model.isOpen(self.childPath(name))) {
 				child._dy = FONT_NORMAL.height;
 			}
 			lastY = child._y;
@@ -110,8 +141,8 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 	//console.log("click", event.offsetY);
 	var handled = false;
 
-	if (self._model.isDir(self._name)) {
-		if (self._model.isOpen(self._name)) {
+	if (self._model.isDir(self.path())) {
+		if (self._model.isOpen(self.path())) {
 			var subdirs = Object.keys(self._childDirs);
 			var index = 0;
 			while (!handled && index < subdirs.length) {
@@ -147,19 +178,21 @@ DirectoryView.prototype.renderDirectories = function(context) {
 	//context.rect(x, y, self._dx, self._dy);
 	//context.clip();
 
+	//LOG(self._name, x, y, self._dx, self._dy);
+
 	// our name
 	if (self._parent) { // don't draw root dir
-		if (self._model.isDir(self._name)) {
-			var handle = self._model.isOpen(self._name) ? '- ' : '+ ';
+		if (self._model.isDir(self.path())) {
+			var handle = self._model.isOpen(self.path()) ? '- ' : '+ ';
 			self._renderText(handle + self._name + '/', x, y, FONT_NORMAL, context);
 		}
 	}
 
-	if (self._model.isOpen(self._name)) {
+	if (self._model.isOpen(self.path())) {
 		// children
 		Object.keys(self._childDirs).forEach(function(name) {
 			var child = self._childDirs[name];
-			if (self._model.isDir(name)) {
+			if (self._model.isDir(self.childPath(name))) {
 				child.renderDirectories(context);
 			}
 		});
@@ -183,6 +216,63 @@ DirectoryView.prototype._renderText = function(text, x, y, font, context) {
 
 	return font.height;
 }
+
+
+DirectoryView.prototype.getParentDir = function(filename) {
+	var self = this;
+	var parts = filename.split('/');
+	if (parts.length == 1 && self._childHash.hasOwnProperty(parts[0])) {
+		return self;
+	} else if (self._childDirs.hasOwnProperty(parts[0])) {
+		var name = parts.shift();
+		return self._childDirs[name].getParentDir(parts.join('/'));
+	}
+};
+
+
+DirectoryView.prototype.getFileY = function(filename) {
+	var self = this;
+	var parent = self.getParentDir(filename);
+	filename = filename.split('/').pop();
+	if (parent == self) {
+		var lines_dy = 0;
+		for(var i=0; i < self._children.length; i++) {
+			if (self._children[i] === filename) {
+				break;
+			} else {
+				lines_dy += self._model.visibleLineCount(
+					self.childPath(self._children[i]));
+			}
+		}
+
+		var y = self.y() + (self._dy * lines_dy / self._model.visibleLineCount(self.path()));
+		return y;
+	} else {
+		return parent.getFileY(filename);
+	}	
+};
+
+DirectoryView.prototype.getFileDY = function(filename) {
+	var self = this;
+	var parent = self.getParentDir(filename);
+	filename = filename.split('/').pop();
+	if (parent == self) {
+		var lines_dy = 0;
+		for(var i=0; i < self._children.length; i++) {
+			if (self._children[i] === filename) {
+				break;
+			} else {
+				lines_dy += self._model.visibleLineCount(
+					self.childPath(self._children[i]));
+			}
+		}
+
+		var y = self._dy * self._model.visibleLineCount(self.childPath(filename)) / self._model.visibleLineCount(self.path());
+		return y;
+	} else {
+		return parent.getFileDY(filename);
+	}	
+};
 
 // absolute x relative to canvas
 DirectoryView.prototype.x = function() {

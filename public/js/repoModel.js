@@ -71,8 +71,8 @@ RepoModel.prototype.setData = function(filesizes, diffs) {
 		});
 	});
 
-	//self._data = new ModelNode('/', true, null);
-	//self._data.addChildren(Object.keys(filesizes.range));
+	self._root = new ModelNode('/', true, null);
+	self._root.addChildren(Object.keys(self._range));
 };
 
 
@@ -132,6 +132,8 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 		});
 	});
 
+	self._root = new ModelNode('/', true, null);
+	self._root.addChildren(Object.keys(self._range));
 };
 
 // returns full path of all filenames
@@ -173,6 +175,16 @@ RepoModel.prototype.fileSize = function(filename, commit_id) {
 	}
 }
 
+RepoModel.prototype.getParent = function(name) {
+	var self = this;
+	var parent = null;
+	var node = self._getNode(name);
+	if (node) {
+		parent = node._parent();
+	}
+	return parent ? parent._name : "";
+}
+
 // returns array of names
 RepoModel.prototype.getChildren = function(name) {
 	var self = this;
@@ -191,8 +203,8 @@ RepoModel.prototype.visibleLineCount = function(name) {
 	var node = self._getNode(name);
 	if (node) {
 		if (node._isOpen) {
-			if (self._filesizes.range.hasOwnProperty(name)) {
-				total += self._filesizes.range[name];
+			if (self._range.hasOwnProperty(name)) {
+				total += self._range[name];
 			}
 
 			node.childNames().forEach(function(child) {
@@ -201,6 +213,7 @@ RepoModel.prototype.visibleLineCount = function(name) {
 		}
 	}
 	ASSERT(!isNaN(total));
+	//LOG("visibleLineCount", name, total);
 	return total;
 };
 
@@ -208,10 +221,10 @@ RepoModel.prototype._getNode = function(name) {
 	var self = this;
 	if (!name || name == "" || name == "/") {
 		// root node
-		return self._data;
+		return self._root;
 	}
 	var parts = name.split('/');
-	var node = self._data;
+	var node = self._root;
 	parts.forEach(function(dirname) {
 		if (node) {
 			node = node.getChild(dirname);

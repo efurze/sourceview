@@ -44,6 +44,7 @@ module.exports = {
 					scripts: [
 						{ path: "/js/canvas_renderer.js" },
 						{ path: "/js/repoModel.js" },
+						{ path: "/js/directory_view.js" },
 						{ path: "/js/downloader.js" },
 						{ path: "/js/range_view.js" }
 					]

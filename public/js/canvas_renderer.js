@@ -97,6 +97,8 @@ var CanvasRenderer = function(revCount) {
 
 
 	this._downloader = new Downloader();	
+	this._dirView = new DirectoryView("/", null);
+	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 };
 
 CanvasRenderer.prototype.setData = function(revList, model, from, to) {
@@ -105,6 +107,8 @@ CanvasRenderer.prototype.setData = function(revList, model, from, to) {
 	self._model = model;
 	self._fromAbs = from;
 	self._toAbs = to;
+
+	self._dirView.setModel(model);
 
 	self._fromCommit = 0;
 	self._toCommit = self._revList.length-1;
@@ -182,6 +186,8 @@ CanvasRenderer.prototype.ajaxDone = function(success, data) {
 CanvasRenderer.prototype.calculateLayout = function() {
 	console.log("calculateLayout()");
 	var self = this;
+
+	self._dirView.layout();
 
 	self._files = self._model.getFilenames()
 					.filter(function(filename) {
@@ -281,40 +287,18 @@ CanvasRenderer.prototype.render = function() {
 };
 
 CanvasRenderer.prototype.renderFilenames = function() {
-	console.log("renderFilenames");
 	var self = this;
+
 	self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
 	self._filesContext.strokeStyle = COLORS.FILES_BACKGROUND;
 	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
 	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
-
-	var y = self._height + FONT_NORMAL.height;
-	var filecount = self._files.length;
-
-	// Draw bottom-to-top so we elide the small files instead of the big ones
-	for (var i=1; i <= filecount; i++) {
-		var filename = self._files[filecount - i];
-		var font = self.isDir(filename) ? FONT_DIR : FONT_NORMAL;
-		var nextShouldBeAt = self.fileYMiddle(filename) + font.height/2;
-		if (nextShouldBeAt <= y - font.height || self.isDir(filename)) {
-			y = nextShouldBeAt;
-
-			if (self.isDir(filename)) {
-				self._filesContext.beginPath();
-				self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
-				self._filesContext.fillRect(0, y, self._filesWidth, font.height + 4);
-			}
-
-			self._filesContext.strokeStyle = font.color;
-			self._filesContext.fillStyle = font.color;
-			self._filesContext.font = font.name;
-			self._filesContext.fillText(filename, 5, y);
-		}
-	}		
+	self._dirView.renderDirectories(self._filesContext);	
 };
 
 CanvasRenderer.prototype.highlightFilenames = function() {
+	return;
 	var self = this;
 	var fontHeight;
 /*
@@ -358,15 +342,18 @@ CanvasRenderer.prototype.renderHistory = function() {
 	var self = this;
 
 	self._files.forEach(function(filename) {
-		self.renderFileHistory(filename);
-		self.renderFileDiffs(filename);
+		if (self._model.isVisible(filename)) {
+			self.renderFileHistory(filename);
+			self.renderFileDiffs(filename);
+		}
 	});
 };
 
 // in pixels
 CanvasRenderer.prototype.fileYTop = function(filename) {
 	var self = this;
-	return self._yAxis[filename];
+	//return self._yAxis[filename];
+	return self._dirView.getFileY(filename);
 };
 
 // in pixels
@@ -381,7 +368,8 @@ CanvasRenderer.prototype.fileHeight = function(filename) {
 	if (self.isDir(filename)) {
 		return FONT_DIR.height;
 	} else {
-		return (self._model.fileMaxSize(filename) * self._pixelsPerLine);
+		//return (self._model.fileMaxSize(filename) * self._pixelsPerLine);
+		return self._dirView.getFileDY(filename);
 	}
 };
 
@@ -392,8 +380,8 @@ CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	if (self.isDir(filename)) {
 		return FONT_DIR.height;
 	} else {
-		return (self._model.fileSize(filename, self._revList[commit_index]) 
-			* self._pixelsPerLine);
+		return  self._model.fileSize(filename, self._revList[commit_index]) 
+		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);
 	}
 };
 
@@ -578,17 +566,10 @@ CanvasRenderer.prototype.filesDoubleClick = function(event) {
 
 CanvasRenderer.prototype.filesClick = function(event) {
 	var self = this;
-	if (self._selectedFile) {
-		if (self.isDir(self._selectedFile)
-			&& self._closedDirs.hasOwnProperty(self._selectedFile)) {
-			delete self._closedDirs[self._selectedFile];
-		} else {
-			self.closeFile(self._selectedFile);
-		}
+	if (self._dirView.handleFilesClick(event)) {
 		self.calculateLayout();
 		self.render();
 	}
-
 };
 
 CanvasRenderer.prototype.closeFile = function(filename) {
