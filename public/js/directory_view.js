@@ -19,6 +19,12 @@ var FONT_LARGE = {
 	'color': 'black'
 };
 
+var FONT_DIR = {
+	'name': '12px Helvetica',
+	'height': 12,
+	'color': 'BLUE'
+};
+
 /*
 	@filesizes = {
 	'range': {},
@@ -26,7 +32,7 @@ var FONT_LARGE = {
 	}
 */
 var DirectoryView = function(name, parent) {
-	LOG("New DirView", name);
+	//LOG("New DirView", name);
 	var self = this;
 	self._parent = parent;
 	self._name = name;
@@ -88,50 +94,47 @@ DirectoryView.prototype.setModel = function(model) {
 DirectoryView.prototype.layout = function() {
 	var self = this;
 	var y = 0;
-	var lineCount = self._model.visibleLineCount(self.path());
+	if (!self._model.isOpen(self.path())) {
+		return;
+	}
 
+	var lineCount = self._model.visibleLineCount(self.path());
+	var y_adjust = 0;
+	Object.keys(self._childDirs).forEach(function(name) {
+		var subdir = self._childDirs[name];
+		var childLineCount = self._model.visibleLineCount(subdir.path());
+		var dy = (childLineCount * self._dy) / lineCount;
+		if (dy < FONT_DIR.height) {
+			y_adjust += FONT_DIR.height - dy;
+			dy = FONT_DIR.height;
+		}
+		if (y < FONT_DIR.height && self._parent) {
+			y_adjust += FONT_DIR.height - y;
+			y = FONT_DIR.height;
+		}
+		y += dy;
+	});
+
+	y = 0;
 	self._children.forEach(function(name) {
 		var childLineCount = self._model.visibleLineCount(self.childPath(name));
-		var dy = (childLineCount * self._dy) / lineCount;
-		if (!self._model.isOpen(self.childPath(name))) {
-			dy = 0;
-		}
+		var childHeight = (childLineCount * (self._dy - y_adjust)) / lineCount;
+
 		if (self._model.isDir(self.childPath(name))) {
 			var child = self._childDirs[name];
-			child.setClip(self._x + MARGIN, y, self._dx, dy);
+			if (childHeight < FONT_DIR.height) {
+				childHeight = FONT_DIR.height;
+			}
+			if (y < FONT_DIR.height && self._parent) {
+				y = FONT_DIR.height;
+			}
+			child.setClip(self._x + MARGIN, y, self._dx, childHeight);
 			child.layout();
 			y += child._dy;
 		} else {
-			y += dy;
+			y += childHeight;
 		}
 	});
-
-
-	var lastY = 0;
-	if (!self._parent) {
-		lastY = -100;
-	}
-	var lastChild = null;
-	self._children.forEach(function(name) {
-		if (self._model.isDir(self.childPath(name))) {
-			var child = self._childDirs[name];
-			y = child._y;
-			if (y < lastY + FONT_NORMAL.height) {
-				var delta = lastY + FONT_NORMAL.height - y;
-				//LOG("adjust", name,"by", delta);
-				child._y += delta;
-				if (lastChild) {
-					lastChild._dy += delta;
-				}
-			}
-			if (!self._model.isOpen(self.childPath(name))) {
-				child._dy = FONT_NORMAL.height;
-			}
-			lastY = child._y;
-			lastChild = child;
-		}
-	});
-
 }
 
 
@@ -153,7 +156,7 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 
 		if (!handled) {
 			var y = self.y();
-			if (event.offsetY >= y && event.offsetY <= (y + FONT_NORMAL.height)) {
+			if (event.offsetY >= y && event.offsetY <= (y + FONT_DIR.height)) {
 				//console.log("event handled by", self._name);
 				handled = true;
 				self._model.toggleOpen(self._name);
@@ -184,7 +187,7 @@ DirectoryView.prototype.renderDirectories = function(context) {
 	if (self._parent) { // don't draw root dir
 		if (self._model.isDir(self.path())) {
 			var handle = self._model.isOpen(self.path()) ? '- ' : '+ ';
-			self._renderText(handle + self._name + '/', x, y, FONT_NORMAL, context);
+			self._renderText(handle + self._name + '/', x, y, FONT_DIR, context);
 		}
 	}
 
@@ -323,7 +326,7 @@ DirectoryView.prototype.setClip = function(x,y,dx,dy) {
 	self._dx = dx;
 	self._dy = dy;
 	//LOG("relative setClip", self._name, x, y, dx, dy);
-	LOG("setClip", self._name, self.y(), dy);
+	//LOG("setClip", self._name, self.y(), dy);
 }
 
 function LOG() {

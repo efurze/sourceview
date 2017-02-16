@@ -188,60 +188,6 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
 
 	self._dirView.layout();
-
-	self._files = self._model.getFilenames()
-					.filter(function(filename) {
-						if (!self._filter || self._filter === "") {
-							return true;
-						}
-						return filename.startsWith(self._filter);
-					});
-
-	// filter out descendants of closed dirs
-	var closedDirsHash = {};
-	self._files = self._files.filter(function(file) {
-		if (!self.isVisible(file)) {
-			var visibleDir = self.visibleAncestor(file);
-			if (!closedDirsHash.hasOwnProperty(visibleDir)) {
-				closedDirsHash[visibleDir] = true;
-			}
-			return false;
-		}
-		return true;
-	});
-
-	// add in the directories
-	var closedDirs = Object.keys(closedDirsHash);
-	closedDirs.forEach(function(dir) {
-		self._files.push(dir);
-	});
-
-	// sort
-	self._files.sort(function (a, b) {
-		return a.toLowerCase().localeCompare(b.toLowerCase());
-	});
-
-	var visibleLines = 0;
-
-	self._files.forEach(function(file) {
-		if (self.isVisible(file) && !self.isDir(file)) {
-			visibleLines += self._model.fileMaxSize(file);
-		}
-	});
-
-	var pixelsPerDir = FONT_DIR.height;
-	self._pixelsPerLine = (self._height - closedDirs.length * pixelsPerDir)/visibleLines;
-
-	var yCoord = 0;
-	self._yAxis = {};
-	self._files.forEach(function(file) {
-		self._yAxis[file] = yCoord;
-		if (self.isDir(file)) {
-			yCoord += pixelsPerDir;
-		} else {
-			yCoord += self._model.fileMaxSize(file) * self._pixelsPerLine;
-		}
-	});
 };
 
 
@@ -322,7 +268,7 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 */
 	var filename = self._selectedFile;
 	if (filename) {
-		var font = self.isDir(filename) ? FONT_DIR : FONT_LARGE;
+		var font = self._model.isDir(filename) ? FONT_DIR : FONT_LARGE;
 		var y = self.fileYMiddle(filename) - font.height/2 - 4;
 		self._filesContext.beginPath();
 		self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
@@ -340,6 +286,11 @@ CanvasRenderer.prototype.highlightFilenames = function() {
 CanvasRenderer.prototype.renderHistory = function() {
 	console.log("renderHistory");
 	var self = this;
+
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
+	self._context.clearRect(0, 0, self._width, self._height);
+	self._context.fillRect(0, 0, self._width, self._height);
 
 	self._files.forEach(function(filename) {
 		if (self._model.isVisible(filename)) {
@@ -365,19 +316,14 @@ CanvasRenderer.prototype.fileYBottom = function(filename) {
 // in pixels
 CanvasRenderer.prototype.fileHeight = function(filename) {
 	var self = this;
-	if (self.isDir(filename)) {
-		return FONT_DIR.height;
-	} else {
-		//return (self._model.fileMaxSize(filename) * self._pixelsPerLine);
-		return self._dirView.getFileDY(filename);
-	}
+	return self._dirView.getFileDY(filename);
 };
 
 // in pixels
 // @commit_index = index into self._history
 CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	var self = this;
-	if (self.isDir(filename)) {
+	if (self._model.isDir(filename)) {
 		return FONT_DIR.height;
 	} else {
 		return  self._model.fileSize(filename, self._revList[commit_index]) 
@@ -407,7 +353,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 		if (filename === self._selectedFile) {
 			self._context.fillStyle = "grey";
 		} else {
-			self._context.fillStyle = self.isDir(filename) 
+			self._context.fillStyle = self._model.isDir(filename) 
 				? COLORS.REPO_DIR
 				: COLORS.REPO;
 		}
@@ -459,7 +405,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 
-	self._context.fillStyle = self.isDir(filename) 
+	self._context.fillStyle = self._model.isDir(filename) 
 		? COLORS.DIFF_DIR
 		: COLORS.DIFF;
 	if (self._selectedCommitIndex == diff_index
@@ -472,7 +418,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	var fileHeight = self.fileHeight(filename);
 	var x = commit_width * diff_index;
 
-	if (self.isDir(filename)) {
+	if (self._model.isDir(filename)) {
 		var changed_files = Object.keys(diff_summary);
 		var mark_commit = false;
 		for (var i=0; i < changed_files.length; i++) {
@@ -574,7 +520,7 @@ CanvasRenderer.prototype.filesClick = function(event) {
 
 CanvasRenderer.prototype.closeFile = function(filename) {
 	var self = this;
-	if (!self.isDir(filename)) {
+	if (!self._model.isDir(filename)) {
 		var parts = filename.split('/');
 		parts.pop();
 		var dir = parts.join('/') + '/';
