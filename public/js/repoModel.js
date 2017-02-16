@@ -273,7 +273,7 @@ RepoModel.prototype.isVisible = function(name) {
 	var visible = false;
 	var node = self._getNode(name);
 	while (node) {
-		if (node._isDir && !node._isOpen) {
+		if (node._parent && !node._parent._isOpen) {
 			return false;
 		}
 		node = node._parent;

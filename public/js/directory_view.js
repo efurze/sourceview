@@ -38,7 +38,7 @@ var DirectoryView = function(name, parent) {
 	self._name = name;
 	self._childDirs = {};
 	self._children = [];
-	self._childHash = {};
+	self._layout = {}; // filename: {y, dy}
 	self._x = 0;
 	self._y = 0;
 	self._dx = 0;
@@ -70,6 +70,24 @@ DirectoryView.prototype.childPath = function(name) {
 	return path + name;
 }
 
+DirectoryView.prototype.displayOrder = function() {
+	var self = this;
+	var names = [];
+	self._children.forEach(function(name) {
+		var path = self.childPath(name);
+		if (self._model.isDir(path)) {
+			if (self._model.isOpen(path)) {
+				names = names.concat(self._childDirs[name].displayOrder());
+			} else {
+				names.push(path);
+			}
+		} else {
+			names.push(path);
+		}
+	});
+	return names;
+}
+
 DirectoryView.prototype.setModel = function(model) {
 	var self = this;
 	self._childDirs = {};
@@ -83,7 +101,6 @@ DirectoryView.prototype.setModel = function(model) {
 			self._childDirs[name].setModel(model);
 		}
 		self._children.push(name);
-		self._childHash[name] = true;
 	});
 
 	self._children.sort(function (a, b) {
@@ -120,10 +137,6 @@ DirectoryView.prototype.requestedHeight = function(pixelsPerLine, atY) {
 DirectoryView.prototype.layout = function() {
 	var self = this;
 	var y = 0;
-	
-	if (self._name === 'public') {
-		var foo = 'break';
-	}
 
 	var lineCount = self._model.visibleLineCount(self.path());
 	var firstOrderPixelsPerLine = self._dy/lineCount;
@@ -164,8 +177,16 @@ DirectoryView.prototype.layout = function() {
 				self._dx, 
 				subdir.requestedHeight(pixelsPerLine, y));
 			subdir.layout();
+			self._layout[name] = {
+				'y': y,
+				'dy': subdir._dy
+			};
 			y += subdir._dy;
 		} else {
+			self._layout[name] = {
+				'y': y,
+				'dy': childLineCount * pixelsPerLine
+			};
 			y += childLineCount * pixelsPerLine;
 		}
 	});
@@ -258,12 +279,14 @@ DirectoryView.prototype._renderText = function(text, x, y, font, context) {
 DirectoryView.prototype.getParentDir = function(filename) {
 	var self = this;
 	var parts = filename.split('/');
-	if (parts.length == 1 && self._childHash.hasOwnProperty(parts[0])) {
+
+	if (parts.length == 1) {
 		return self;
 	} else if (self._childDirs.hasOwnProperty(parts[0])) {
 		var name = parts.shift();
 		return self._childDirs[name].getParentDir(parts.join('/'));
 	}
+	return null;
 };
 
 
@@ -272,18 +295,7 @@ DirectoryView.prototype.getFileY = function(filename) {
 	var parent = self.getParentDir(filename);
 	filename = filename.split('/').pop();
 	if (parent == self) {
-		var lines_dy = 0;
-		for(var i=0; i < self._children.length; i++) {
-			if (self._children[i] === filename) {
-				break;
-			} else {
-				lines_dy += self._model.visibleLineCount(
-					self.childPath(self._children[i]));
-			}
-		}
-
-		var y = self.y() + (self._dy * lines_dy / self._model.visibleLineCount(self.path()));
-		return y;
+		return self.y() + self._layout[filename].y;
 	} else {
 		return parent.getFileY(filename);
 	}	
@@ -294,18 +306,7 @@ DirectoryView.prototype.getFileDY = function(filename) {
 	var parent = self.getParentDir(filename);
 	filename = filename.split('/').pop();
 	if (parent == self) {
-		var lines_dy = 0;
-		for(var i=0; i < self._children.length; i++) {
-			if (self._children[i] === filename) {
-				break;
-			} else {
-				lines_dy += self._model.visibleLineCount(
-					self.childPath(self._children[i]));
-			}
-		}
-
-		var y = self._dy * self._model.visibleLineCount(self.childPath(filename)) / self._model.visibleLineCount(self.path());
-		return y;
+		return self._layout[filename].dy;
 	} else {
 		return parent.getFileDY(filename);
 	}	

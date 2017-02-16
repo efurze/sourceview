@@ -77,21 +77,19 @@ var CanvasRenderer = function(revCount) {
 
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
-	this._yAxis = {}; // filename => y-coord in pixels of top of file
 	this._pixelsPerLine = 1;
 
 	this._revCount = revCount;
 
 	this._selectedFile = "";
 	this._filter = "";
-	this._closedDirs = {};
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
-	$("#filenames").dblclick(this.filesDoubleClick.bind(this));
+	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
-	$("#filter_button").on('click', self.onFilterClick.bind(self));
+	//$("#filter_button").on('click', self.onFilterClick.bind(self));
 	$("#next_button").on('click', self.onNextClick.bind(self));
 	$("#back_button").on('click', self.onPrevClick.bind(self));
 
@@ -113,15 +111,15 @@ CanvasRenderer.prototype.setData = function(revList, model, from, to) {
 	self._fromCommit = 0;
 	self._toCommit = self._revList.length-1;
 
-	self._files = self._model.getFilenames(); // sorted in display order, top-to-bottom
-
+	//self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
+/*
 	if (self._files.length > 10000) {
 		// collapse all dirs
 		self._files.forEach(function(filename) {
-			self.closeFile(filename);
+			self._model.setOpen(filename, false);
 		});
 	}
-
+*/
 	self.calculateLayout();
 	self.render();
 };
@@ -188,6 +186,7 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
 
 	self._dirView.layout();
+	self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
 };
 
 
@@ -195,31 +194,6 @@ CanvasRenderer.prototype.isDir = function(filename) {
 	return filename.endsWith('/');
 }
 
-CanvasRenderer.prototype.isVisible = function(filename) {
-	var self = this;
-	var parts = filename.split('/');
-	var dirname = "";
-	for (var i=0; i < parts.length; i++) {
-		dirname += parts[i] + '/';
-		if (self._closedDirs.hasOwnProperty(dirname)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-CanvasRenderer.prototype.visibleAncestor = function(filename) {
-	var self = this;
-	var parts = filename.split('/');
-	var dirname = "";
-	for (var i=0; i < parts.length; i++) {
-		dirname += parts[i] + '/';
-		if (self._closedDirs.hasOwnProperty(dirname)) {
-			return dirname;
-		}
-	}
-	return "";
-}
 
 CanvasRenderer.prototype.isDescendantOf = function(filename, dir) {
 	var self = this;
@@ -303,7 +277,6 @@ CanvasRenderer.prototype.renderHistory = function() {
 // in pixels
 CanvasRenderer.prototype.fileYTop = function(filename) {
 	var self = this;
-	//return self._yAxis[filename];
 	return self._dirView.getFileY(filename);
 };
 
@@ -339,7 +312,10 @@ CanvasRenderer.prototype.fileYMiddle = function(filename) {
 
 CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	var self = this;
-
+	if (!self.isDrawn(filename)) {
+		return;
+	}
+	console.log("renderFileHistory", filename);
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var x = 0;
 	var fileTop = self.fileYTop(filename);
@@ -347,16 +323,18 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
 	self._context.fillRect(0, fileTop, self._width, maxFileHeight);
+	if (filename === self._selectedFile) {
+		self._context.fillStyle = "grey";
+	} else {
+		if(self._model.isDir(filename)) {
+			self._context.fillStyle = COLORS.REPO_DIR
+		} else {
+			self._context.fillStyle = COLORS.REPO;
+		}
+	}
 
 	for (var index=self._fromCommit; index <= self._toCommit; index++) {
 		var dy = self.fileHeightAtCommit(filename, index);
-		if (filename === self._selectedFile) {
-			self._context.fillStyle = "grey";
-		} else {
-			self._context.fillStyle = self._model.isDir(filename) 
-				? COLORS.REPO_DIR
-				: COLORS.REPO;
-		}
 		self._context.fillRect(x,
 			fileTop,
 			commit_width,
@@ -370,7 +348,9 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 
 CanvasRenderer.prototype.renderFileDiffs = function(filename) {
 	var self = this;
-
+	if (!self.isDrawn(filename)) {
+		return;
+	}
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
 		self.renderFileDiff(index, filename);
 	};
@@ -518,15 +498,6 @@ CanvasRenderer.prototype.filesClick = function(event) {
 	}
 };
 
-CanvasRenderer.prototype.closeFile = function(filename) {
-	var self = this;
-	if (!self._model.isDir(filename)) {
-		var parts = filename.split('/');
-		parts.pop();
-		var dir = parts.join('/') + '/';
-		self._closedDirs[dir] = true;
-	}
-}
 
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
@@ -625,6 +596,17 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 		return self._fromCommit+index;
 	}
 	return -1;
+}
+
+CanvasRenderer.prototype.isDrawn = function(filename) {
+	var self = this;
+	if (!self._model.isVisible(filename)) {
+		return false;
+	}
+	if (self._model.isDir(filename) && self._model.isOpen(filename)) {
+		return false;
+	}
+	return true;
 }
 
 
