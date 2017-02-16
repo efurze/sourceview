@@ -124,11 +124,13 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 	Object.keys(self._filesizes).forEach(function(sha) {
 		var info = self._filesizes[sha];
 		Object.keys(info).forEach(function(filename) {
-			if (!self._range.hasOwnProperty(filename)) {
-				self._range[filename] = 0;
+			if (filename && filename.length) {
+				if (!self._range.hasOwnProperty(filename)) {
+					self._range[filename] = 0;
+				}
+				self._range[filename] = Math.max(self._range[filename], 
+												 info[filename]);
 			}
-			self._range[filename] = Math.max(self._range[filename], 
-											 info[filename]);
 		});
 	});
 
@@ -334,7 +336,11 @@ ModelNode.prototype.addChildren = function(filenames) {
 	var self = this;
 
 	filenames.forEach(function(filename) {
-		self.addChild(filename);		
+		if (filename && filename.trim().length) {
+			self.addChild(filename);		
+		} else {
+			ASSERT(false);
+		}
 	});
 };
 

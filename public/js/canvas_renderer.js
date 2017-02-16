@@ -111,15 +111,17 @@ CanvasRenderer.prototype.setData = function(revList, model, from, to) {
 	self._fromCommit = 0;
 	self._toCommit = self._revList.length-1;
 
-	//self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
-/*
-	if (self._files.length > 10000) {
+	var files = self._dirView.getAll();
+
+	if (files.length > 500) {
 		// collapse all dirs
-		self._files.forEach(function(filename) {
-			self._model.setOpen(filename, false);
+		files.forEach(function(filename) {
+			if (self._model.isDir(filename)) {
+				self._model.setOpen(filename, false);
+			}
 		});
 	}
-*/
+
 	self.calculateLayout();
 	self.render();
 };
@@ -315,7 +317,7 @@ CanvasRenderer.prototype.renderFileHistory = function(filename) {
 	if (!self.isDrawn(filename)) {
 		return;
 	}
-	console.log("renderFileHistory", filename);
+	//console.log("renderFileHistory", filename);
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var x = 0;
 	var fileTop = self.fileYTop(filename);

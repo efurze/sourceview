@@ -33,6 +33,7 @@ var FONT_DIR = {
 */
 var DirectoryView = function(name, parent) {
 	//LOG("New DirView", name);
+	ASSERT(name.length);
 	var self = this;
 	self._parent = parent;
 	self._name = name;
@@ -88,12 +89,27 @@ DirectoryView.prototype.displayOrder = function() {
 	return names;
 }
 
+DirectoryView.prototype.getAll = function() {
+	var self = this;
+	var names = [];
+	self._children.forEach(function(name) {
+		var path = self.childPath(name);
+		names.push(path);
+		if (self._model.isDir(path)) {
+			names = names.concat(self._childDirs[name].displayOrder());
+		}
+	});
+	return names;
+}
+
 DirectoryView.prototype.setModel = function(model) {
 	var self = this;
 	self._childDirs = {};
 	self._children = [];
 	self._model = model;
 	model.getChildren(self.path()).forEach(function(child) {
+		if (!child || !child.length)
+			return;
 		var parts = child.split('/');
 		var name = parts[parts.length-1];
 		if (model.isDir(child)) {
@@ -103,9 +119,9 @@ DirectoryView.prototype.setModel = function(model) {
 		self._children.push(name);
 	});
 
-	self._children.sort(function (a, b) {
-		return a.toLowerCase().localeCompare(b.toLowerCase());
-	});
+//	self._children.sort(function (a, b) {
+//		return a.toLowerCase().localeCompare(b.toLowerCase());
+//	});
 }
 
 DirectoryView.prototype.requestedHeight = function(pixelsPerLine, atY) {
