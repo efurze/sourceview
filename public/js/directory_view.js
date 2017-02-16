@@ -91,48 +91,82 @@ DirectoryView.prototype.setModel = function(model) {
 	});
 }
 
+DirectoryView.prototype.requestedHeight = function(pixelsPerLine, atY) {
+	var self = this;
+
+	if (!self._model.isOpen(self.path())) {
+		return FONT_DIR.height;
+	}
+
+	var height = 0;
+
+	self._children.forEach(function(name) {
+		var dy = 0;
+		if (self._model.isDir(self.childPath(name))) {
+			var subdir = self._childDirs[name];
+			if (height + atY < FONT_DIR.height && self._parent._parent) {
+				dy = FONT_DIR.height - height - atY;
+			}
+			dy += subdir.requestedHeight(pixelsPerLine, atY + height);
+		} else {
+			dy = pixelsPerLine * self._model.visibleLineCount(self.childPath(name));
+		}
+		height += dy;
+	});
+
+	return Math.max(height, FONT_DIR.height);
+}
+
 DirectoryView.prototype.layout = function() {
 	var self = this;
 	var y = 0;
-	if (!self._model.isOpen(self.path())) {
-		return;
+	
+	if (self._name === 'public') {
+		var foo = 'break';
 	}
 
 	var lineCount = self._model.visibleLineCount(self.path());
+	var firstOrderPixelsPerLine = self._dy/lineCount;
 	var y_adjust = 0;
-	Object.keys(self._childDirs).forEach(function(name) {
-		var subdir = self._childDirs[name];
-		var childLineCount = self._model.visibleLineCount(subdir.path());
-		var dy = (childLineCount * self._dy) / lineCount;
-		if (dy < FONT_DIR.height) {
-			y_adjust += FONT_DIR.height - dy;
-			dy = FONT_DIR.height;
-		}
-		if (y < FONT_DIR.height && self._parent) {
-			y_adjust += FONT_DIR.height - y;
-			y = FONT_DIR.height;
+
+	self._children.forEach(function(name) {
+		var childLineCount = self._model.visibleLineCount(self.childPath(name));
+		var dy = 0;
+		
+		if (self._model.isDir(self.childPath(name))) {
+			var subdir = self._childDirs[name];
+			if (y < FONT_DIR.height && self._parent) {
+				y_adjust += FONT_DIR.height - y;
+				y = FONT_DIR.height;
+			}
+			dy = subdir.requestedHeight(firstOrderPixelsPerLine, y);
+			y_adjust += dy - (childLineCount * firstOrderPixelsPerLine);
+		} else {
+			dy = (childLineCount * firstOrderPixelsPerLine);
 		}
 		y += dy;
 	});
 
+	var pixelsPerLine = (self._dy - y_adjust) / lineCount;
+
 	y = 0;
 	self._children.forEach(function(name) {
 		var childLineCount = self._model.visibleLineCount(self.childPath(name));
-		var childHeight = (childLineCount * (self._dy - y_adjust)) / lineCount;
+		var childHeight = childLineCount * pixelsPerLine;
 
 		if (self._model.isDir(self.childPath(name))) {
-			var child = self._childDirs[name];
-			if (childHeight < FONT_DIR.height) {
-				childHeight = FONT_DIR.height;
-			}
+			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y = FONT_DIR.height;
 			}
-			child.setClip(self._x + MARGIN, y, self._dx, childHeight);
-			child.layout();
-			y += child._dy;
+			subdir.setClip(self._x + MARGIN, 
+				y, 
+				self._dx, 
+				subdir.requestedHeight(pixelsPerLine, y));
+			subdir.layout();
+			y += subdir._dy;
 		} else {
-			y += childHeight;
+			y += childLineCount * pixelsPerLine;
 		}
 	});
 }

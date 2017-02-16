@@ -580,6 +580,7 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 	if (file != self._selectedFile) {
 		var previous = self._selectedFile;
 		self._selectedFile = file;
+		//console.log("Selected:", file);
 
 		if (previous) {
 			self.renderFileHistory(previous);
