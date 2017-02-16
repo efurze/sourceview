@@ -7,8 +7,8 @@ var COLORS = {
  DIFF: 				'#424D54',	// blue-black
  DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
 
- REPO_DIR: 			'#AD3232', 	// 
- DIFF_DIR: 			'#561919',	// 
+ REPO_DIR: 			'#686a83', 	// 
+ DIFF_DIR: 			'#414252',	// 
 };
 
 var MARGIN = 5;
