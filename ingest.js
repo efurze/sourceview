@@ -4,9 +4,9 @@ let Logger = require('./lib/logger.js');
 
 
 
-var ingest = function(dir, max) {
+var ingest = function(dir, max, start) {
 	var digest = new Digest(dir);
-	digest.buildBranchInfo('master', max);
+	digest.buildBranchInfo('master', start, max);
 };
 
 
@@ -17,13 +17,22 @@ var repo = process.argv[2];
 console.log("Reading repository at " + repo);
 
 var max = 0;
-if (process.argv.length > 3 && process.argv[3].startsWith("-max")) {
-	var parts = process.argv[3].split('=')
-	if (parts.length > 1) {
+var start = 0;
+
+process.argv.forEach(function(arg, index) {
+	if (index < 2)
+		return;
+
+	var parts = arg.split('=');
+
+	if (arg.startsWith('-max')) {
 		max = parseInt(parts[1]);
 		console.log("Limiting ingestion to", max, "commits");
+	} else if (arg.startsWith('-start')) {
+		start = parseInt(parts[1]);
+		console.log("Beginning ingestion at", start);
 	}
-}
+});
 
-ingest(repo, max);
+ingest(repo, max, start);
 

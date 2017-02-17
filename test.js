@@ -1,5 +1,5 @@
 var Git = require('./lib/git.js');
-var git = new Git('/Users/efurze/repos/git');
+var git = new Git('/Users/efurze/repos/linux');
 
 var Digest = require('./lib/digest.js');
 var digest = new Digest('/Users/efurze/repos/linux');
@@ -11,6 +11,12 @@ var Promise = require('bluebird');
 var exec = require('child_process').exec;
 
 var persist = require('./lib/persist.js');
+
+
+git.diff('c497f8d17246720afe680ea1a8fa6e48e75af852')
+	.then(function(diff) {
+		console.log(diff);
+	});
 
 /*
 git.revList('master')
@@ -29,7 +35,7 @@ git.revList('master')
 	});
 */
 
-digest.buildBranchInfo('master');
+//digest.buildBranchInfo('master');
 
 /*
 persist.getRevList('git', 'master')
