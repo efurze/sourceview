@@ -1,6 +1,6 @@
 
-let Persist = require('./lib/persist.js');
-let Logger = require('./lib/logger.js');
+let Persist = require('../lib/persist.js');
+let Logger = require('../lib/logger.js');
 let Promise = require('bluebird');
 
 
