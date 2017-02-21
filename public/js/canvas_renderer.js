@@ -79,13 +79,15 @@ var CanvasRenderer = function(revCount) {
 	this._lastMouseY = -1;
 	this._pixelsPerLine = 1;
 
+	this._offset = 0;
+
 	this._revCount = revCount;
 
 	this._selectedFile = "";
 	this._filter = "";
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
-	$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
+	//$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
@@ -139,7 +141,6 @@ CanvasRenderer.prototype.onNextClick = function() {
 	var self = this;
 
 	var repo = urlParam("repo");
-
 	if (self._toAbs < self._revCount) {
 		var delta = self._toAbs - self._fromAbs;
 		var from = self._fromAbs + Math.round(delta/3);
@@ -148,6 +149,38 @@ CanvasRenderer.prototype.onNextClick = function() {
 		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
 			self.ajaxDone.bind(self));
 	}
+
+/*
+	if (self._toCommit >= self._revCount-1)
+		return;
+
+	self._fromCommit++;
+	self._toCommit++;
+
+	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
+	self._offset --;
+	
+	var img = self._context.getImageData(0,0,self._width, self._height);
+	
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
+	self._context.clearRect(0, 0, self._width, self._height);
+	self._context.fillRect(0, 0, self._width, self._height);
+
+	self._context.putImageData(img, -commit_width, 0);
+
+
+	var repo = urlParam("repo");
+
+	if (self._toCommit >= self._revList.length
+		|| !self._model.hasCommit(self._revList(self._toCommit)))
+	{
+		var from = self._toCommit;
+		var to = Math.min(self._revCount, from + 10);
+		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
+			self.ajaxDone.bind(self));
+	}
+*/
 	
 };
 
@@ -164,6 +197,23 @@ CanvasRenderer.prototype.onPrevClick = function() {
 		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
 			self.ajaxDone.bind(self));
 	}
+/*
+	self._fromCommit--;
+	self._toCommit--;
+	
+
+	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
+	self._offset ++;
+
+	var img = self._context.getImageData(0,0,self._width, self._height);
+
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
+	self._context.clearRect(0, 0, self._width, self._height);
+	self._context.fillRect(0, 0, self._width, self._height);
+
+	self._context.putImageData(img, commit_width, 0);
+*/
 	
 };
 
@@ -191,6 +241,41 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
 };
 
+// in pixels
+CanvasRenderer.prototype.fileYTop = function(filename) {
+	var self = this;
+	return self._dirView.getFileY(filename);
+};
+
+// in pixels
+CanvasRenderer.prototype.fileYBottom = function(filename) {
+	var self = this;
+	return self.fileYTop(filename) + self.fileHeight(filename);
+};
+
+// in pixels
+CanvasRenderer.prototype.fileHeight = function(filename) {
+	var self = this;
+	return self._dirView.getFileDY(filename);
+};
+
+// in pixels
+// @commit_index = index into self._history
+CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
+	var self = this;
+	if (self._model.isDir(filename)) {
+		return FONT_DIR.height;
+	} else {
+		return  self._model.fileSize(filename, self._revList[commit_index]) 
+		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);
+	}
+};
+
+// in pixels
+CanvasRenderer.prototype.fileYMiddle = function(filename) {
+	var self = this;
+	return (self.fileYBottom(filename) + self.fileYTop(filename))/2;
+};
 
 CanvasRenderer.prototype.isDir = function(filename) {
 	return filename.endsWith('/');
@@ -271,53 +356,23 @@ CanvasRenderer.prototype.renderHistory = function() {
 	self._files.forEach(function(filename) {
 		if (self._model.isVisible(filename)) {
 			self.renderFileHistory(filename);
-			self.renderFileDiffs(filename);
 		}
 	});
 };
 
-// in pixels
-CanvasRenderer.prototype.fileYTop = function(filename) {
-	var self = this;
-	return self._dirView.getFileY(filename);
-};
-
-// in pixels
-CanvasRenderer.prototype.fileYBottom = function(filename) {
-	var self = this;
-	return self.fileYTop(filename) + self.fileHeight(filename);
-};
-
-// in pixels
-CanvasRenderer.prototype.fileHeight = function(filename) {
-	var self = this;
-	return self._dirView.getFileDY(filename);
-};
-
-// in pixels
-// @commit_index = index into self._history
-CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
-	var self = this;
-	if (self._model.isDir(filename)) {
-		return FONT_DIR.height;
-	} else {
-		return  self._model.fileSize(filename, self._revList[commit_index]) 
-		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);
-	}
-};
-
-// in pixels
-CanvasRenderer.prototype.fileYMiddle = function(filename) {
-	var self = this;
-	return (self.fileYBottom(filename) + self.fileYTop(filename))/2;
-};
-
 CanvasRenderer.prototype.renderFileHistory = function(filename) {
+	var self = this;
+
+	self.renderFilesizeHistory(filename);
+	self.renderFileDiffs(filename);
+}
+
+CanvasRenderer.prototype.renderFilesizeHistory = function(filename) {
 	var self = this;
 	if (!self.isDrawn(filename)) {
 		return;
 	}
-	//console.log("renderFileHistory", filename);
+
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var x = 0;
 	var fileTop = self.fileYTop(filename);
@@ -419,7 +474,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 	} else {
 		var fileLen = self._model.fileMaxSize(filename);
 
-		if (diff_summary.hasOwnProperty(filename)) {
+		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
 			var edits = diff_summary[filename];
 
 			edits.forEach(function(edit) { // "+1,9"
@@ -557,10 +612,8 @@ CanvasRenderer.prototype.handleMouseYChange = function(event) {
 
 		if (previous) {
 			self.renderFileHistory(previous);
-			self.renderFileDiffs(previous);
 		}
 		self.renderFileHistory(file);
-		self.renderFileDiffs(file);
 		self.renderFilenames();
 		self.highlightFilenames();
 		self.renderDiffContent();
