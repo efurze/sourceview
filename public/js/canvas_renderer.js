@@ -398,7 +398,7 @@ CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) {
 
 	var fileTop = self.fileYTop(filename);
 	var fileHeight = self.fileHeight(filename);
-	var x = commit_width * diff_index;
+	var x = commit_width * (diff_index - self._fromCommit);
 
 	if (self._model.isDir(filename)) {
 		var changed_files = Object.keys(diff_summary);
