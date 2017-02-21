@@ -99,6 +99,8 @@ var CanvasRenderer = function(revCount) {
 	this._downloader = new Downloader();	
 	this._dirView = new DirectoryView("/", null);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
+
+	this._repoView = new RepoView(this._context, this._width, this._height);
 };
 
 CanvasRenderer.prototype.setData = function(revList, model, from, to) {
@@ -109,6 +111,7 @@ CanvasRenderer.prototype.setData = function(revList, model, from, to) {
 	self._toAbs = to;
 
 	self._dirView.setModel(model);
+	self._repoView.setData(model, revList);
 
 	self._fromCommit = 0;
 	self._toCommit = self._revList.length-1;
@@ -239,7 +242,17 @@ CanvasRenderer.prototype.calculateLayout = function() {
 
 	self._dirView.layout();
 	self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
+
+	var layout = {}; //filename: {y:, dy:}
+	self._files.forEach(function(filename) {
+		layout[filename] = {
+			y: self._dirView.getFileY(filename),
+			dy: self._dirView.getFileDY(filename)
+		};
+	});
+	self._repoView.setYLayout(layout);
 };
+
 
 // in pixels
 CanvasRenderer.prototype.fileYTop = function(filename) {
@@ -247,35 +260,6 @@ CanvasRenderer.prototype.fileYTop = function(filename) {
 	return self._dirView.getFileY(filename);
 };
 
-// in pixels
-CanvasRenderer.prototype.fileYBottom = function(filename) {
-	var self = this;
-	return self.fileYTop(filename) + self.fileHeight(filename);
-};
-
-// in pixels
-CanvasRenderer.prototype.fileHeight = function(filename) {
-	var self = this;
-	return self._dirView.getFileDY(filename);
-};
-
-// in pixels
-// @commit_index = index into self._history
-CanvasRenderer.prototype.fileHeightAtCommit = function(filename, commit_index) {
-	var self = this;
-	if (self._model.isDir(filename)) {
-		return FONT_DIR.height;
-	} else {
-		return  self._model.fileSize(filename, self._revList[commit_index]) 
-		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);
-	}
-};
-
-// in pixels
-CanvasRenderer.prototype.fileYMiddle = function(filename) {
-	var self = this;
-	return (self.fileYBottom(filename) + self.fileYTop(filename))/2;
-};
 
 CanvasRenderer.prototype.isDir = function(filename) {
 	return filename.endsWith('/');
@@ -304,45 +288,6 @@ CanvasRenderer.prototype.renderFilenames = function() {
 	self._dirView.renderDirectories(self._filesContext);	
 };
 
-CanvasRenderer.prototype.highlightFilenames = function() {
-	return;
-	var self = this;
-	var fontHeight;
-/*
-	// files in this diff
-	if (self._selectedCommitIndex >= 0 && self._fromCommit != self._toCommit) {
-		var diff = self._diffs[self._selectedCommitIndex];
-		Object.keys(diff.diffs).forEach(function(filename) {
-			fontHeight = FONT_NORMAL.height;
-			var y = self.fileYMiddle(filename) - fontHeight/2 - 2;
-
-			self._filesContext.beginPath();
-			self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
-			self._filesContext.fillRect(0, y, self._filesWidth, fontHeight + 4);
-
-			self._filesContext.beginPath();
-			self._filesContext.fillStyle = 'red';
-			self._filesContext.font = FONT_NORMAL.height;
-			self._filesContext.fillText(filename, 10, y);
-		});
-	}
-*/
-	var filename = self._selectedFile;
-	if (filename) {
-		var font = self._model.isDir(filename) ? FONT_DIR : FONT_LARGE;
-		var y = self.fileYMiddle(filename) - font.height/2 - 4;
-		self._filesContext.beginPath();
-		self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
-		self._filesContext.strokeStyle = font.color;
-		self._filesContext.fillRect(0, y, self._filesWidth, font.height + 8);
-		self._filesContext.rect(0, y, self._filesWidth, font.height + 8);
-		self._filesContext.stroke();
-
-		self._filesContext.fillStyle = font.color;
-		self._filesContext.font = font.name;
-		self._filesContext.fillText(filename, 5, self.fileYMiddle(filename) + font.height/2);
-	}
-}
 
 CanvasRenderer.prototype.renderHistory = function() {
 	console.log("renderHistory");
@@ -353,171 +298,10 @@ CanvasRenderer.prototype.renderHistory = function() {
 	self._context.clearRect(0, 0, self._width, self._height);
 	self._context.fillRect(0, 0, self._width, self._height);
 
-	self._files.forEach(function(filename) {
-		if (self._model.isVisible(filename)) {
-			self.renderFileHistory(filename);
-		}
-	});
-};
-
-CanvasRenderer.prototype.renderFileHistory = function(filename) {
-	var self = this;
-
-	self.renderFilesizeHistory(filename);
-	self.renderFileDiffs(filename);
-}
-
-CanvasRenderer.prototype.renderFilesizeHistory = function(filename) {
-	var self = this;
-	if (!self.isDrawn(filename)) {
-		return;
-	}
-
-	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
-	var x = 0;
-	var fileTop = self.fileYTop(filename);
-	var maxFileHeight = self.fileHeight(filename);
-
-	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._context.fillRect(0, fileTop, self._width, maxFileHeight);
-	if (filename === self._selectedFile) {
-		self._context.fillStyle = "grey";
-	} else {
-		if(self._model.isDir(filename)) {
-			self._context.fillStyle = COLORS.REPO_DIR
-		} else {
-			self._context.fillStyle = COLORS.REPO;
-		}
-	}
-
-	for (var index=self._fromCommit; index <= self._toCommit; index++) {
-		var dy = self.fileHeightAtCommit(filename, index);
-		self._context.fillRect(x,
-			fileTop,
-			commit_width,
-			dy
-		);
-		x += commit_width;
-	};
-
+	self._repoView.render();
 };
 
 
-CanvasRenderer.prototype.renderFileDiffs = function(filename) {
-	var self = this;
-	if (!self.isDrawn(filename)) {
-		return;
-	}
-	for (var index = self._fromCommit; index <= self._toCommit; index++) {
-		self.renderFileDiff(index, filename);
-	};
-};
-
-CanvasRenderer.prototype.renderDiff = function(diff_index) { 
-	var self = this;
-	if (!diff_index < 0 || !diff_index >= self._revList.length) 
-		return;
-
-	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
-	if (diff_summary) {
-		var files = {};
-		self._files.forEach(function(file) {
-			files[file] = true;
-		});
-
-		Object.keys(diff_summary).forEach(function(filename) {
-			if (files.hasOwnProperty(filename))
-				self.renderFileDiff(diff_index, filename);
-		});
-	}
-};
-
-// diff:  // {commit:{}, diffs: {"public/css/main.css":["-1,5","+1,9"],"public/js/renderer.js":["-5,21","+5,27","-29,13","+35,36"]}
-CanvasRenderer.prototype.renderFileDiff = function(diff_index, filename) { 
-	var self = this;
-	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-
-	if (!diff_index < 0 || !diff_index >= self._revList.length) 
-		return;
-
-	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
-
-	self._context.fillStyle = self._model.isDir(filename) 
-		? COLORS.DIFF_DIR
-		: COLORS.DIFF;
-	if (self._selectedCommitIndex == diff_index
-		&& self._toCommit != self._fromCommit) {
-		self._context.fillStyle = COLORS.DIFF_HIGHLIGHT;
-		//self.renderDiffContent();
-	}
-
-	var fileTop = self.fileYTop(filename);
-	var fileHeight = self.fileHeight(filename);
-	var x = commit_width * (diff_index - self._fromCommit);
-
-	if (self._model.isDir(filename)) {
-		var changed_files = Object.keys(diff_summary);
-		var mark_commit = false;
-		for (var i=0; i < changed_files.length; i++) {
-			if (self.isDescendantOf(changed_files[i], filename)) {
-				mark_commit = true;
-				break;
-			}
-		}
-		if (mark_commit) {
-			self._context.fillRect(x,
-					fileTop,
-					commit_width,
-					fileHeight
-				);
-		}
-	} else {
-		var fileLen = self._model.fileMaxSize(filename);
-
-		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
-			var edits = diff_summary[filename];
-
-			edits.forEach(function(edit) { // "+1,9"
-				var parts = edit.split(",");
-				var linenum = parseInt(parts[0].slice(1));
-				var editLen = parseInt(parts[1]);
-				var dy =  (editLen*fileHeight)/fileLen;
-				var y = fileTop + (linenum * fileHeight)/fileLen;
-
-				self._context.fillRect(x,
-					y,
-					commit_width,
-					dy
-				);
-			});
-		}
-	}
-};
-
-CanvasRenderer.prototype.renderDiffContent = function() {
-	/*
-	let self = this;
-	$("#code_textarea").text("");
-	if (self._selectedCommitIndex >= 0 
-		&& self._selectedCommitIndex < self._revList.length) {
-		let diff_info = self._diffs[self._selectedCommitIndex];
-		if (diff_info && self._selectedFile) {
-			let diff = diff_info.diffs;
-
-			if (diff.hasOwnProperty(self._selectedFile)
-				&& diff[self._selectedFile].raw) {
-				let diff_str = decodeURI(diff[self._selectedFile].raw);
-				//$("#code_textarea").text(diff_str);
-
-				var diff2htmlUi = new Diff2HtmlUI({
-					diff: diff_str
-				});
-				diff2htmlUi.draw('#code_div', {inputFormat: 'diff', showFiles: false, matching: 'lines'});
-			}
-		}
-	}
-	*/
-};
 
 CanvasRenderer.prototype.historyDoubleClick = function(event) {
 	var self = this;
@@ -565,28 +349,12 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 
 	if (self._lastMouseX != event.offsetX) {
 		self._lastMouseX = event.offsetX;
-		var index = self.commitIndexFromXCoord(event.offsetX);
-		if (index != self._selectedCommitIndex) {
-			var previous = self._selectedCommitIndex;
-			var msg = "";
-			self._selectedCommitIndex = index;
-			if (index >= 0 && index < self._revList.length) {
-				msg = "[" + self._model.getCommitDate(self._revList[index]) + "]: ";
-				msg += self._model.getCommitMsg(self._revList[self._selectedCommitIndex]);
-			}
-			$("#commit_info").text(msg);
-			
-			if (previous >= 0) {
-				self.renderDiff(previous);
-			}
-			self.renderDiff(index);
-			self.renderFilenames();
-			self.highlightFilenames();
-		}
+		self._repoView.setSelectedCommit(self.commitIndexFromXCoord(event.offsetX));
 	}
 
 	if (self._lastMouseY != event.offsetY) {
-		self.handleMouseYChange(event);
+		self._lastMouseY = event.offsetY;
+		self._repoView.setSelectedFile(self.fileFromYCoord(event.offsetY));
 	}
 };
 
@@ -597,26 +365,8 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 	}
 
 	if (self._lastMouseY != event.offsetY) {
-		self.handleMouseYChange(event);
-	}
-};
-
-CanvasRenderer.prototype.handleMouseYChange = function(event) {
-	var self = this;
-	self._lastMouseY = event.offsetY;
-	var file = self.fileFromYCoord(event.offsetY);
-	if (file != self._selectedFile) {
-		var previous = self._selectedFile;
-		self._selectedFile = file;
-		//console.log("Selected:", file);
-
-		if (previous) {
-			self.renderFileHistory(previous);
-		}
-		self.renderFileHistory(file);
-		self.renderFilenames();
-		self.highlightFilenames();
-		self.renderDiffContent();
+		self._lastMouseY = event.offsetY;
+		self._repoView.setSelectedFile(self.fileFromYCoord(event.offsetY));
 	}
 };
 
@@ -653,16 +403,6 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	return -1;
 }
 
-CanvasRenderer.prototype.isDrawn = function(filename) {
-	var self = this;
-	if (!self._model.isVisible(filename)) {
-		return false;
-	}
-	if (self._model.isDir(filename) && self._model.isOpen(filename)) {
-		return false;
-	}
-	return true;
-}
 
 
 var urlParam = function(name){
