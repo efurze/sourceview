@@ -107,10 +107,29 @@ RepoModel.prototype.setData = function(filesizes, diffs) {
 */
 RepoModel.prototype.setRangeData = function(commits, size_history, diff_summaries) {
 	var self = this;
-	self._filesizes = size_history; // commit_sha: {filename: length}
-	self._diffs = diff_summaries; // commit_sha: {filename: diff_summary}
+	self._filesizes = {}; // commit_sha: {filename: length}
+	self._diffs = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
+
+	self._root = new ModelNode('/', true, null);
+	self.addData(commits, size_history, diff_summaries);
+};
+
+RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
+	var self = this;
+
+	Object.keys(size_history).forEach(function(sha) {
+		if (!self._filesizes.hasOwnProperty(sha)) {
+			self._filesizes[sha] = size_history[sha];
+		}
+	});
+
+	Object.keys(diff_summaries).forEach(function(sha) {
+		if (!self._diffs.hasOwnProperty(sha)) {
+			self._diffs[sha] = diff_summaries[sha];
+		}
+	});
 
 	commits.forEach(function(commit) {
 		self._commits[commit.hash] = {
@@ -120,13 +139,15 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 		};
 	});
 
-	// initialize range
-	Object.keys(self._filesizes).forEach(function(sha) {
-		var info = self._filesizes[sha];
+	// update range
+	var new_files = [];
+	Object.keys(size_history).forEach(function(sha) {
+		var info = size_history[sha];
 		Object.keys(info).forEach(function(filename) {
 			if (filename && filename.length) {
 				if (!self._range.hasOwnProperty(filename)) {
 					self._range[filename] = 0;
+					new_files.push(filename);
 				}
 				self._range[filename] = Math.max(self._range[filename], 
 												 info[filename]);
@@ -134,9 +155,12 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 		});
 	});
 
-	self._root = new ModelNode('/', true, null);
-	self._root.addChildren(Object.keys(self._range));
-};
+	self._root.addChildren(new_files);
+}
+
+RepoModel.prototype.hasCommit = function(commit_id) {
+	return this._commits.hasOwnProperty(commit_id);
+}
 
 // returns full path of all filenames
 RepoModel.prototype.getFilenames = function() {
