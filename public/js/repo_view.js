@@ -220,6 +220,9 @@ RepoView.prototype._renderCommit = function(diff_index) {
 // draw a row
 RepoView.prototype._renderFile = function(filename) {	
 	var self = this;
+	if (!self._layout.hasOwnProperty(filename)) {
+		return;
+	}
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
 		self._renderCell(filename, index);
 	};
