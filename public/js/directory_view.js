@@ -248,7 +248,7 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 
 
 
-DirectoryView.prototype.renderDirectories = function() {
+DirectoryView.prototype.render = function() {
 	var self = this;
 	var x = self.x();
 	var y = self.y();
@@ -275,7 +275,7 @@ DirectoryView.prototype.renderDirectories = function() {
 		Object.keys(self._childDirs).forEach(function(name) {
 			var child = self._childDirs[name];
 			if (self._model.isDir(self.childPath(name))) {
-				child.renderDirectories();
+				child.render();
 			}
 		});
 	}

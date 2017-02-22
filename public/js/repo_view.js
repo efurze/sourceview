@@ -110,8 +110,25 @@ RepoView.prototype.setSelectedCommit = function(index) {
 
 
 RepoView.prototype.setCommitRange = function(from, to) {
-	this._fromCommit = from;
-	this._toCommit = to;
+	var self = this;
+	to = Math.min(to, self._revList.length-1);
+	from = Math.max(from, 0);
+
+	// dirty the newly visible commits
+	if (to > self._toCommit) {
+		var start = Math.max(self._toCommit, from);
+		for (var i=start; i <= to; i++) {
+			self.markCommit(self._revList[i]);
+		}
+	} else if (from < self._fromCommit) {
+		var end = Math.min(self._fromCommit, to);
+		for (var i=from; i <= end; i++) {
+			self.markCommit(self._revList[i]);	
+		}
+	}
+
+	self._fromCommit = from;
+	self._toCommit = to;
 }
 
 RepoView.prototype.setYLayout = function(layout) {

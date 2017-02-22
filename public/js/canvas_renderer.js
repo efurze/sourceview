@@ -69,6 +69,7 @@ var CanvasRenderer = function(revList) {
 	this._filter = "";
 	this._mouseDown = false;
 	this._xForLastCanvasShift = 0;
+	this._scrollTimerId = -1;
 	this._model = new RepoModel();
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
@@ -127,28 +128,46 @@ CanvasRenderer.prototype.onFilterClick = function() {
 	
 };
 
-CanvasRenderer.prototype.onNextClick = function() {
+/*
+	@count: # of commits to scroll. < 0 means right (prev)
+*/
+CanvasRenderer.prototype._scrollCanvas = function(count) {
 	var self = this;
 
-	if (self._toCommit >= self._revCount-1)
-		return;
-
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-	self._fromCommit ++;
-	self._toCommit ++;
+	var visible_commits = self._toCommit - self._fromCommit;
+	var previous_to = self._toCommit;
+	var previous_from = self._fromCommit;
+	if (count > 0) {
+		self._toCommit = Math.min(self._revList.length-1, self._toCommit + count);
+		self._fromCommit = self._toCommit - visible_commits;
+	} else {
+		self._fromCommit = Math.max(0, self._fromCommit + count);
+		self._toCommit = self._fromCommit + visible_commits;
+	}
+
+	if (self._toCommit == previous_to)
+		return;
+		
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit)
-	self._repoView.markCommit(self._revList[self._toCommit]);
-	
 	var img = self._context.getImageData(0,0,self._width, self._height);
 	
+	// clear canvas
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
 	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
 	self._context.clearRect(0, 0, self._width, self._height);
 	self._context.fillRect(0, 0, self._width, self._height);
 
-	self._context.putImageData(img, -commit_width, 0);
-	
+	self._context.putImageData(img, -(count*commit_width), 0);
+}
 
+CanvasRenderer.prototype.onNextClick = function() {
+	var self = this;
+
+	if (self._toCommit >= self._revCount-1)
+		return;
+	
+	self._scrollCanvas(1);
 
 	var repo = urlParam("repo");
 
@@ -172,20 +191,7 @@ CanvasRenderer.prototype.onPrevClick = function() {
 	if (self._fromCommit <= 0)
 		return;
 
-	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-	self._fromCommit --;
-	self._toCommit --;
-	self._repoView.setCommitRange(self._fromCommit, self._toCommit)
-	self._repoView.markCommit(self._revList[self._fromCommit]);
-
-	var img = self._context.getImageData(0,0,self._width, self._height);
-
-	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
-	self._context.clearRect(0, 0, self._width, self._height);
-	self._context.fillRect(0, 0, self._width, self._height);
-
-	self._context.putImageData(img, commit_width, 0);
+	self._scrollCanvas(-1);
 
 	var repo = urlParam("repo");
 	if (!self._model.hasCommit(self._revList[self._fromCommit]))
@@ -248,7 +254,7 @@ CanvasRenderer.prototype.renderFilenames = function() {
 	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
 	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
 
-	self._dirView.renderDirectories(self._filesContext);	
+	self._dirView.render();	
 };
 
 
@@ -295,13 +301,47 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	if (self._mouseDown) {
 		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
 		var delta = self._xForLastCanvasShift - self._lastMouseX;
-		if (Math.abs(delta) >= commit_width) {
-			if (delta < 0) {
-				self.onPrevClick();
-			} else {
-				self.onNextClick();
-			}
+		
+		var count = Math.round(delta/commit_width);
+		if (count != 0) {
+			self._scrollCanvas(count);
+			self._xForLastCanvasShift = self._lastMouseX;
 		}
+
+		if (self._scrollTimerId >= 0) {
+			clearTimeout(self._scrollTimerId);
+			self._scrollTimerId = -1;
+		}
+
+		self._scrollTimerId = setTimeout(function() {
+			console.log("tick");
+			self._scrollTimerId = -1;
+			var from = self._toCommit;
+			for (var i=self._fromCommit; i <= self._toCommit; i++) {
+				if (!self._model.hasCommit(self._revList[i])) {
+					from = i;
+					break;
+				}
+			}
+
+			var to = from;
+			for (var i=self._toCommit; i > from; i--) {
+				if (!self._model.hasCommit(self._revList[i])) {
+					to = i;
+					break;
+				}	
+			}
+
+			if (from < to) {
+				var repo = urlParam("repo");
+				self._downloader.get("/rangeJSON?repo=" 
+					+ repo 
+					+ "&from=" + from
+					+"&to=" + to,
+					self.ajaxDone.bind(self));
+			}
+		}, 200);
+
 
 		self._lastMouseY = event.offsetY;
 		self._lastMouseX = event.offsetX;
