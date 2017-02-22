@@ -105,6 +105,8 @@ DirectoryView.prototype.getAll = function() {
 
 DirectoryView.prototype.setModel = function(model) {
 	var self = this;
+	var files = [];
+	var dirs = [];
 	self._childDirs = {};
 	self._children = [];
 	self._model = model;
@@ -116,10 +118,13 @@ DirectoryView.prototype.setModel = function(model) {
 		if (model.isDir(child)) {
 			self._childDirs[name] = new DirectoryView(name, self._context, self);
 			self._childDirs[name].setModel(model);
+			dirs.push(name);
+		} else {
+			files.push(name);
 		}
-		self._children.push(name);
 	});
 
+	self._children = files.concat(dirs);
 //	self._children.sort(function (a, b) {
 //		return a.toLowerCase().localeCompare(b.toLowerCase());
 //	});
