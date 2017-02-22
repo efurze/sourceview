@@ -13,10 +13,10 @@ function getData(req) {
 	var data = {};
 	return persist.getRevList(repo, 'master')
 		.then(function(history) {
-			data.fromRev = from;
-			data.toRev = to;
-			data.history = history;
 			data.commits = history.slice(from, to+1);
+			data.fromRev = from;
+			data.toRev = from + data.commits.length-1;
+			data.history = history;
 			return Promise.map(data.commits, function(commit_id) {
 				return persist.getCommit(repo, commit_id);
 			});
