@@ -70,10 +70,12 @@ var CanvasRenderer = function(revList) {
 	this._mouseDown = false;
 	this._xForLastCanvasShift = 0;
 	this._scrollTimerId = -1;
+	this._selectionFrozen = false;
 	this._model = new RepoModel();
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).mousedown(this.mouseDown.bind(this));
+	$(this._canvas).click(this.repoClick.bind(this));
 	$(document).mouseup(this.mouseUp.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
@@ -291,6 +293,17 @@ CanvasRenderer.prototype.filesClick = function(event) {
 };
 
 
+CanvasRenderer.prototype.repoClick = function(event) {
+	var self = this;
+	if (self._ignoreMouseUp) {
+		self._ignoreMouseUp = false;
+		return;
+	}
+
+	self._selectionFrozen = !self._selectionFrozen;
+	self.mouseMoveHistoryWindow(event);
+};
+
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
 
@@ -302,6 +315,7 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	if (self._mouseDown) {
 		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
 		var delta = self._xForLastCanvasShift - self._lastMouseX;
+		self._dragging = true;
 		
 		var count = Math.round(delta/commit_width);
 		if (count != 0) {
@@ -349,6 +363,9 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		return;
 	}
 
+	if (self._selectionFrozen)
+		return;
+
 	if (self._lastMouseX != event.offsetX) {
 		self._lastMouseX = event.offsetX;
 		self._repoView.setSelectedCommit(self.commitIndexFromXCoord(event.offsetX));
@@ -368,6 +385,10 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 
 CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 	var self = this;
+	
+	if (self._selectionFrozen)
+		return;
+
 	if (event.offsetY == self._lastMouseY ) {
 		return;
 	}
@@ -388,13 +409,17 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 CanvasRenderer.prototype.mouseDown = function(event) {
 	var self = this;
 	self._xForLastCanvasShift = event.offsetX;
-	self._lastMouseX = event.offsetX;
 	self._mouseDown = true;
 }
 
 CanvasRenderer.prototype.mouseUp = function(event) {
 	var self = this;
 	self._mouseDown = false;
+	if (self._selectionFrozen && self._dragging) {
+		self._dragging = false;
+		self._ignoreMouseUp = true;
+	}
+	self._dragging = false;
 }
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
