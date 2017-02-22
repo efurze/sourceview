@@ -82,7 +82,7 @@ var CanvasRenderer = function(revList) {
 
 
 	this._downloader = new Downloader();	
-	this._dirView = new DirectoryView("/", null);
+	this._dirView = new DirectoryView("/", this._filesContext, null);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
 	this._repoView = new RepoView(this._context, revList);
@@ -313,7 +313,13 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
-		self._repoView.setSelectedFile(self.fileFromYCoord(event.offsetY));
+		var file = self.fileFromYCoord(event.offsetY);
+		if (file != self._selectedFile) {
+			self._selectedFile = file;
+			self._repoView.setSelectedFile(file);
+			self._model.setSelectedFile(file);
+			self.renderFilenames();
+		}
 	}
 };
 
@@ -325,7 +331,13 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
-		self._repoView.setSelectedFile(self.fileFromYCoord(event.offsetY));
+		var file = self.fileFromYCoord(event.offsetY);
+		if (file != self._selectedFile) {
+			self._selectedFile = file;
+			self._repoView.setSelectedFile(file);
+			self._model.setSelectedFile(file);
+			self.renderFilenames();
+		}
 	}
 };
 

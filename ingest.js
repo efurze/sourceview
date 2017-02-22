@@ -6,7 +6,7 @@ let Logger = require('./lib/logger.js');
 
 var ingest = function(dir, max, start) {
 	var digest = new Digest(dir);
-	digest.buildBranchInfo('master', start, max);
+	digest.buildBranchInfo2('master', start, max);
 };
 
 

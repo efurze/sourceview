@@ -1,5 +1,5 @@
 var Git = require('./lib/git.js');
-var git = new Git('/Users/efurze/repos/linux');
+var git = new Git('/Users/efurze/repos/git');
 
 var Digest = require('./lib/digest.js');
 var digest = new Digest('/Users/efurze/repos/linux');
@@ -13,9 +13,10 @@ var exec = require('child_process').exec;
 var persist = require('./lib/persist.js');
 
 
-git.diff('c497f8d17246720afe680ea1a8fa6e48e75af852')
+git.diff('67d4160712ef07bc7a5bc6790f166ba39d45a82a',
+	'ada5853c98c5c0ad84a990cc6ee7365a14555c0f')
 	.then(function(diff) {
-		console.log(diff);
+		console.log(diff.diffSummary());
 	});
 
 /*

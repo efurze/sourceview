@@ -31,11 +31,12 @@ var FONT_DIR = {
 	'history': []
 	}
 */
-var DirectoryView = function(name, parent) {
+var DirectoryView = function(name, context, parent) {
 	//LOG("New DirView", name);
 	ASSERT(name.length);
 	var self = this;
 	self._parent = parent;
+	self._context = context;
 	self._name = name;
 	self._childDirs = {};
 	self._children = [];
@@ -113,7 +114,7 @@ DirectoryView.prototype.setModel = function(model) {
 		var parts = child.split('/');
 		var name = parts[parts.length-1];
 		if (model.isDir(child)) {
-			self._childDirs[name] = new DirectoryView(name, self);
+			self._childDirs[name] = new DirectoryView(name, self._context, self);
 			self._childDirs[name].setModel(model);
 		}
 		self._children.push(name);
@@ -242,23 +243,25 @@ DirectoryView.prototype.handleFilesClick = function(event) {
 
 
 
-DirectoryView.prototype.renderDirectories = function(context) {
+DirectoryView.prototype.renderDirectories = function() {
 	var self = this;
 	var x = self.x();
 	var y = self.y();
 
-	//context.save();
-	//context.beginPath();
-	//context.rect(x, y, self._dx, self._dy);
-	//context.clip();
-
-	//LOG(self._name, x, y, self._dx, self._dy);
-
 	// our name
 	if (self._parent) { // don't draw root dir
 		if (self._model.isDir(self.path())) {
+			var selectedFile = self._model.getSelectedFile();
+			var selectedDir = self._model.isDir(selectedFile)
+				? selectedFile 
+				: self._model.getParent(selectedFile);
+
 			var handle = self._model.isOpen(self.path()) ? '- ' : '+ ';
-			self._renderText(handle + self._name + '/', x, y, FONT_DIR, context);
+			self._renderText(handle + self._name + '/', 
+				x, y, 
+				FONT_DIR, 
+				self.path() === selectedDir
+			);
 		}
 	}
 
@@ -267,24 +270,24 @@ DirectoryView.prototype.renderDirectories = function(context) {
 		Object.keys(self._childDirs).forEach(function(name) {
 			var child = self._childDirs[name];
 			if (self._model.isDir(self.childPath(name))) {
-				child.renderDirectories(context);
+				child.renderDirectories();
 			}
 		});
 	}
 
-	//context.restore();
 }
 
 
-DirectoryView.prototype._renderText = function(text, x, y, font, context) {
+DirectoryView.prototype._renderText = function(text, x, y, font, selected) {
 	var self = this;
 
+	var context = self._context;
 	context.beginPath();
 	context.fillStyle = FILES_BACKGROUND_COLOR;
 	context.fillRect(x, y, self._dx, font.height);
 
 	context.beginPath();
-	context.fillStyle = font.color;
+	context.fillStyle = selected ? 'red' : font.color;
 	context.font = font.name;
 	context.fillText(text, x + MARGIN, y + font.height);
 
@@ -294,6 +297,9 @@ DirectoryView.prototype._renderText = function(text, x, y, font, context) {
 
 DirectoryView.prototype.getParentDir = function(filename) {
 	var self = this;
+	if (!filename || !filename.length)
+		return null;
+
 	var parts = filename.split('/');
 
 	if (parts.length == 1) {

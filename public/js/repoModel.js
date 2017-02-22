@@ -7,6 +7,7 @@ var RepoModel = function() {
 	self._diffs = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
+	self._selectedFile = "";
 };
 
 /*
@@ -75,6 +76,17 @@ RepoModel.prototype.setData = function(filesizes, diffs) {
 	self._root.addChildren(Object.keys(self._range));
 };
 
+RepoModel.prototype.setSelectedFile = function(filename) {
+	var self = this;
+	if (self._selectedFile != filename) {
+		self._selectedFile = filename;
+	}
+}
+
+RepoModel.prototype.getSelectedFile = function() {
+	var self = this;
+	return self._selectedFile;
+}
 
 /*
 
@@ -209,9 +221,9 @@ RepoModel.prototype.getParent = function(name) {
 	var parent = null;
 	var node = self._getNode(name);
 	if (node) {
-		parent = node._parent();
+		parent = node._parent;
 	}
-	return parent ? parent._name : "";
+	return parent ? parent.getName() : "";
 }
 
 // returns array of names
