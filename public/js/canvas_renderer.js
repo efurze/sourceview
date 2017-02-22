@@ -69,6 +69,7 @@ var CanvasRenderer = function(revList) {
 	this._filter = "";
 	this._mouseDown = false;
 	this._xForLastCanvasShift = 0;
+	this._model = new RepoModel();
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).mousedown(this.mouseDown.bind(this));
@@ -89,20 +90,20 @@ var CanvasRenderer = function(revList) {
 	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
 };
 
-CanvasRenderer.prototype.setData = function(model, from, to) {
+CanvasRenderer.prototype.setData = function(commits, history, summaries, from, to) {
 	var self = this;
-	self._model = model;
 	self._fromCommit = from;
 	self._toCommit = to;
 
 	ASSERT(!isNaN(from));
 	ASSERT(!isNaN(to));
 
-	self._dirView.setModel(model);
-	self._repoView.setData(model, from, to);
+	self._model.addData(commits, history, summaries);
+
+	self._dirView.setModel(self._model);
+	self._repoView.setData(self._model, from, to);
 
 	var files = self._dirView.getAll();
-
 	if (files.length > 500) {
 		// collapse all dirs
 		files.forEach(function(filename) {
@@ -115,6 +116,7 @@ CanvasRenderer.prototype.setData = function(model, from, to) {
 	self.calculateLayout();
 	self.render();
 };
+
 
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
@@ -200,8 +202,8 @@ CanvasRenderer.prototype.onPrevClick = function() {
 CanvasRenderer.prototype.ajaxDone = function(success, data) {
 	var self = this;
 	if (success) {
-		self._model.addData(data.commits, data.size_history, data.diff_summaries);
-		self._repoView.render();
+		self.setData(data.commits, data.size_history, data.diff_summaries,
+			self._fromCommit, self._toCommit);
 	}
 };
 

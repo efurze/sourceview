@@ -35,11 +35,10 @@ $(function() {
 }
 */
 		init: function(data) {
-			var revList = data.history
-			var model = new RepoModel();
-			model.setRangeData(data.commits, data.size_history, data.diff_summaries);
-			RangeView._renderer = new CanvasRenderer(revList);
-			RangeView._renderer.setData(model, 
+			RangeView._renderer = new CanvasRenderer(data.history);
+			RangeView._renderer.setData(data.commits,
+				data.size_history,
+				data.diff_summaries,
 				parseInt(data.fromRev), 
 				parseInt(data.toRev)
 			);

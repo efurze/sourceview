@@ -8,6 +8,7 @@ var RepoModel = function() {
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
 	self._selectedFile = "";
+	self._root = new ModelNode('/', true, null);
 };
 
 /*
@@ -72,7 +73,6 @@ RepoModel.prototype.setData = function(filesizes, diffs) {
 		});
 	});
 
-	self._root = new ModelNode('/', true, null);
 	self._root.addChildren(Object.keys(self._range));
 };
 
