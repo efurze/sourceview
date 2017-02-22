@@ -113,12 +113,14 @@ RepoView.prototype.setYLayout = function(layout) {
 // in pixels
 RepoView.prototype.fileYTop = function(filename) {
 	var self = this;
+	ASSERT(self._layout.hasOwnProperty(filename));
 	return self._layout[filename].y;
 };
 
 // in pixels
 RepoView.prototype.fileYBottom = function(filename) {
 	var self = this;
+	ASSERT(self._layout.hasOwnProperty(filename));
 	return self.fileYTop(filename) + self.fileHeight(filename);
 };
 
@@ -151,6 +153,10 @@ RepoView.prototype.isDrawn = function(filename) {
 	return true;
 }
 
+RepoView.prototype.isDescendantOf = function(filename, dir) {
+	var self = this;
+	return filename.startsWith(dir);
+}
 
 
 RepoView.prototype.render = function() {
@@ -236,7 +242,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	}
 
 
-	if (self._model.isDir(filename)) {
+	if (self._model.isDir(filename) && diff_summary) {
 		var changed_files = Object.keys(diff_summary);
 		var mark_commit = false;
 		for (var i=0; i < changed_files.length; i++) {
@@ -278,6 +284,10 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 
 
 
-
+function ASSERT(cond) {
+	if (!cond) {
+		debugger
+	}
+}
 
 

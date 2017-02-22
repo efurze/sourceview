@@ -247,16 +247,6 @@ CanvasRenderer.prototype.fileYTop = function(filename) {
 };
 
 
-CanvasRenderer.prototype.isDir = function(filename) {
-	return filename.endsWith('/');
-}
-
-
-CanvasRenderer.prototype.isDescendantOf = function(filename, dir) {
-	var self = this;
-	return filename.startsWith(dir);
-}
-
 CanvasRenderer.prototype.render = function() {
 	var self = this;
 	self.renderFilenames();
