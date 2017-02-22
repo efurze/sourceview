@@ -84,7 +84,8 @@ var CanvasRenderer = function(revList) {
 
 
 	this._downloader = new Downloader();	
-	this._dirView = new DirectoryView("/", this._filesContext, null);
+	this._dirView = DirectoryView;
+	this._dirView.init(this._filesContext)
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
 	this._repoView = new RepoView(this._context, revList);
@@ -359,7 +360,7 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		if (file != self._selectedFile) {
 			self._selectedFile = file;
 			self._repoView.setSelectedFile(file);
-			self._model.setSelectedFile(file);
+			self._dirView.setSelectedFile(file);
 			self.renderFilenames();
 		}
 	}
@@ -377,7 +378,7 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 		if (file != self._selectedFile) {
 			self._selectedFile = file;
 			self._repoView.setSelectedFile(file);
-			self._model.setSelectedFile(file);
+			self._dirView.setSelectedFile(file);
 			self.renderFilenames();
 		}
 	}
