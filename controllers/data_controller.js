@@ -22,7 +22,7 @@ function getData(req) {
 			});
 		}).then(function(commits) {
 			data.commits = commits;
-			return persist.sizeSnapshot(repo, data.commits);
+			return persist.sizeSnapshot(repo, [data.commits[0]]);
 		}).then(function(sizes) {
 			data.size_history = sizes;
 			return persist.diffSummary(repo, data.commits);

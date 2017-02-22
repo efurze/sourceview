@@ -94,13 +94,22 @@ var CanvasRenderer = function(revList) {
 	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
 };
 
-CanvasRenderer.prototype.setData = function(commits, history, summaries, from, to) {
+CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, from, to) {
 	var self = this;
 	self._fromCommit = from;
 	self._toCommit = to;
 
 	ASSERT(!isNaN(from));
 	ASSERT(!isNaN(to));
+	ASSERT(from < to);
+
+	// construct history
+	var history = initial_size;
+	for (var i=from+1; i<=to; i++) {
+		var sha = self._revList[i];
+		history[sha] = self._updateSizes(history[self._revList[i-1]],
+										summaries[self._revList[i]]);
+	}
 
 	self._model.addData(commits, history, summaries);
 
@@ -121,6 +130,44 @@ CanvasRenderer.prototype.setData = function(commits, history, summaries, from, t
 	self.render();
 };
 
+CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
+	var self = this;
+	var updated = JSON.parse(JSON.stringify(sizes));
+
+	Object.keys(diff).forEach(function(filename) {
+		var delta = 0;
+		diff[filename].forEach(function(chunk) {
+			// @@ -33,6 +35,12 @@
+			// @@ -0,0 +1 @@
+			if (!chunk.length) 
+				return;
+			let parts = chunk.split(" ");
+
+			parts.forEach(function(chunk) {
+				if (!chunk.length)
+					return;
+				let parts = chunk.split(",");
+				let sign = parts[0].slice(0, 1);
+				let count = 0;
+				if (parts.length > 1) {
+					count = parseInt(parts[1]);
+				} else if (parts.length == 1){
+					count = 1;
+				}
+				if (sign === "+") {
+					delta += count;
+				} else {
+					delta -= count;
+				}
+			});
+			if (!updated.hasOwnProperty(filename)) {
+				updated[filename] = 0;
+			}
+			updated[filename] += delta;
+		});
+	});
+	return updated;
+}
 
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
