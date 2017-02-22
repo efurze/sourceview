@@ -43,7 +43,7 @@ var MARGIN = 5;
 ...
 ]
 */
-var CanvasRenderer = function(revCount) {
+var CanvasRenderer = function(revList) {
 	console.log("CanvasRenderer()");
 	var self = this;
 
@@ -62,15 +62,13 @@ var CanvasRenderer = function(revCount) {
 	this._lastMouseY = -1;
 	this._pixelsPerLine = 1;
 
-	this._offset = 0;
-
-	this._revCount = revCount;
+	this._revCount = revList.length;
+	this._revList = revList;
 
 	this._selectedFile = "";
 	this._filter = "";
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
-	//$(this._canvas).dblclick(this.historyDoubleClick.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
@@ -83,22 +81,21 @@ var CanvasRenderer = function(revCount) {
 	this._dirView = new DirectoryView("/", null);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
-	this._repoView = new RepoView(this._context);
+	this._repoView = new RepoView(this._context, revList);
 	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
 };
 
-CanvasRenderer.prototype.setData = function(revList, model, from, to) {
+CanvasRenderer.prototype.setData = function(model, from, to) {
 	var self = this;
-	self._revList = revList;
 	self._model = model;
-	self._fromAbs = from;
-	self._toAbs = to;
+	self._fromCommit = from;
+	self._toCommit = to;
+
+	ASSERT(!isNaN(from));
+	ASSERT(!isNaN(to));
 
 	self._dirView.setModel(model);
-	self._repoView.setData(model, revList);
-
-	self._fromCommit = 0;
-	self._toCommit = self._revList.length-1;
+	self._repoView.setData(model, from, to);
 
 	var files = self._dirView.getAll();
 
@@ -127,25 +124,14 @@ CanvasRenderer.prototype.onFilterClick = function() {
 CanvasRenderer.prototype.onNextClick = function() {
 	var self = this;
 
-	var repo = urlParam("repo");
-	if (self._toAbs < self._revCount) {
-		var delta = self._toAbs - self._fromAbs;
-		var from = self._fromAbs + Math.round(delta/3);
-		var to = from + delta;
-		to = Math.min(to, self._revCount);
-		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
-			self.ajaxDone.bind(self));
-	}
-
-/*
 	if (self._toCommit >= self._revCount-1)
 		return;
 
-	self._fromCommit++;
-	self._toCommit++;
-
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-	self._offset --;
+	self._fromCommit ++;
+	self._toCommit ++;
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit)
+	self._repoView.markCommit(self._revList[self._toCommit]);
 	
 	var img = self._context.getImageData(0,0,self._width, self._height);
 	
@@ -155,42 +141,36 @@ CanvasRenderer.prototype.onNextClick = function() {
 	self._context.fillRect(0, 0, self._width, self._height);
 
 	self._context.putImageData(img, -commit_width, 0);
+	
 
 
 	var repo = urlParam("repo");
 
-	if (self._toCommit >= self._revList.length
-		|| !self._model.hasCommit(self._revList(self._toCommit)))
+	if (!self._model.hasCommit(self._revList[self._toCommit]))
 	{
-		var from = self._toCommit;
-		var to = Math.min(self._revCount, from + 10);
+		var to = Math.min(self._revCount, self._toCommit + 10);
+		var from = to - 10;
+		ASSERT(!isNaN(from));
+		ASSERT(!isNaN(to));
 		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
 			self.ajaxDone.bind(self));
+	} else {
+		self._repoView.render();
 	}
-*/
 	
 };
 
 CanvasRenderer.prototype.onPrevClick = function() {
 	var self = this;
 
-	var repo = urlParam("repo");
-
-	if (self._fromAbs > 0) {
-		var delta = self._toAbs - self._fromAbs;
-		var from = self._fromAbs - Math.round(delta/3);
-		from = Math.max(from, 0);
-		var to = from + delta;
-		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
-			self.ajaxDone.bind(self));
-	}
-/*
-	self._fromCommit--;
-	self._toCommit--;
-	
+	if (self._fromCommit <= 0)
+		return;
 
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-	self._offset ++;
+	self._fromCommit --;
+	self._toCommit --;
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit)
+	self._repoView.markCommit(self._revList[self._fromCommit]);
 
 	var img = self._context.getImageData(0,0,self._width, self._height);
 
@@ -200,23 +180,24 @@ CanvasRenderer.prototype.onPrevClick = function() {
 	self._context.fillRect(0, 0, self._width, self._height);
 
 	self._context.putImageData(img, commit_width, 0);
-*/
-	
+
+	var repo = urlParam("repo");
+	if (!self._model.hasCommit(self._revList[self._fromCommit]))
+	{
+		var from = Math.max(self._fromCommit - 10, 0);
+		var to = from + 10;
+		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
+			self.ajaxDone.bind(self));
+	} else {
+		self._repoView.render();
+	}
 };
 
 CanvasRenderer.prototype.ajaxDone = function(success, data) {
 	var self = this;
 	if (success) {
-		var revList = data.commits.map(function(commit) {
-			return commit.hash;
-		});
-		var model = new RepoModel();
-		model.setRangeData(data.commits, data.size_history, data.diff_summaries);
-		self.setData(revList,
-			model, 
-			parseInt(data.fromRev), 
-			parseInt(data.toRev)
-		);
+		self._model.addData(data.commits, data.size_history, data.diff_summaries);
+		self._repoView.render();
 	}
 };
 
@@ -279,29 +260,10 @@ CanvasRenderer.prototype.renderHistory = function() {
 
 
 
-CanvasRenderer.prototype.historyDoubleClick = function(event) {
-	var self = this;
-	// show commit
-	var index = self.commitIndexFromXCoord(event.offsetX);
-	self._selectedCommitIndex = -1;
-	var text = "[" + self._model.getCommitDate(self._revList[index]) + "]: ";
-	text += self._model.getCommitMsg(self._revList[index]);
-	$("#commit_info").text(text);
-	self._fromCommit = index;
-	self._toCommit = index;
-	self._files = self._files.filter(function(filename) {
-		return self._model.fileSize(filename, self._revList[index]) > 0;
-	});
-	self.calculateLayout();
-	self.render();
-};
-
 CanvasRenderer.prototype.filesDoubleClick = function(event) {
 	var self = this;
 	// show file history
 	if (self._selectedFile) {
-		self._fromCommit = 0;
-		self._toCommit = self._revList.length-1;
 		$("#filter_input").val(self._selectedFile);
 		self.onFilterClick();
 	}
@@ -373,7 +335,7 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	var self = this;
 	var length = self._toCommit - self._fromCommit + 1;
 	var index = Math.floor((length * x) / self._width);
-	if (index >= 0 && index < self._revList.length) {
+	if (index >= 0 && self._fromCommit+index <= self._toCommit) {
 		return self._fromCommit+index;
 	}
 	return -1;
@@ -389,5 +351,11 @@ var urlParam = function(name){
     else{
        return results[1] || 0;
     }
+}
+
+function ASSERT(cond) {
+	if (!cond) {
+		debugger
+	}
 }
 

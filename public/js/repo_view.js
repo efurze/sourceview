@@ -32,14 +32,21 @@ var FONT_DIR = {
 };
 
 
-var RepoView = function(context) {
+var RepoView = function(context, revList) {
+	var self = this;
 	this._context = context;
+	this._revList = revList;
 	this._width = 0;
 	this._height = 0;
 	this._selectedFile = "";
 	this._selectedCommitIndex = -1;
 	this._dirtyFiles = {};
 	this._dirtyCommits = {};
+	this._revIndex = {};
+
+	revList.forEach(function(sha, index) {
+		self._revIndex[sha] = index;
+	});
 }
 
 RepoView.prototype.setClip = function(x, y, dx, dy) {
@@ -74,6 +81,12 @@ RepoView.prototype.setSelectedFile = function(file) {
 	}
 }
 
+RepoView.prototype.setData = function(model, from, to) {
+	this._model = model;
+	this._fromCommit = from;
+	this._toCommit = to;
+}
+
 RepoView.prototype.setSelectedCommit = function(index) {
 	var self = this;
 
@@ -88,18 +101,17 @@ RepoView.prototype.setSelectedCommit = function(index) {
 		$("#commit_info").text(msg);
 		
 		if (previous >= 0) {
-			self.markCommit(previous);
+			self.markCommit(self._revList[previous]);
 		}
-		self.markCommit(index);
+		self.markCommit(self._revList[index]);
 		self.render();
 	}
 }
 
-RepoView.prototype.setData = function(model, revList) {
-	this._model = model;
-	this._revList = revList;
-	this._fromCommit = 0;
-	this._toCommit = revList.length;
+
+RepoView.prototype.setCommitRange = function(from, to) {
+	this._fromCommit = from;
+	this._toCommit = to;
 }
 
 RepoView.prototype.setYLayout = function(layout) {
@@ -169,16 +181,16 @@ RepoView.prototype.render = function() {
 		}
 	});
 
-	Object.keys(self._dirtyCommits).forEach(function(index) {
-		self._renderCommit(index);
-		delete self._dirtyCommits[index];
+	Object.keys(self._dirtyCommits).forEach(function(sha) {
+		self._renderCommit(self._revIndex[sha]);
+		delete self._dirtyCommits[sha];
 	});
 }
 
 // draw a column
 RepoView.prototype._renderCommit = function(diff_index) { 
 	var self = this;
-	if (!diff_index < 0 || !diff_index >= self._revList.length) 
+	if (diff_index < self._fromCommit || diff_index > self._toCommit) 
 		return;
 
 	Object.keys(self._layout).forEach(function(filename) {

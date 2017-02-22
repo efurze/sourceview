@@ -35,14 +35,11 @@ $(function() {
 }
 */
 		init: function(data) {
-			var revList = data.commits.map(function(commit) {
-				return commit.hash;
-			});
+			var revList = data.history
 			var model = new RepoModel();
 			model.setRangeData(data.commits, data.size_history, data.diff_summaries);
-			RangeView._renderer = new CanvasRenderer(parseInt(data.revCount));
-			RangeView._renderer.setData(revList,
-				model, 
+			RangeView._renderer = new CanvasRenderer(revList);
+			RangeView._renderer.setData(model, 
 				parseInt(data.fromRev), 
 				parseInt(data.toRev)
 			);

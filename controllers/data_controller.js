@@ -6,17 +6,17 @@ Promise.promisifyAll(fs);
 
 
 function getData(req) {
-	var repo = req.param('repo');
-	var from = req.param('from') || 0;
-	var to = req.param('to') || 100;
+	var repo = req.query['repo'];
+	var from = parseInt(req.query['from']) || 0;
+	var to = parseInt(req.query['to']) || 100;
 	
 	var data = {};
 	return persist.getRevList(repo, 'master')
 		.then(function(history) {
 			data.fromRev = from;
 			data.toRev = to;
-			data.revCount = history.length;
-			data.commits = history.slice(from, to);
+			data.history = history;
+			data.commits = history.slice(from, to+1);
 			return Promise.map(data.commits, function(commit_id) {
 				return persist.getCommit(repo, commit_id);
 			});
@@ -56,6 +56,7 @@ module.exports = {
 	requestRangeJSON: function(req, res) {
 		getData(req)
 			.then(function(data) {
+				delete data.history;
 				res.send(data);
 			});
 	}

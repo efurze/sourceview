@@ -175,17 +175,20 @@ returns: {
 */
 RepoModel.prototype.getDiffSummary = function(commit_id) {
 	var self = this;
-	return self._diffs[commit_id];
+	if (self.hasCommit(commit_id))
+		return self._diffs[commit_id];
 }
 
 RepoModel.prototype.getCommitMsg = function(commit_id) {
 	var self = this;
-	return self._commits[commit_id].message;
+	if (self.hasCommit(commit_id))
+		return self._commits[commit_id].message;
 }
 
 RepoModel.prototype.getCommitDate = function(commit_id) {
 	var self = this;
-	return self._commits[commit_id].date;
+	if (self.hasCommit(commit_id))
+		return self._commits[commit_id].date;
 }
 
 RepoModel.prototype.fileMaxSize = function(filename) {
