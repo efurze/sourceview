@@ -67,8 +67,12 @@ var CanvasRenderer = function(revList) {
 
 	this._selectedFile = "";
 	this._filter = "";
+	this._mouseDown = false;
+	this._xForLastCanvasShift = 0;
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
+	$(this._canvas).mousedown(this.mouseDown.bind(this));
+	$(document).mouseup(this.mouseUp.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
@@ -280,8 +284,25 @@ CanvasRenderer.prototype.filesClick = function(event) {
 
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
+
 	if (event.offsetX == self._lastMouseX 
 		&& event.offsetY == self._lastMouseY ) {
+		return;
+	}
+
+	if (self._mouseDown) {
+		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
+		var delta = self._xForLastCanvasShift - self._lastMouseX;
+		if (Math.abs(delta) >= commit_width) {
+			if (delta < 0) {
+				self.onPrevClick();
+			} else {
+				self.onNextClick();
+			}
+		}
+
+		self._lastMouseY = event.offsetY;
+		self._lastMouseX = event.offsetX;
 		return;
 	}
 
@@ -308,6 +329,18 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 	}
 };
 
+
+CanvasRenderer.prototype.mouseDown = function(event) {
+	var self = this;
+	self._xForLastCanvasShift = event.offsetX;
+	self._lastMouseX = event.offsetX;
+	self._mouseDown = true;
+}
+
+CanvasRenderer.prototype.mouseUp = function(event) {
+	var self = this;
+	self._mouseDown = false;
+}
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var self = this;
