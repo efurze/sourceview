@@ -13,23 +13,6 @@ var COLORS = {
 
 var MARGIN = 5;
 
-var FONT_NORMAL = {
-	'name': '8px Helvetica',
-	'height': 8,
-	'color': 'black'
-};
-
-var FONT_LARGE = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'black'
-};
-
-var FONT_DIR = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'BLUE'
-};
 /*
 @history_data: [
 	{
@@ -100,7 +83,8 @@ var CanvasRenderer = function(revCount) {
 	this._dirView = new DirectoryView("/", null);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
-	this._repoView = new RepoView(this._context, this._width, this._height);
+	this._repoView = new RepoView(this._context);
+	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
 };
 
 CanvasRenderer.prototype.setData = function(revList, model, from, to) {
@@ -245,10 +229,12 @@ CanvasRenderer.prototype.calculateLayout = function() {
 
 	var layout = {}; //filename: {y:, dy:}
 	self._files.forEach(function(filename) {
-		layout[filename] = {
-			y: self._dirView.getFileY(filename),
-			dy: self._dirView.getFileDY(filename)
-		};
+		if (self._model.isVisible(filename)) {
+			layout[filename] = {
+				y: self._dirView.getFileY(filename),
+				dy: self._dirView.getFileDY(filename)
+			};
+		}
 	});
 	self._repoView.setYLayout(layout);
 };
