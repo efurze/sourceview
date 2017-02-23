@@ -167,8 +167,8 @@ CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
 			if (!updated.hasOwnProperty(filename)) {
 				updated[filename] = 0;
 			}
-			updated[filename] += delta;
 		});
+		updated[filename] += delta;
 	});
 	return updated;
 }
