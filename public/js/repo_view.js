@@ -210,6 +210,9 @@ RepoView.prototype._renderCommit = function(diff_index) {
 	if (diff_index < self._fromCommit || diff_index > self._toCommit) 
 		return;
 
+	//console.log("Drawing commit", diff_index, self._revList[diff_index],
+	//	"at column", diff_index - self._fromCommit);
+	
 	Object.keys(self._layout).forEach(function(filename) {
 		if (self._model.isVisible(filename)) {
 			self._renderCell(filename, diff_index);

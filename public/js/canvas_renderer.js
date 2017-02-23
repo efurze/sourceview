@@ -98,13 +98,20 @@ CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, fr
 	var self = this;
 	self._fromCommit = from;
 	self._toCommit = to;
+	self._dirView.setModel(self._model);
+	self._repoView.setData(self._model, self._fromCommit, self._toCommit);
+	self._updateData(commits, initial_size, summaries, from, to);
+}
 
+CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries, from, to) {
+	var self = this;
 	ASSERT(!isNaN(from));
 	ASSERT(!isNaN(to));
 	ASSERT(from < to);
 
 	// construct history
-	var history = initial_size;
+	var history = {};
+	history[commits[0].hash] = initial_size[commits[0].hash];
 	for (var i=from+1; i<=to; i++) {
 		var sha = self._revList[i];
 		history[sha] = self._updateSizes(history[self._revList[i-1]],
@@ -112,9 +119,6 @@ CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, fr
 	}
 
 	self._model.addData(commits, history, summaries);
-
-	self._dirView.setModel(self._model);
-	self._repoView.setData(self._model, from, to);
 
 	var files = self._dirView.getAll();
 	if (files.length > 500) {
@@ -258,8 +262,8 @@ CanvasRenderer.prototype.onPrevClick = function() {
 CanvasRenderer.prototype.ajaxDone = function(success, data) {
 	var self = this;
 	if (success) {
-		self.setData(data.commits, data.size_history, data.diff_summaries,
-			self._fromCommit, self._toCommit);
+		self._updateData(data.commits, data.size_history, data.diff_summaries,
+			parseInt(data.fromRev), parseInt(data.toRev));
 	}
 };
 

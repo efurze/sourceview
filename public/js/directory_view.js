@@ -29,6 +29,7 @@ var FONT_DIR = {
 var DirectoryView = {};
 
 DirectoryView._root = null;
+DirectoryView._model = null;
 DirectoryView._selectedFile = "";
 
 DirectoryView.init = function(context) {
@@ -40,7 +41,17 @@ DirectoryView.setClip = function(x,y,dx,dy) {
 };
 
 DirectoryView.setModel = function(model) {
-	DirectoryView._root.setModel(model);
+	DirectoryView._model = model;
+	model.addListener(DirectoryView._fileAddedCB);
+	DirectoryView._root.setModel();
+};
+
+DirectoryView._fileAddedCB = function(filename) {
+	var parent = DirectoryView._root.getParentDir(filename);
+	ASSERT(parent);
+	if (parent) {
+		parent.addFile(filename);
+	}
 };
 
 DirectoryView.setSelectedFile = function(filename) {
@@ -136,8 +147,8 @@ DirectoryViewNode.prototype.displayOrder = function() {
 	var names = [];
 	self._children.forEach(function(name) {
 		var path = self.childPath(name);
-		if (self._model.isDir(path)) {
-			if (self._model.isOpen(path)) {
+		if (DirectoryView._model.isDir(path)) {
+			if (DirectoryView._model.isOpen(path)) {
 				names = names.concat(self._childDirs[name].displayOrder());
 			} else {
 				names.push(path);
@@ -155,44 +166,46 @@ DirectoryViewNode.prototype.getAll = function() {
 	self._children.forEach(function(name) {
 		var path = self.childPath(name);
 		names.push(path);
-		if (self._model.isDir(path)) {
+		if (DirectoryView._model.isDir(path)) {
 			names = names.concat(self._childDirs[name].displayOrder());
 		}
 	});
 	return names;
 }
 
-DirectoryViewNode.prototype.setModel = function(model) {
+DirectoryViewNode.prototype.setModel = function() {
 	var self = this;
-	var files = [];
-	var dirs = [];
 	self._childDirs = {};
 	self._children = [];
-	self._model = model;
-	model.getChildren(self.path()).forEach(function(child) {
-		if (!child || !child.length)
-			return;
-		var parts = child.split('/');
-		var name = parts[parts.length-1];
-		if (model.isDir(child)) {
-			self._childDirs[name] = new DirectoryViewNode(name, self._context, self);
-			self._childDirs[name].setModel(model);
-			dirs.push(name);
-		} else {
-			files.push(name);
-		}
+	DirectoryView._model.getChildren(self.path()).forEach(function(child) {
+		self.addFile(child);
 	});
 
-	self._children = files.concat(dirs);
-//	self._children.sort(function (a, b) {
-//		return a.toLowerCase().localeCompare(b.toLowerCase());
-//	});
+	Object.keys(self._childDirs).forEach(function(dirname) {
+		self._childDirs[dirname].setModel();
+	});
+}
+
+// @filename: full path
+DirectoryViewNode.prototype.addFile = function(filename) {
+	var self = this;
+	if (!filename || !filename.length)
+		return;
+	var parts = filename.split('/');
+	var name = parts[parts.length-1];
+	if (DirectoryView._model.isDir(filename)) {
+		if (!self._childDirs.hasOwnProperty(name)) 
+			self._childDirs[name] = new DirectoryViewNode(name, self._context, self);
+		self._children.push(name);
+	} else {
+		self._children.unshift(name);
+	}
 }
 
 DirectoryViewNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 	var self = this;
 
-	if (!self._model.isOpen(self.path())) {
+	if (!DirectoryView._model.isOpen(self.path())) {
 		return FONT_DIR.height;
 	}
 
@@ -200,14 +213,14 @@ DirectoryViewNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 
 	self._children.forEach(function(name) {
 		var dy = 0;
-		if (self._model.isDir(self.childPath(name))) {
+		if (DirectoryView._model.isDir(self.childPath(name))) {
 			var subdir = self._childDirs[name];
 			if (height + atY < FONT_DIR.height && self._parent._parent) {
 				dy = FONT_DIR.height - height - atY;
 			}
 			dy += subdir.requestedHeight(pixelsPerLine, atY + height);
 		} else {
-			dy = pixelsPerLine * self._model.visibleLineCount(self.childPath(name));
+			dy = pixelsPerLine * DirectoryView._model.visibleLineCount(self.childPath(name));
 		}
 		height += dy;
 	});
@@ -219,15 +232,15 @@ DirectoryViewNode.prototype.layout = function() {
 	var self = this;
 	var y = 0;
 
-	var lineCount = self._model.visibleLineCount(self.path());
+	var lineCount = DirectoryView._model.visibleLineCount(self.path());
 	var firstOrderPixelsPerLine = self._dy/lineCount;
 	var y_adjust = 0;
 
 	self._children.forEach(function(name) {
-		var childLineCount = self._model.visibleLineCount(self.childPath(name));
+		var childLineCount = DirectoryView._model.visibleLineCount(self.childPath(name));
 		var dy = 0;
 		
-		if (self._model.isDir(self.childPath(name))) {
+		if (DirectoryView._model.isDir(self.childPath(name))) {
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y_adjust += FONT_DIR.height - y;
@@ -245,10 +258,10 @@ DirectoryViewNode.prototype.layout = function() {
 
 	y = 0;
 	self._children.forEach(function(name) {
-		var childLineCount = self._model.visibleLineCount(self.childPath(name));
+		var childLineCount = DirectoryView._model.visibleLineCount(self.childPath(name));
 		var childHeight = childLineCount * pixelsPerLine;
 
-		if (self._model.isDir(self.childPath(name))) {
+		if (DirectoryView._model.isDir(self.childPath(name))) {
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y = FONT_DIR.height;
@@ -280,8 +293,8 @@ DirectoryViewNode.prototype.handleFilesClick = function(event) {
 	//console.log("click", event.offsetY);
 	var handled = false;
 
-	if (self._model.isDir(self.path())) {
-		if (self._model.isOpen(self.path())) {
+	if (DirectoryView._model.isDir(self.path())) {
+		if (DirectoryView._model.isOpen(self.path())) {
 			var subdirs = Object.keys(self._childDirs);
 			var index = 0;
 			while (!handled && index < subdirs.length) {
@@ -295,7 +308,7 @@ DirectoryViewNode.prototype.handleFilesClick = function(event) {
 			if (event.offsetY >= y && event.offsetY <= (y + FONT_DIR.height)) {
 				//console.log("event handled by", self._name);
 				handled = true;
-				self._model.toggleOpen(self._name);
+				DirectoryView._model.toggleOpen(self._name);
 			}
 		}
 	}
@@ -314,13 +327,13 @@ DirectoryViewNode.prototype.render = function() {
 
 	// our name
 	if (self._parent) { // don't draw root dir
-		if (self._model.isDir(self.path())) {
+		if (DirectoryView._model.isDir(self.path())) {
 			var selectedFile = DirectoryView._selectedFile;
-			var selectedDir = self._model.isDir(selectedFile)
+			var selectedDir = DirectoryView._model.isDir(selectedFile)
 				? selectedFile 
-				: self._model.getParent(selectedFile);
+				: DirectoryView._model.getParent(selectedFile);
 
-			var handle = self._model.isOpen(self.path()) ? '- ' : '+ ';
+			var handle = DirectoryView._model.isOpen(self.path()) ? '- ' : '+ ';
 			self._renderText(handle + self._name + '/', 
 				x, y, 
 				FONT_DIR, 
@@ -329,11 +342,11 @@ DirectoryViewNode.prototype.render = function() {
 		}
 	}
 
-	if (self._model.isOpen(self.path())) {
+	if (DirectoryView._model.isOpen(self.path())) {
 		// children
 		Object.keys(self._childDirs).forEach(function(name) {
 			var child = self._childDirs[name];
-			if (self._model.isDir(self.childPath(name))) {
+			if (DirectoryView._model.isDir(self.childPath(name))) {
 				child.render();
 			}
 		});

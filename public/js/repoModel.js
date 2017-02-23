@@ -8,7 +8,8 @@ var RepoModel = function() {
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
 	self._selectedFile = "";
-	self._root = new ModelNode('/', true, null);
+	self._addListeners = [];
+	self._root = new ModelNode(self, '/', true, null);
 };
 
 /*
@@ -124,7 +125,7 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
 
-	self._root = new ModelNode('/', true, null);
+	self._root = new ModelNode(self, '/', true, null);
 	self.addData(commits, size_history, diff_summaries);
 };
 
@@ -167,7 +168,15 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 		});
 	});
 
-	self._root.addChildren(new_files);
+	self._addChildren(new_files);
+}
+
+RepoModel.prototype._addChildren = function(files) {
+	var self = this;
+	files.forEach(function(filename) {
+		self._root.addChild(filename);
+	});
+	
 }
 
 RepoModel.prototype.hasCommit = function(commit_id) {
@@ -322,13 +331,25 @@ RepoModel.prototype.isVisible = function(name) {
 	return true;
 };
 
+RepoModel.prototype.addListener = function(fn) {
+	var self = this;
+	self._addListeners.push(fn);
+}
+
+RepoModel.prototype._emitAdd = function(filename) {
+	var self = this;
+	self._addListeners.forEach(function(listener) {
+		listener(filename);
+	});
+}
 
 //-------------------------------------
 
 
 
-var ModelNode = function(name, isDir, parent) {
+var ModelNode = function(model, name, isDir, parent) {
 	var self = this;
+	self._model = model;
 	self._name = name;
 	self._isOpen = true;
 	self._isDir = isDir;
@@ -347,6 +368,7 @@ ModelNode.prototype.getChildren = function() {
 ModelNode.prototype.childNames = function() {
 	var self = this;
 	return Object.keys(self._children).map(function(name) {
+		ASSERT(self._children[name]);
 		return self._children[name].getName();
 	});
 }
@@ -387,18 +409,22 @@ ModelNode.prototype.addChild = function(filename) {
 	var self = this;
 
 	var parts = filename.split('/');
-	var dirname = parts[0];
-	var dir = self._children[dirname] 
-		|| new ModelNode(dirname,  
-			parts.length > 1,
-			self);
-	if (!self._children.hasOwnProperty(dirname)) {
-		self._children[dirname] = dir;
+	var name = parts[0];
+	var child = self._children[name];
+	if (!child) {
+		child = new ModelNode(self._model,
+					name,  
+					parts.length > 1,
+					self);
+		self._children[name] = child;
+		if (self._model) {
+			self._model._emitAdd(child.getName());
+		}
 	}
 	if (parts.length > 1) {
 		// pop off the directory name
 		parts.shift();
-		dir.addChild(parts.join('/'));
+		child.addChild(parts.join('/'));
 	}
 }
 
