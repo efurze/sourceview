@@ -13,6 +13,11 @@ case $command in
 	echo "import"
 	node ingest.js "$@"
 	;;
+
+"revList" | "revlist")
+	echo "Creating Revision List"
+	node ingest.js "$@" -revList
+	;;
 *)
 	echo "unknown command" $command
 	;;

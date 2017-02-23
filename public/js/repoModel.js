@@ -408,6 +408,9 @@ ModelNode.prototype.addChildren = function(filenames) {
 ModelNode.prototype.addChild = function(filename) {
 	var self = this;
 
+	if (filename.endsWith('/')) {
+		filename = filename.slice(0, filename.length-1);
+	}
 	var parts = filename.split('/');
 	var name = parts[0];
 	var child = self._children[name];
@@ -424,6 +427,7 @@ ModelNode.prototype.addChild = function(filename) {
 	if (parts.length > 1) {
 		// pop off the directory name
 		parts.shift();
+		child._isDir = true;
 		child.addChild(parts.join('/'));
 	}
 }

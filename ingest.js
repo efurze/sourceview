@@ -9,6 +9,11 @@ var ingest = function(dir, max, start) {
 	digest.buildBranchInfo2('master', start, max);
 };
 
+var makeRevList = function(dir, max, start) {
+	var digest = new Digest(dir);
+	digest.saveRevlist('master', start, max);
+};
+
 
 // process.argv[0] == node
 // process.argv[1] == process.js
@@ -18,6 +23,7 @@ console.log("Reading repository at " + repo);
 
 var max = 0;
 var start = 0;
+var revList = false;
 
 process.argv.forEach(function(arg, index) {
 	if (index < 2)
@@ -31,8 +37,14 @@ process.argv.forEach(function(arg, index) {
 	} else if (arg.startsWith('-start')) {
 		start = parseInt(parts[1]);
 		console.log("Beginning ingestion at", start);
+	} else if (arg.startsWith('-revList')) {
+		revList = true;
 	}
 });
 
-ingest(repo, max, start);
+if (revList) {
+	makeRevList(repo, max, start);
+} else {
+	ingest(repo, max, start);
+}
 
