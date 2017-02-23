@@ -68,6 +68,10 @@ var CanvasRenderer = function(revList) {
 	this._selectedFile = "";
 	this._filter = "";
 	this._mouseDown = false;
+	this._mouseDownPos = {
+		x: -1,
+		y: -1
+	};
 	this._xForLastCanvasShift = 0;
 	this._scrollTimerId = -1;
 	this._selectionFrozen = false;
@@ -346,10 +350,9 @@ CanvasRenderer.prototype.filesClick = function(event) {
 
 CanvasRenderer.prototype.repoClick = function(event) {
 	var self = this;
-	if (self._ignoreMouseUp) {
-		self._ignoreMouseUp = false;
+	if (event.offsetX != self._mouseDownPos.x
+	|| event.offsetY != self._mouseDownPos.y)
 		return;
-	}
 
 	self._selectionFrozen = !self._selectionFrozen;
 	self.mouseMoveHistoryWindow(event);
@@ -366,11 +369,11 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	if (self._mouseDown) {
 		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
 		var delta = self._xForLastCanvasShift - self._lastMouseX;
-		self._dragging = true;
 		
 		var count = Math.round(delta/commit_width);
 		if (count != 0) {
 			self._scrollCanvas(count);
+			self._repoView.render();
 			self._xForLastCanvasShift = self._lastMouseX;
 		}
 
@@ -380,7 +383,6 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		}
 
 		self._scrollTimerId = setTimeout(function() {
-			console.log("tick");
 			self._scrollTimerId = -1;
 			var from = self._toCommit;
 			for (var i=self._fromCommit; i <= self._toCommit; i++) {
@@ -460,17 +462,14 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 CanvasRenderer.prototype.mouseDown = function(event) {
 	var self = this;
 	self._xForLastCanvasShift = event.offsetX;
+	self._mouseDownPos.x = event.offsetX;
+	self._mouseDownPos.y = event.offsetY;
 	self._mouseDown = true;
 }
 
 CanvasRenderer.prototype.mouseUp = function(event) {
 	var self = this;
 	self._mouseDown = false;
-	if (self._selectionFrozen && self._dragging) {
-		self._dragging = false;
-		self._ignoreMouseUp = true;
-	}
-	self._dragging = false;
 }
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
