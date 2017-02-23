@@ -115,7 +115,7 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 
 	// construct history
 	var history = {};
-	history[commits[0].hash] = initial_size[commits[0].hash];
+	history[commits[0].id] = initial_size[commits[0].id];
 	for (var i=from+1; i<=to; i++) {
 		var sha = self._revList[i];
 		history[sha] = self._updateSizes(history[self._revList[i-1]],

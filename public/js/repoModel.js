@@ -93,7 +93,7 @@ RepoModel.prototype.getSelectedFile = function() {
 
 	@commits: [
 		{
-			hash: <sha>,
+			id: <sha>,
 			date:
 			message:
 			author_name:
@@ -145,7 +145,7 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 	});
 
 	commits.forEach(function(commit) {
-		self._commits[commit.hash] = {
+		self._commits[commit.id] = {
 			'message': commit.message,
 			'date': commit.date,
 			'author_name': commit.author_name

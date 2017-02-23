@@ -6,12 +6,12 @@ let Logger = require('./lib/logger.js');
 
 var ingest = function(dir, max, start) {
 	var digest = new Digest(dir);
-	digest.buildBranchInfo2('master', start, max);
+	digest.buildBranchInfo('master', start, max);
 };
 
 var makeRevList = function(dir, max, start) {
 	var digest = new Digest(dir);
-	digest.saveRevlist('master', start, max);
+	digest.saveRevList('master', start, max);
 };
 
 
