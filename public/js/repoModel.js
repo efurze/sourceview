@@ -7,6 +7,7 @@ var RepoModel = function() {
 	self._diffs = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._range = {}; // filname: length
+	self._blame = {};
 	self._selectedFile = "";
 	self._addListeners = [];
 	self._root = new ModelNode(self, '/', true, null);
@@ -129,7 +130,7 @@ RepoModel.prototype.setRangeData = function(commits, size_history, diff_summarie
 	self.addData(commits, size_history, diff_summaries);
 };
 
-RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
+RepoModel.prototype.addData = function(commits, size_history, diff_summaries, blame) {
 	var self = this;
 
 	Object.keys(size_history).forEach(function(sha) {
@@ -143,6 +144,12 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 			self._diffs[sha] = diff_summaries[sha];
 		}
 	});
+
+	Object.keys(blame).forEach(function(sha) {
+		if (!self._blame.hasOwnProperty(sha)) {
+			self._blame[sha] = blame[sha];
+		}
+	})
 
 	commits.forEach(function(commit) {
 		self._commits[commit.id] = {
@@ -210,6 +217,18 @@ RepoModel.prototype.getCommitDate = function(commit_id) {
 	var self = this;
 	if (self.hasCommit(commit_id))
 		return self._commits[commit_id].date;
+}
+
+RepoModel.prototype.getCommitAuthor = function(commit_id) {
+	var self = this;
+	if (self.hasCommit(commit_id))
+		return self._commits[commit_id].author_name;
+}
+
+RepoModel.prototype.getBlame = function(commit_id) {
+	var self = this;
+	if (self._blame.hasOwnProperty(commit_id))
+		return self._blame[commit_id];
 }
 
 RepoModel.prototype.fileMaxSize = function(filename) {

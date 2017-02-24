@@ -116,13 +116,23 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	// construct history
 	var history = {};
 	history[commits[0].id] = initial_size[commits[0].id];
-	for (var i=from+1; i<=to; i++) {
-		var sha = self._revList[i];
-		history[sha] = self._updateSizes(history[self._revList[i-1]],
-										summaries[self._revList[i]]);
+	for (var i=1; i<commits.length; i++) {
+		var sha = self._revList[from+i];
+		history[sha] = self._updateSizes(history[self._revList[from+i-1]],
+										summaries[sha]);
 	}
 
-	self._model.addData(commits, history, summaries);
+	// blame
+	var blame = {}; // sha: {filename : [{from: to: author:}]}
+	blame[commits[0].id] = {};
+	for (var i=1; i<commits.length; i++) {
+		var sha = self._revList[from+i];
+		blame[sha] = self._updateBlame(blame[self._revList[from+i-1]],
+									summaries[sha],
+									commits[i]);
+	}	
+
+	self._model.addData(commits, history, summaries, blame);
 
 	var files = self._dirView.getAll();
 	if (files.length > 500) {
@@ -137,6 +147,92 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	self.calculateLayout();
 	self.render();
 };
+
+/*
+	@blame = {
+			filename : [ // sorted
+			{
+				from: 
+				to: 
+				author:
+			}
+		]
+	}
+*/
+CanvasRenderer.prototype._updateBlame = function(blame, diff, commit) {
+	var self = this;
+	var updated = {};
+
+	ASSERT(blame);
+	ASSERT(commit);
+
+	Object.keys(diff).forEach(function(filename) {
+		updated[filename] = [];
+		var edits = diff[filename]
+		edits.forEach(function(edit) { // "+1,9"
+			var parts = edit.split(",");
+			var linenum = parseInt(parts[0].slice(1));
+			var editLen = parseInt(parts[1]);
+
+			var newChunk = {
+				from: linenum,
+				to: linenum + editLen,
+				author: commit.author_name || commit.author_email
+			};
+
+			
+			if (!blame.hasOwnProperty(filename)) {
+				updated[filename].push(newChunk);
+			} else {
+				// TODO: optimize this - don't have to go through every chunk here
+				blame[filename].forEach(function(chunk) {
+					// chunk = {from, to, author}
+					updated[filename] = updated[filename].concat(merge(chunk, newChunk));
+				});
+			}
+
+		});
+	});
+
+	return updated;
+}
+
+function merge(chunk1, chunk2) {
+	if (chunk1.from > chunk2.to)
+		return [chunk1, chunk2];
+	if (chunk1.to < chunk2.from)
+		return [chunk2, chunk1];
+
+	var newChunks = [];
+	var first, second;
+	if (chunk1.from < chunk2.from) {
+		first = chunk1;
+		second = chunk2;
+	} else {
+		first = chunk2;
+		second = chunk1;
+	}
+
+	var newFirst = {
+		from: first.from,
+		to: second.from-1,
+		author: first.author
+	};
+
+	newChunks.push(newFirst);
+	newChunks.push(second);
+
+	if (second.to < first.to) {
+		var third = {
+			from: second.to + 1,
+			to: first.to,
+			author: first.author
+		};
+		newChunks.push(third);
+	}
+
+	return newChunks;
+}
 
 CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
 	var self = this;

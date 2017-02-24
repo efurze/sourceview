@@ -31,6 +31,13 @@ var FONT_DIR = {
 	'color': 'BLUE'
 };
 
+var AUTHOR_COLORS = [
+	'red',
+	'blue',
+	'green',
+	'yellow',
+	'orange'
+];
 
 var RepoView = function(context, revList) {
 	var self = this;
@@ -43,6 +50,7 @@ var RepoView = function(context, revList) {
 	this._dirtyFiles = {};
 	this._dirtyCommits = {};
 	this._revIndex = {};
+	this._authorColors = {};
 
 	revList.forEach(function(sha, index) {
 		self._revIndex[sha] = index;
@@ -239,6 +247,12 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	var x = commit_width * (diff_index - self._fromCommit);
 	var fileTop = self.fileYTop(filename);
 	var maxFileHeight = self.fileHeight(filename);
+	var author = self._model.getCommitAuthor(self._revList[diff_index]);
+
+	if (!self._authorColors.hasOwnProperty(author)) {
+		var author_count = Object.keys(self._authorColors).length;
+		self._authorColors[author] = AUTHOR_COLORS[author_count % AUTHOR_COLORS.length];
+	}
 
 	// size
 	self._context.beginPath();
@@ -270,7 +284,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 	self._context.fillStyle = self._model.isDir(filename) 
 		? COLORS.DIFF_DIR
-		: COLORS.DIFF;
+		: self._authorColors[author];
 	if (self._selectedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
 		self._context.fillStyle = COLORS.DIFF_HIGHLIGHT;
