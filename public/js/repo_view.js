@@ -247,7 +247,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	var x = commit_width * (diff_index - self._fromCommit);
 	var fileTop = self.fileYTop(filename);
 	var maxFileHeight = self.fileHeight(filename);
-	var author = self._model.getCommitAuthor(self._revList[diff_index]);
+	var sha = self._revList[diff_index];
+	var author = self._model.getCommitAuthor(sha);
 
 	if (!self._authorColors.hasOwnProperty(author)) {
 		var author_count = Object.keys(self._authorColors).length;
@@ -265,20 +266,48 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	if (filename === self._selectedFile) {
 		self._context.fillStyle = "grey";
 	} else {
-		if(self._model.isDir(filename)) {
+		if (self._model.isDir(filename)) {
 			self._context.fillStyle = COLORS.REPO_DIR
 		} else {
 			self._context.fillStyle = COLORS.REPO;
 		}
 	}
 
-	self._context.beginPath();
+	var fileLen = self._model.fileMaxSize(filename);
 	var dy = self.fileHeightAtCommit(filename, diff_index);
-	self._context.fillRect(x,
-		fileTop,
-		commit_width,
-		dy
-	);
+
+	if(self._model.isDir(filename) || filename === self._selectedFile) {
+		self._context.beginPath();
+		self._context.fillRect(x,
+			fileTop,
+			commit_width,
+			dy
+		);
+	} else {
+		// {filename : [{from: to: author:}]}
+		var blame = self._model.getBlame(sha);
+		if (blame && blame[filename]) {
+			blame[filename].forEach(function(chunk) {
+				var author = self._model.getCommitAuthor(chunk.commit);
+				self._context.fillStyle = self._authorColors[author];
+				var linenum = chunk.from;
+				var editLen = chunk.to - chunk.from + 1;
+				var dy =  (editLen*maxFileHeight)/fileLen;
+				var y = fileTop + (linenum * maxFileHeight)/fileLen;
+
+				self._context.beginPath();
+				self._context.fillRect(x,
+					y,
+					commit_width,
+					dy
+				);
+			});
+		}
+	}
+
+
+
+	
 
 	// diff
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
@@ -308,7 +337,6 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 				);
 		}
 	} else {
-		var fileLen = self._model.fileMaxSize(filename);
 
 		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
 			var edits = diff_summary[filename];

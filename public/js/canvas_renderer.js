@@ -123,14 +123,16 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	}
 
 	// blame
-	var blame = {}; // sha: {filename : [{from: to: author:}]}
+	var blame = {}; // sha: {filename : [{from: to: commit:}]}
 	blame[commits[0].id] = {};
 	for (var i=1; i<commits.length; i++) {
 		var sha = self._revList[from+i];
 		blame[sha] = self._updateBlame(blame[self._revList[from+i-1]],
 									summaries[sha],
-									commits[i]);
+									commits[i],
+									history);
 	}	
+
 
 	self._model.addData(commits, history, summaries, blame);
 
@@ -150,7 +152,7 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 
 /*
 	@blame = {
-			filename : [ // sorted
+			filename : [ // sorted by start line
 			{
 				from: 
 				to: 
@@ -159,80 +161,98 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 		]
 	}
 */
-CanvasRenderer.prototype._updateBlame = function(blame, diff, commit) {
+
+CanvasRenderer.prototype._updateBlame = function(blame, diff, commit, size_history) {
 	var self = this;
-	var updated = {};
 
 	ASSERT(blame);
 	ASSERT(commit);
 
+	var updated = JSON.parse(JSON.stringify(blame));
+
 	Object.keys(diff).forEach(function(filename) {
-		updated[filename] = [];
+
+		updated[filename] = arrayify(updated[filename], 
+							size_history[commit.id][filename]);
+
 		var edits = diff[filename]
-		edits.forEach(function(edit) { // "+1,9"
-			var parts = edit.split(",");
-			var linenum = parseInt(parts[0].slice(1));
-			var editLen = parseInt(parts[1]);
-
-			var newChunk = {
-				from: linenum,
-				to: linenum + editLen,
-				author: commit.author_name || commit.author_email
-			};
-
-			
-			if (!blame.hasOwnProperty(filename)) {
-				updated[filename].push(newChunk);
-			} else {
-				// TODO: optimize this - don't have to go through every chunk here
-				blame[filename].forEach(function(chunk) {
-					// chunk = {from, to, author}
-					updated[filename] = updated[filename].concat(merge(chunk, newChunk));
-				});
-			}
-
+		edits.forEach(function(edit) { // "-1,8 +1,9"
+			var parts = edit.split(' ');
+			parts.forEach(function(part) {
+				insertEdit(updated[filename], part, commit.id);
+			});
 		});
+
+		updated[filename] = chunkify(updated[filename]);
 	});
 
 	return updated;
 }
 
-function merge(chunk1, chunk2) {
-	if (chunk1.from > chunk2.to)
-		return [chunk1, chunk2];
-	if (chunk1.to < chunk2.from)
-		return [chunk2, chunk1];
-
-	var newChunks = [];
-	var first, second;
-	if (chunk1.from < chunk2.from) {
-		first = chunk1;
-		second = chunk2;
-	} else {
-		first = chunk2;
-		second = chunk1;
+/* 
+chunks = [{
+	from:
+	to:
+	commit:
+}...]
+*/
+function arrayify(chunks, filelength) {
+	var ary = new Array(filelength);
+	ary.fill(null);
+	if (chunks) {
+		chunks.forEach(function(chunk) {
+			for (var i=chunk.from; i <= chunk.to; i++) {
+				ary[i] = chunk.commit;
+			}
+		});
 	}
-
-	var newFirst = {
-		from: first.from,
-		to: second.from-1,
-		author: first.author
-	};
-
-	newChunks.push(newFirst);
-	newChunks.push(second);
-
-	if (second.to < first.to) {
-		var third = {
-			from: second.to + 1,
-			to: first.to,
-			author: first.author
-		};
-		newChunks.push(third);
-	}
-
-	return newChunks;
+	return ary;
 }
+
+function chunkify(ary) {
+	var chunks = [];
+	var chunk;
+	var current_commit = "";
+	for (var i=0; i < ary.length; i++) {
+		if (!ary[i])
+			continue;
+
+		if (ary[i] != current_commit) {
+			current_commit = ary[i];
+			if (chunk) {
+				chunk.to = i;
+				chunks.push(chunk)
+			}
+			chunk = {
+				from: i,
+				commit: ary[i]
+			}
+		} 
+	}
+	if (chunk) {
+		chunk.to = i;
+		chunks.push(chunk);
+	}
+	return chunks;
+}
+
+/*
+	edit: +1,9
+*/
+function insertEdit(ary, edit, commit_id) {
+	var parts = edit.split(",");
+	var sign = parts[0].charAt(0);
+	var linenum = parseInt(parts[0].slice(1));
+	var editLen = parseInt(parts[1]);
+	if (sign === "+") {
+		for (var i=0; i<editLen; i++) {
+			ary.splice(i+linenum, 0, commit_id);
+		}
+	} else {
+		ary.splice(linenum, editLen);
+	}
+}
+
 
 CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
 	var self = this;
@@ -599,7 +619,6 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	}
 	return -1;
 }
-
 
 
 var urlParam = function(name){
