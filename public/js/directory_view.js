@@ -306,9 +306,9 @@ DirectoryViewNode.prototype.handleFilesClick = function(event) {
 		if (!handled) {
 			var y = self.y();
 			if (event.offsetY >= y && event.offsetY <= (y + FONT_DIR.height)) {
-				//console.log("event handled by", self._name);
+				//console.log("event handled by", self.path());
 				handled = true;
-				DirectoryView._model.toggleOpen(self._name);
+				DirectoryView._model.toggleOpen(self.path());
 			}
 		}
 	}
