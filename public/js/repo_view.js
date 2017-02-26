@@ -3,12 +3,24 @@
 var COLORS = {
  FILES_BACKGROUND: 	'#F0DAA4', 	// goldenrod
  REPO_BACKGROUND: 	'#A2BCCD', 	// light blue
- REPO: 				'#8296A4', 	// medium blue
- DIFF: 				'#424D54',	// blue-black
+ REPO: 				'rgb(130,150,164)', // medium blue
+ DIFF: 				'rgb(66, 77, 84)',	// blue-black
  DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
 
  REPO_DIR: 			'#686a83', 	// 
  DIFF_DIR: 			'#414252',	// 
+};
+
+var REPO_RGB = {
+	r: 130,
+	g: 150,
+	b: 164
+};
+
+var DIFF_RGB = {
+	r: 66,
+	g: 77,
+	b: 84
 };
 
 var MARGIN = 5;
@@ -32,11 +44,11 @@ var FONT_DIR = {
 };
 
 var AUTHOR_COLORS = [
-	'red',
-	'blue',
-	'green',
-	'yellow',
-	'orange'
+	'rgb(200,0,0)',
+	'rgb(0,0,200)',
+	'rgb(0,200,0)',
+	'rgb(200,200,0)',
+	'rgb(255,165,0)'
 ];
 
 var RepoView = function(context, revList) {
@@ -273,41 +285,52 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		}
 	}
 
-	var fileLen = self._model.fileMaxSize(filename);
-	var dy = self.fileHeightAtCommit(filename, diff_index);
+	var fileLen = self._model.fileMaxSize(filename); // lines
+	var heightAtCommit = self.fileHeightAtCommit(filename, diff_index);
+	var blame = self._model.getBlame(sha);
 
-	if(self._model.isDir(filename) || filename === self._selectedFile) {
-		self._context.beginPath();
-		self._context.fillRect(x,
-			fileTop,
-			commit_width,
-			dy
-		);
-	} else {
-		// {filename : [{from: to: author:}]}
-		var blame = self._model.getBlame(sha);
-		if (blame && blame[filename]) {
-			blame[filename].forEach(function(chunk) {
-				var author = self._model.getCommitAuthor(chunk.commit);
-				self._context.fillStyle = self._authorColors[author];
-				var linenum = chunk.from;
-				var editLen = chunk.to - chunk.from + 1;
-				var dy =  (editLen*maxFileHeight)/fileLen;
-				var y = fileTop + (linenum * maxFileHeight)/fileLen;
+	self._context.beginPath();
+	self._context.fillRect(x,
+		fileTop,
+		commit_width,
+		heightAtCommit
+	);
 
-				self._context.beginPath();
-				self._context.fillRect(x,
-					y,
-					commit_width,
-					dy
-				);
-			});
-		}
+	self._context.save();
+
+	self._context.rect(x,
+		fileTop,
+		commit_width,
+		heightAtCommit
+	);
+	self._context.clip();
+
+	if (blame && blame[filename] && filename != self._selectedFile) {
+		blame[filename].forEach(function(chunk) {
+			var linenum = chunk.from;
+			var editLen = chunk.to - chunk.from;
+			var dy =  (editLen*heightAtCommit)/fileLen;
+			var y = fileTop + (linenum * heightAtCommit)/fileLen;
+ 
+			self._context.fillStyle = 
+				self._commitColor(diff_index-self._revIndex[chunk.commit],
+								self._authorColors[self._model.getCommitAuthor(chunk.commit)]);
+			
+			//ASSERT(y >= fileTop);
+			//ASSERT(y + dy >= fileTop);
+			//ASSERT(y <= fileTop + heightAtCommit);
+			//ASSERT(y + dy <= fileTop + heightAtCommit);
+
+			self._context.beginPath();
+			self._context.fillRect(x,
+				y,
+				commit_width,
+				dy
+			);
+		});
 	}
 
-
-
-	
+	self._context.restore();
 
 	// diff
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
@@ -359,7 +382,28 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 }
 
 
+RepoView.prototype._commitColor = function(delta, blend_color) {
+	var self = this;
+	var factor = Math.exp(-.02*delta);
 
+	if (blend_color.startsWith('#'))
+		blend_color = hex2rgb(blend_color);
+	var rgb = blend_color.replace(/[^\d,]/g, '').split(',');
+
+	var r = Math.round(REPO_RGB.r + factor * (rgb[0] - REPO_RGB.r));
+	var g = Math.round(REPO_RGB.g + factor * (rgb[1] - REPO_RGB.g));
+	var b = Math.round(REPO_RGB.b + factor * (rgb[2] - REPO_RGB.b));
+	return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+function hex2rgb(hex){
+	 hex = hex.replace('#','');
+	 var r = parseInt(hex.substring(0, hex.length/3), 16);
+	 var g = parseInt(hex.substring(hex.length/3, 2*hex.length/3), 16);
+	 var b = parseInt(hex.substring(2*hex.length/3, 3*hex.length/3), 16);
+
+	 return 'rgba('+r+','+g+','+b+')';
+}
 
 function ASSERT(cond) {
 	if (!cond) {
