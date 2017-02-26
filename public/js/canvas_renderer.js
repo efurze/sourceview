@@ -123,16 +123,16 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	}
 
 	// blame
-	var blame = {}; // sha: {filename : [{from: to: commit:}]}
+	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
 	blame[commits[0].id] = {};
 	for (var i=1; i<commits.length; i++) {
+		console.log("blame", i);
 		var sha = self._revList[from+i];
 		blame[sha] = self._updateBlame(blame[self._revList[from+i-1]],
 									summaries[sha],
 									commits[i],
 									history);
 	}	
-
 
 	self._model.addData(commits, history, summaries, blame);
 
@@ -220,7 +220,7 @@ function chunkify(ary) {
 		if (ary[i] != current_commit) {
 			current_commit = ary[i];
 			if (chunk) {
-				chunk.to = i;
+				chunk.to = i-1;
 				chunks.push(chunk)
 			}
 			chunk = {
@@ -230,7 +230,7 @@ function chunkify(ary) {
 		} 
 	}
 	if (chunk) {
-		chunk.to = i;
+		chunk.to = i-1;
 		chunks.push(chunk);
 	}
 	return chunks;
@@ -242,11 +242,15 @@ function chunkify(ary) {
 function insertEdit(ary, edit, commit_id) {
 	var parts = edit.split(",");
 	var sign = parts[0].charAt(0);
-	var linenum = parseInt(parts[0].slice(1));
+	var linenum = parseInt(parts[0].slice(1)) - 1;
 	var editLen = parseInt(parts[1]);
 	if (sign === "+") {
 		for (var i=0; i<editLen; i++) {
-			ary.splice(i+linenum, 0, commit_id);
+			if (!ary[i+linenum]) {
+				ary[i+linenum] = commit_id;
+			} else {
+				ary.splice(i+linenum, 0, commit_id);
+			}
 		}
 	} else {
 		ary.splice(linenum, editLen);

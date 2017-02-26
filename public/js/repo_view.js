@@ -258,9 +258,10 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 	var x = commit_width * (diff_index - self._fromCommit);
 	var fileTop = self.fileYTop(filename);
-	var maxFileHeight = self.fileHeight(filename);
+	var maxFileHeight = self.fileHeight(filename); // pixels
 	var sha = self._revList[diff_index];
 	var author = self._model.getCommitAuthor(sha);
+	var linesAtCommit = self._model.fileSize(filename, self._revList[diff_index]);
 
 	if (!self._authorColors.hasOwnProperty(author)) {
 		var author_count = Object.keys(self._authorColors).length;
@@ -309,8 +310,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		blame[filename].forEach(function(chunk) {
 			var linenum = chunk.from;
 			var editLen = chunk.to - chunk.from;
-			var dy =  (editLen*heightAtCommit)/fileLen;
-			var y = fileTop + (linenum * heightAtCommit)/fileLen;
+			var dy =  (editLen*maxFileHeight)/fileLen;
+			var y = fileTop + (linenum * maxFileHeight)/fileLen;
  
 			self._context.fillStyle = 
 				self._commitColor(diff_index-self._revIndex[chunk.commit],
@@ -318,8 +319,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 			
 			//ASSERT(y >= fileTop);
 			//ASSERT(y + dy >= fileTop);
-			//ASSERT(y <= fileTop + heightAtCommit);
-			//ASSERT(y + dy <= fileTop + heightAtCommit);
+			//ASSERT(y <= fileTop + maxFileHeight);
+			//ASSERT(y + dy <= fileTop + maxFileHeight);
 
 			self._context.beginPath();
 			self._context.fillRect(x,
