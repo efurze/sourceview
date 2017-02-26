@@ -167,7 +167,7 @@ DirectoryViewNode.prototype.getAll = function() {
 		var path = self.childPath(name);
 		names.push(path);
 		if (DirectoryView._model.isDir(path)) {
-			names = names.concat(self._childDirs[name].displayOrder());
+			names = names.concat(self._childDirs[name].getAll());
 		}
 	});
 	return names;
