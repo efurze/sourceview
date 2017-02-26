@@ -20,12 +20,11 @@ var filename = process.argv[3];
 Persist.getRevList(repo, 'master')
 	.then(function(history) {
 		Promise.each(history, function(sha, index) {
-			var filesize;
-			return Persist.sizeSnapshot(repo, [{hash:sha}])
+			return Persist.sizeSnapshot(repo, [{id:sha}])
 				.then(function(size) {
 					size = size[sha];
 					filesize = size.hasOwnProperty(filename) ? size[filename] : 0
-					return Persist.diffSummary(repo, [{hash:sha}])
+					return Persist.diffSummary(repo, [{id:sha}])
 				}).then(function(diff) {
 					diff = diff[sha];
 					console.log(
