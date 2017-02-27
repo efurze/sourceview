@@ -104,7 +104,9 @@ CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, fr
 	self._toCommit = to;
 	self._dirView.setModel(self._model);
 	self._repoView.setData(self._model, self._fromCommit, self._toCommit);
-	self._updateData(commits, initial_size, summaries, from, to);
+	self.render();
+	setTimeout(self._updateData.bind(self, commits, initial_size, summaries, from, to),
+		1);
 }
 
 CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries, from, to) {

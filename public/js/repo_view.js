@@ -62,7 +62,9 @@ var RepoView = function(context, revList) {
 	this._selectedFile = "";
 	this._selectedCommitIndex = -1;
 	this._dirtyFiles = {};
+	this._dirtyFilesAry = [];
 	this._dirtyCommits = {};
+	this._dirtyCommitsAry = [];
 	this._revIndex = {};
 	this._authorColors = {};
 
@@ -80,12 +82,18 @@ RepoView.prototype.setClip = function(x, y, dx, dy) {
 
 RepoView.prototype.markFile = function(file) {
 	var self = this;
-	self._dirtyFiles[file] = true;
+	if (!self._dirtyFiles.hasOwnProperty(file)) {
+		self._dirtyFiles[file] = true;
+		self._dirtyFilesAry.push(file);
+	}
 }
 
 RepoView.prototype.markCommit = function(commit) {
 	var self = this;
-	self._dirtyCommits[commit] = true;
+	if (!self._dirtyCommits.hasOwnProperty(commit)) {
+		self._dirtyCommits[commit] = true;
+		self._dirtyCommitsAry.push(commit);
+	}
 }
 
 RepoView.prototype.setSelectedFile = function(file) {
@@ -214,22 +222,48 @@ RepoView.prototype.isDescendantOf = function(filename, dir) {
 
 RepoView.prototype.render = function() {
 	var self = this;
+	if (self._dirtyFilesAry.length)
+		requestAnimationFrame(self._renderFiles.bind(self));
+	else if (self._dirtyCommitsAry.length)
+		requestAnimationFrame(self._renderCommits.bind(self));
+}
+
+RepoView.prototype._renderFiles = function() {
+	var self = this;
+	var counter = 0;
 	rect_count = 0;
 	//console.time("repo render");
-	Object.keys(self._dirtyFiles).forEach(function(filename) {
+
+	while (counter++ < 2 && self._dirtyFilesAry.length) {
+		var filename = self._dirtyFilesAry.shift();
+		delete self._dirtyFiles[filename];
 		if (self._model.isVisible(filename)) {
 			self._renderFile(filename);
-			delete self._dirtyFiles[filename];
 		}
-	});
-
-	Object.keys(self._dirtyCommits).forEach(function(sha) {
-		self._renderCommit(self._revIndex[sha]);
-		delete self._dirtyCommits[sha];
-	});
+	}
 
 	//console.log(rect_count);
 	//console.timeEnd("repo render");
+
+	self.render();
+}
+
+RepoView.prototype._renderCommits = function() {
+	var self = this;
+	var counter = 0;
+	rect_count = 0;
+	//console.time("repo render");
+
+	while (counter++ < 2 && self._dirtyCommitsAry.length) {
+		var sha = self._dirtyCommitsAry.shift();
+		delete self._dirtyCommits[sha];
+		self._renderCommit(self._revIndex[sha]);
+	}
+
+	//console.log(rect_count);
+	//console.timeEnd("repo render");
+
+	self.render();
 }
 
 // draw a column
@@ -324,8 +358,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
  
 			self._context.fillStyle = 
 				self._commitColor(diff_index-self._revIndex[chunk.commit],
-								COLORS.DIFF);
-								//self._authorColors[self._model.getCommitAuthor(chunk.commit)]);
+								//COLORS.DIFF);
+								self._authorColors[self._model.getCommitAuthor(chunk.commit)]);
 			
 			//ASSERT(y >= fileTop);
 			//ASSERT(y + dy >= fileTop);
