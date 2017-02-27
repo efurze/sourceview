@@ -1,5 +1,6 @@
 'use strict';
 
+var Directories = {};
 
 var RepoModel = function() {
 	var self = this;
@@ -328,12 +329,7 @@ RepoModel.prototype.isOpen = function(name) {
 };
 
 RepoModel.prototype.isDir = function(name) {
-	var self = this;
-	var node = self._getNode(name);
-	if (node) {
-		return node._isDir;
-	}
-	return false;
+	return Directories.hasOwnProperty(name);
 };
 
 
@@ -374,6 +370,9 @@ var ModelNode = function(model, name, isDir, parent) {
 	self._isDir = isDir;
 	self._parent = parent;
 	self._children = {}; // name to ModelNode
+	if (isDir) {
+		Directories[self.getName()] = true;
+	}
 	//LOG("new ModelNode", self.getName());
 }
 
