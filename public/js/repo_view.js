@@ -51,6 +51,8 @@ var AUTHOR_COLORS = [
 	'rgb(255,165,0)'
 ];
 
+var rect_count = 0;
+
 var RepoView = function(context, revList) {
 	var self = this;
 	this._context = context;
@@ -102,9 +104,11 @@ RepoView.prototype.setSelectedFile = function(file) {
 }
 
 RepoView.prototype.setData = function(model, from, to) {
+	var self = this;
 	this._model = model;
 	this._fromCommit = from;
 	this._toCommit = to;
+	this._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 }
 
 RepoView.prototype.setSelectedCommit = function(index) {
@@ -210,7 +214,8 @@ RepoView.prototype.isDescendantOf = function(filename, dir) {
 
 RepoView.prototype.render = function() {
 	var self = this;
-
+	rect_count = 0;
+	//console.time("repo render");
 	Object.keys(self._dirtyFiles).forEach(function(filename) {
 		if (self._model.isVisible(filename)) {
 			self._renderFile(filename);
@@ -222,6 +227,9 @@ RepoView.prototype.render = function() {
 		self._renderCommit(self._revIndex[sha]);
 		delete self._dirtyCommits[sha];
 	});
+
+	//console.log(rect_count);
+	//console.timeEnd("repo render");
 }
 
 // draw a column
@@ -255,7 +263,7 @@ RepoView.prototype._renderFile = function(filename) {
 RepoView.prototype._renderCell = function(filename, diff_index) {	
 	var self = this;
 
-	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
+	var commit_width = self._commit_width;
 	var x = commit_width * (diff_index - self._fromCommit);
 	var fileTop = self.fileYTop(filename);
 	var maxFileHeight = self.fileHeight(filename); // pixels
@@ -271,11 +279,12 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	// size
 	self._context.beginPath();
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._context.fillRect(x,
+	self._fillRect(x,
 		fileTop,
 		commit_width,
 		maxFileHeight
 	);
+
 	if (filename === self._selectedFile) {
 		self._context.fillStyle = "grey";
 	} else {
@@ -291,7 +300,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	var blame = self._model.getBlame(sha);
 
 	self._context.beginPath();
-	self._context.fillRect(x,
+	self._fillRect(x,
 		fileTop,
 		commit_width,
 		heightAtCommit
@@ -305,7 +314,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		heightAtCommit
 	);
 	self._context.clip();
-
+	
 	if (blame && blame[filename] && filename != self._selectedFile) {
 		blame[filename].forEach(function(chunk) {
 			var linenum = chunk.from;
@@ -315,7 +324,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
  
 			self._context.fillStyle = 
 				self._commitColor(diff_index-self._revIndex[chunk.commit],
-								self._authorColors[self._model.getCommitAuthor(chunk.commit)]);
+								COLORS.DIFF);
+								//self._authorColors[self._model.getCommitAuthor(chunk.commit)]);
 			
 			//ASSERT(y >= fileTop);
 			//ASSERT(y + dy >= fileTop);
@@ -323,7 +333,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 			//ASSERT(y + dy <= fileTop + maxFileHeight);
 
 			self._context.beginPath();
-			self._context.fillRect(x,
+			self._fillRect(x,
 				y,
 				commit_width,
 				dy
@@ -354,7 +364,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 			}
 		}
 		if (mark_commit) {
-			self._context.fillRect(x,
+			self._fillRect(x,
 					fileTop,
 					commit_width,
 					maxFileHeight
@@ -372,7 +382,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 				var dy =  (editLen*maxFileHeight)/fileLen;
 				var y = fileTop + (linenum * maxFileHeight)/fileLen;
 
-				self._context.fillRect(x,
+				self._fillRect(x,
 					y,
 					commit_width,
 					dy
@@ -382,6 +392,15 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	}
 }
 
+
+RepoView.prototype._fillRect = function(x, y, dx, dy) {
+	var self = this;
+	//if (dx < 1 || dy < 1)
+	//	return;
+
+	self._context.fillRect(x, y, dx, dy);
+	rect_count++;
+}
 
 RepoView.prototype._commitColor = function(delta, blend_color) {
 	var self = this;

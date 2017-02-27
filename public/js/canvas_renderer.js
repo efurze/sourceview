@@ -122,21 +122,12 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 										summaries[sha]);
 	}
 
-	// blame
 	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
-	blame[commits[0].id] = {};
-	for (var i=1; i<commits.length; i++) {
-		console.log("blame", i);
-		var sha = self._revList[from+i];
-		blame[sha] = self._updateBlame(blame[self._revList[from+i-1]],
-									summaries[sha],
-									commits[i],
-									history);
-	}	
-
 	self._model.addData(commits, history, summaries, blame);
 
-	var files = self._dirView.getAll();
+	//self._filterEmptyFiles();
+
+	var files = self._dirView.displayOrder();
 	if (files.length > 500) {
 		// collapse all dirs
 		files.forEach(function(filename) {
@@ -145,10 +136,49 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 			}
 		});
 	}
-
+	
 	self.calculateLayout();
 	self.render();
+
+
+	blame = {};
+	var counter = 1;
+	var doBlame = function() {
+		var sha = self._revList[from+counter];
+		blame = self._updateBlame(blame,
+									summaries[sha],
+									commits[counter],
+									history);
+		var blame_hash = {};
+		blame_hash[sha] = blame;
+		self._model.addData([], {}, {}, blame_hash);
+		self._repoView.markCommit(sha);
+		self._repoView.render();
+		counter ++;
+		if (counter < commits.length) {
+			setTimeout(doBlame, 1);
+		}
+	};
+	//setTimeout(doBlame, 1);
+
 };
+
+
+CanvasRenderer.prototype._filterEmptyFiles = function() {
+	var self = this;
+
+	var nonzeroFiles = {};
+	var all_files = self._model.getFilenames();
+	all_files.forEach(function(filename) {
+		for (var i=self._fromCommit; i <= self._toCommit; i++) {
+			var sha = self._revList[i];
+			if (self._model.fileSize(filename, sha) > 0) {
+				nonzeroFiles[filename] = true;
+				return;
+			}
+		}
+	});
+}
 
 /*
 	@blame = {
@@ -161,7 +191,6 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 		]
 	}
 */
-
 CanvasRenderer.prototype._updateBlame = function(blame, diff, commit, size_history) {
 	var self = this;
 
