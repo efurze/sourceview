@@ -73,7 +73,7 @@ var CanvasRenderer = function(revList) {
 		y: -1
 	};
 	this._xForLastCanvasShift = 0;
-	this._scrollTimerId = -1;
+	this._isScrolling = false;
 	this._selectionFrozen = false;
 	this._model = new RepoModel();
 
@@ -509,6 +509,32 @@ CanvasRenderer.prototype.repoClick = function(event) {
 	self.mouseMoveHistoryWindow(event);
 };
 
+CanvasRenderer.prototype._endScroll = function() {
+	var self = this;
+	var from = self._toCommit;
+	for (var i=self._fromCommit; i <= self._toCommit; i++) {
+		if (!self._model.hasCommit(self._revList[i])) {
+			from = i;
+			break;
+		}
+	}
+	var to = from;
+	for (var i=self._toCommit; i > from; i--) {
+		if (!self._model.hasCommit(self._revList[i])) {
+			to = i;
+			break;
+		}	
+	}
+	if (from < to) {
+		var repo = urlParam("repo");
+		self._downloader.get("/rangeJSON?repo=" 
+			+ repo 
+			+ "&from=" + from
+			+"&to=" + to,
+			self.ajaxDone.bind(self));
+	}
+}
+
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
 
@@ -523,44 +549,11 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		
 		var count = Math.round(delta/commit_width);
 		if (count != 0) {
+			self._isScrolling = true;
 			self._scrollCanvas(count);
 			self._repoView.render();
 			self._xForLastCanvasShift = self._lastMouseX;
 		}
-
-		if (self._scrollTimerId >= 0) {
-			clearTimeout(self._scrollTimerId);
-			self._scrollTimerId = -1;
-		}
-
-		self._scrollTimerId = setTimeout(function() {
-			self._scrollTimerId = -1;
-			var from = self._toCommit;
-			for (var i=self._fromCommit; i <= self._toCommit; i++) {
-				if (!self._model.hasCommit(self._revList[i])) {
-					from = i;
-					break;
-				}
-			}
-
-			var to = from;
-			for (var i=self._toCommit; i > from; i--) {
-				if (!self._model.hasCommit(self._revList[i])) {
-					to = i;
-					break;
-				}	
-			}
-
-			if (from < to) {
-				var repo = urlParam("repo");
-				self._downloader.get("/rangeJSON?repo=" 
-					+ repo 
-					+ "&from=" + from
-					+"&to=" + to,
-					self.ajaxDone.bind(self));
-			}
-		}, 200);
-
 
 		self._lastMouseY = event.offsetY;
 		self._lastMouseX = event.offsetX;
@@ -612,6 +605,7 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 
 CanvasRenderer.prototype.mouseDown = function(event) {
 	var self = this;
+	self._isScrolling = false;
 	self._xForLastCanvasShift = event.offsetX;
 	self._mouseDownPos.x = event.offsetX;
 	self._mouseDownPos.y = event.offsetY;
@@ -620,7 +614,11 @@ CanvasRenderer.prototype.mouseDown = function(event) {
 
 CanvasRenderer.prototype.mouseUp = function(event) {
 	var self = this;
+	if (self._isScrolling) {
+		self._endScroll();
+	}
 	self._mouseDown = false;
+	self._isScrolling = false;
 }
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
