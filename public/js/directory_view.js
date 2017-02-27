@@ -62,8 +62,12 @@ DirectoryView.layout = function() {
 	DirectoryView._root.layout();
 };
 
-DirectoryView.displayOrder = function() {
-	return DirectoryView._root.displayOrder();
+DirectoryView.getLayout = function() {
+	return DirectoryView._root.getLayout();
+};
+
+DirectoryView.closeAll = function() {
+	DirectoryView._root.closeAll();
 };
 
 DirectoryView.getAll = function() {
@@ -118,6 +122,54 @@ var DirectoryViewNode = function(name, context, parent) {
 	self._topMargin = 0;
 };
 
+/*
+	Only includes items that affect repo layout. 
+	Open directories are not included.
+	
+	returns: {
+		filepath: {
+			y:
+			dy:
+		}
+	}
+*/
+DirectoryViewNode.prototype.getLayout = function() {
+	var self = this;
+	
+	var layout = {};
+	Object.keys(self._layout).forEach(function(child) {
+		layout[child] = {
+			y: self.getFileY(child),
+			dy: self.getFileDY(child)
+		};
+	});
+	Object.keys(self._childDirs).forEach(function(name) {
+		var sub = self._childDirs[name].getLayout();
+		if (sub) {
+			Object.keys(sub).forEach(function(key) {
+				layout[name + "/" + key] = sub[key];
+			});
+		}
+	});
+	return layout;
+}
+
+DirectoryViewNode.prototype.isRoot = function() {
+	return this == DirectoryView._root;
+}
+
+DirectoryViewNode.prototype.closeAll = function() {
+	var self = this;
+
+	Object.keys(self._childDirs).forEach(function(name) {
+		self._childDirs[name].closeAll();
+	});
+
+	if (!self.isRoot()) {
+		DirectoryView._model.setOpen(self.path(), false);
+	}
+}
+
 DirectoryViewNode.prototype.path = function() {
 	var self = this;
 	var path = "";
@@ -140,24 +192,6 @@ DirectoryViewNode.prototype.childPath = function(name) {
 		path += '/';
 	}
 	return path + name;
-}
-
-DirectoryViewNode.prototype.displayOrder = function() {
-	var self = this;
-	var names = [];
-	self._children.forEach(function(name) {
-		var path = self.childPath(name);
-		if (DirectoryView._model.isDir(path)) {
-			if (DirectoryView._model.isOpen(path)) {
-				names = names.concat(self._childDirs[name].displayOrder());
-			} else {
-				names.push(path);
-			}
-		} else {
-			names.push(path);
-		}
-	});
-	return names;
 }
 
 DirectoryViewNode.prototype.getAll = function() {
@@ -261,7 +295,7 @@ DirectoryViewNode.prototype.layout = function() {
 		var childLineCount = DirectoryView._model.visibleLineCount(self.childPath(name));
 		var childHeight = childLineCount * pixelsPerLine;
 
-		if (DirectoryView._model.isDir(self.childPath(name))) {
+		if (self._childDirs.hasOwnProperty(name)) {
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y = FONT_DIR.height;
@@ -271,10 +305,12 @@ DirectoryViewNode.prototype.layout = function() {
 				self._dx, 
 				subdir.requestedHeight(pixelsPerLine, y));
 			subdir.layout();
-			self._layout[name] = {
-				'y': y,
-				'dy': subdir._dy
-			};
+			if (!DirectoryView._model.isOpen(self.path())) {
+				self._layout[name] = {
+					'y': y,
+					'dy': subdir._dy
+				};
+			}
 			y += subdir._dy;
 		} else {
 			self._layout[name] = {
@@ -413,8 +449,10 @@ DirectoryViewNode.prototype.getParentDir = function(filename) {
 DirectoryViewNode.prototype.getFileY = function(filename) {
 	var self = this;
 	var parent = self.getParentDir(filename);
+	ASSERT(parent);
 	filename = filename.split('/').pop();
 	if (parent == self) {
+		ASSERT(self._layout[filename]);
 		return self.y() + self._layout[filename].y;
 	} else {
 		return parent.getFileY(filename);
@@ -424,8 +462,10 @@ DirectoryViewNode.prototype.getFileY = function(filename) {
 DirectoryViewNode.prototype.getFileDY = function(filename) {
 	var self = this;
 	var parent = self.getParentDir(filename);
+	ASSERT(parent);
 	filename = filename.split('/').pop();
 	if (parent == self) {
+		ASSERT(self._layout[filename]);
 		return self._layout[filename].dy;
 	} else {
 		return parent.getFileDY(filename);

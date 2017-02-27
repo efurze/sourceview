@@ -129,14 +129,10 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 
 	//self._filterEmptyFiles();
 
-	var files = self._dirView.displayOrder();
+	var files = Object.keys(history[commits[self._toCommit].id]);
 	if (files.length > 500) {
 		// collapse all dirs
-		files.forEach(function(filename) {
-			if (self._model.isDir(filename)) {
-				self._model.setOpen(filename, false);
-			}
-		});
+		self._dirView.closeAll();
 	}
 	
 	self.calculateLayout();
@@ -427,17 +423,9 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	var self = this;
 
 	self._dirView.layout();
-	self._files = self._dirView.displayOrder(); // sorted in display order, top-to-bottom
+	var layout = self._dirView.getLayout();
+	self._files = Object.keys(layout);
 
-	var layout = {}; //filename: {y:, dy:}
-	self._files.forEach(function(filename) {
-		if (self._model.isVisible(filename)) {
-			layout[filename] = {
-				y: self._dirView.getFileY(filename),
-				dy: self._dirView.getFileDY(filename)
-			};
-		}
-	});
 	self._repoView.setYLayout(layout);
 };
 

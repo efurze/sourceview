@@ -165,6 +165,7 @@ RepoView.prototype.setCommitRange = function(from, to) {
 
 RepoView.prototype.setYLayout = function(layout) {
 	var self = this;
+	ASSERT(layout);
 	self._layout = layout;
 	Object.keys(self._layout).forEach(function(filename) {
 		self.markFile(filename);
