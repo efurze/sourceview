@@ -102,7 +102,7 @@ var CanvasRenderer = function(revList) {
 	this._layout = new Layout(this._model, this._revList);
 	this._layout.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
-	this._dirView = new DirectoryView(this._layout, this._filesContext, this._model);
+	this._dirView = new DirectoryView(this._layout, this._filesContext);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
 	this._repoView = new RepoView(this._context, this._model, this._layout, revList);
@@ -473,10 +473,10 @@ CanvasRenderer.prototype.filesClick = function(event) {
 	if (self._selectedFile && self._selectedFile.length > 0) {
 		var selectedDir = self._layout.isDir(self._selectedFile)
 						? self._selectedFile
-						: self._model.getParent(self._selectedFile)
+						: self._layout.getParent(self._selectedFile)
 
 		if (selectedDir.length && selectedDir != '/') {
-			self._model.toggleOpen(selectedDir);
+			self._layout.toggleOpen(selectedDir);
 			self.calculateLayout();
 			self._repoView.markAll();
 			self.render();

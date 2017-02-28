@@ -30,12 +30,10 @@ var FONT_DIR = {
 /*=======================================================================================
 =======================================================================================*/
 
-var DirectoryView = function(layout, context, model) {
+var DirectoryView = function(layout, context) {
 	var self = this;
 	self._context = context;
-	self._model = null;
 	self._layout = layout; // filename: {y, dy}
-	self._model = model;
 	self._selectedFile = '';
 };
 
@@ -76,11 +74,11 @@ DirectoryView.prototype._renderItem = function(path, y, dy) {
 	if (self._layout.isDir(path)) {
 		var selectedDir = self._layout.isDir(self._selectedFile)
 			? self._selectedFile 
-			: self._model.getParent(self._selectedFile);
+			: self._layout.getParent(self._selectedFile);
 
 		var parts = path.split('/');
 
-		var handle = self._model.isOpen(path) ? '- ' : '+ ';
+		var handle = self._layout.isOpen(path) ? '- ' : '+ ';
 		self._renderText(handle + parts[parts.length-1] + '/', 
 			parts.length * MARGIN, 
 			y, 

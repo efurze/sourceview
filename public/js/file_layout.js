@@ -46,35 +46,11 @@ Layout.prototype.setClip = function(x,y,dx,dy) {
 	this._root.setClip(x,y,dx,dy);
 };
 
-
-Layout.prototype._addFile = function(filename) {
-	var parts = parsePath(filename);
-	if (!node_index[parts.parent]) {
-		this._addDir(parts.parent);
-	}
-	ASSERT(node_index[parts.parent]);
-	node_index[parts.parent].addFile(parts.name);
-};
-
-Layout.prototype._addDir = function(filename) {
-	var self = this;
-	var parts = parsePath(filename);
-	if (!node_index[parts.parent]) {
-		self._addDir(parts.parent);
-	}
-	ASSERT(node_index[parts.parent]);
-	node_index[filename] = new LayoutNode(parts.name,
-										self._model,
-										self._revList,
-										node_index[parts.parent]);
-	node_index[parts.parent].addFile(parts.name);
-};
-
 Layout.prototype.layout = function(from, to) {
 	var self = this;
 	ASSERT(self._root);
 
-	self._updateFiles(from, to);
+	self._updateFileList(from, to);
 
 	self._root.layout(from, to);
 	self._listeners.forEach(function(cb) {
@@ -82,24 +58,37 @@ Layout.prototype.layout = function(from, to) {
 	});
 };
 
-Layout.prototype._updateFiles = function(from, to) {
-	var self = this;
-	if (from != self._fromCommit || to != self._toCommit) {
-		self._fromCommit = from;
-		self._toCommit = to;
-		for (var i=from; i<=to; i++) {
-			var sha = self._revList[i];
-			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
-				self._addFile(path);
-			});
-		}
-	}
-}
-
 Layout.prototype.closeAll = function() {
 	ASSERT(this._root);
 	this._root.closeAll();
 };
+
+// returns full path of parent dir
+Layout.prototype.getParent = function(path) {
+	return parsePath(path).parent;
+}
+
+Layout.prototype.isVisible = function(path) {
+	var parts = parsePath(path);
+	ASSERT(node_index[parts.parent]);
+	if (node_index[parts.parent]) {
+		return node_index[parts.parent].isOpen();
+	}
+}
+
+Layout.prototype.isOpen = function(path) {
+	ASSERT(node_index[path]);
+	if (node_index[path]) {
+		return node_index[path].isOpen();
+	}
+}
+
+Layout.prototype.toggleOpen = function(path) {
+	ASSERT(node_index[path]);
+	if (node_index[path]) {
+		node_index[path].setOpen(!node_index[path].isOpen());
+	}
+}
 
 Layout.prototype.displayOrder = function() {
 	var self = this;
@@ -127,8 +116,48 @@ Layout.prototype.isDir = function(filename) {
 
 Layout.prototype.fileMaxSize = function(filename) {
 	return applyParent(filename, "fileMaxSize");
-
 };
+
+Layout.prototype._addFile = function(filename) {
+	var parts = parsePath(filename);
+	if (!node_index[parts.parent]) {
+		this._addDir(parts.parent);
+	}
+	ASSERT(node_index[parts.parent]);
+	node_index[parts.parent].addFile(parts.name);
+};
+
+Layout.prototype._addDir = function(filename) {
+	var self = this;
+	var parts = parsePath(filename);
+	if (!node_index[parts.parent]) {
+		self._addDir(parts.parent);
+	}
+	ASSERT(node_index[parts.parent]);
+	node_index[filename] = new LayoutNode(parts.name,
+										self._model,
+										self._revList,
+										node_index[parts.parent]);
+	node_index[parts.parent].addFile(parts.name);
+};
+
+/*
+	ensures that we have an entry for every file 
+	in all commits between <from> and <to>
+*/
+Layout.prototype._updateFileList = function(from, to) {
+	var self = this;
+	if (from != self._fromCommit || to != self._toCommit) {
+		self._fromCommit = from;
+		self._toCommit = to;
+		for (var i=from; i<=to; i++) {
+			var sha = self._revList[i];
+			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
+				self._addFile(path);
+			});
+		}
+	}
+}
 
 function applyParent(filename, fn){
 	var parts = parsePath(filename);
@@ -173,6 +202,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._y = 0;
 	self._dx = 0;
 	self._dy = 0;
+	self._isOpen = true;
 
 	if (self.isRoot()) {
 		node_index[self._name] = self;
@@ -187,8 +217,8 @@ LayoutNode.prototype.displayOrder = function() {
 	self._children.forEach(function(name) {
 		var path = self.childPath(name);
 		names.push(path);
-		if (isDir(path)) {
-			if (self._model.isOpen(path)) {
+		if (self._childDirs[name]) {
+			if (self._childDirs[name].isOpen()) {
 				names = names.concat(self._childDirs[name].displayOrder());
 			}
 		}
@@ -210,7 +240,7 @@ LayoutNode.prototype.getLayout = function() {
 	var self = this;
 	
 	var layout = {};
-	if (self._model.isOpen(self.path())) {
+	if (self._isOpen) {
 		self._children.forEach(function(child) {
 			layout[child] = {
 				y: self.getFileY(child),
@@ -241,7 +271,7 @@ LayoutNode.prototype.closeAll = function() {
 	});
 
 	if (!self.isRoot()) {
-		self._model.setOpen(self.path(), false);
+		self._isOpen = false;
 	}
 }
 
@@ -306,7 +336,7 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 	var self = this;
 	var bottom_margin = 2;
 
-	if (!self._model.isOpen(self.path())) {
+	if (!self._isOpen) {
 		return FONT_DIR.height + bottom_margin;
 	}
 
@@ -425,7 +455,7 @@ LayoutNode.prototype._setRange = function(from, to) {
 LayoutNode.prototype.visibleLineCount = function() {
 	var self = this;
 	var total = 0;
-	if (self._model.isOpen(self.path())) {
+	if (self._isOpen) {
 		total = self._childLines;
 		Object.keys(self._childDirs).forEach(function(name) {
 			total += self._childDirs[name].visibleLineCount();
@@ -512,6 +542,14 @@ LayoutNode.prototype.setClip = function(x,y,dx,dy) {
 	self._dy = dy;
 	//LOG("relative setClip", self._name, x, y, dx, dy);
 	//LOG("setClip", self._name, self.y(), dy);
+}
+
+LayoutNode.prototype.setOpen = function(open) {
+	this._isOpen = open;
+}
+
+LayoutNode.prototype.isOpen = function() {
+	return this._isOpen;
 }
 
 function LOG() {

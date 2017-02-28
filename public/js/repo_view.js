@@ -210,10 +210,10 @@ RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 
 RepoView.prototype.isDrawn = function(filename) {
 	var self = this;
-	if (!self._model.isVisible(filename)) {
+	if (!self._layoutModel.isVisible(filename)) {
 		return false;
 	}
-	if (self._layoutModel.isDir(filename) && self._model.isOpen(filename)) {
+	if (self._layoutModel.isDir(filename) && self._layoutModel.isOpen(filename)) {
 		return false;
 	}
 	return true;
@@ -242,7 +242,7 @@ RepoView.prototype._renderFiles = function() {
 	while (counter++ < 2 && self._dirtyFilesAry.length) {
 		var filename = self._dirtyFilesAry.shift();
 		delete self._dirtyFiles[filename];
-		if (self._model.isVisible(filename)) {
+		if (self._layoutModel.isVisible(filename)) {
 			self._renderFile(filename);
 		}
 	}
@@ -281,7 +281,7 @@ RepoView.prototype._renderCommit = function(diff_index) {
 	//	"at column", diff_index - self._fromCommit);
 	
 	Object.keys(self._layout).forEach(function(filename) {
-		if (self._model.isVisible(filename)) {
+		if (self._layoutModel.isVisible(filename)) {
 			self._renderCell(filename, diff_index);
 		}
 	})
@@ -302,7 +302,7 @@ RepoView.prototype._renderFile = function(filename) {
 RepoView.prototype._renderCell = function(filename, diff_index) {	
 	var self = this;
 
-	if (self._layoutModel.isDir(filename) && self._model.isOpen(filename)) {
+	if (self._layoutModel.isDir(filename) && self._layoutModel.isOpen(filename)) {
 		return;
 	}
 
