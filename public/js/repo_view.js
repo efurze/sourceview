@@ -204,7 +204,7 @@ RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 		return self.fileHeight(filename);
 	} else {
 		return  self._model.fileSize(filename, self._revList[commit_index]) 
-		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);
+		 	* self.fileHeight(filename) / self._layoutObj.fileMaxSize(filename);
 	}
 };
 
@@ -338,7 +338,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		}
 	}
 
-	var fileLen = self._model.fileMaxSize(filename); // lines
+	var fileLen = self._layoutObj.fileMaxSize(filename); // lines
 	var heightAtCommit = self.fileHeightAtCommit(filename, diff_index);
 	var blame = self._model.getBlame(sha);
 

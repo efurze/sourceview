@@ -83,7 +83,7 @@ var CanvasRenderer = function(revList) {
 	this._xForLastCanvasShift = 0;
 	this._isScrolling = false;
 	this._selectionFrozen = false;
-	this._model = new RepoModel();
+	this._model = new RepoModel(revList);
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).mousedown(this.mouseDown.bind(this));
@@ -99,7 +99,7 @@ var CanvasRenderer = function(revList) {
 
 	this._downloader = new Downloader();
 
-	this._layout = new Layout(this._model);
+	this._layout = new Layout(this._model, this._revList);
 	this._layout.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
 	this._dirView = new DirectoryView(this._layout, this._filesContext, this._model);
@@ -138,12 +138,10 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
 	self._model.addData(commits, history, summaries, blame);
 
-	self._filterEmptyFiles();
-
 	var files = Object.keys(history[self._revList[to]]);
 	if (files.length > 500) {
 		// collapse all dirs
-		self._layout.closeAll();
+		//self._layout.closeAll();
 	}
 
 	for (var i=from; i<=to; i++) {
@@ -181,26 +179,10 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	console.log("calculateLayout()");
 	var self = this;
 
-	self._layout.layout();
+	self._layout.layout(self._fromCommit, self._toCommit);
 	self._files = self._layout.displayOrder();
 };
 
-
-CanvasRenderer.prototype._filterEmptyFiles = function() {
-	var self = this;
-
-	var nonzeroFiles = {};
-	var all_files = self._model.getFilenames();
-	all_files.forEach(function(filename) {
-		for (var i=self._fromCommit; i <= self._toCommit; i++) {
-			var sha = self._revList[i];
-			if (self._model.fileSize(filename, sha) > 0) {
-				nonzeroFiles[filename] = true;
-				return;
-			}
-		}
-	});
-}
 
 /*
 	@blame = {

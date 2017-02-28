@@ -25,9 +25,11 @@ var FONT_DIR = {
 	'color': 'BLUE'
 };
 
+var node_index = {};
 
-var Layout = function(model) {
-	this._root = new LayoutNode("/", model);
+
+var Layout = function(model, revList) {
+	this._root = new LayoutNode("/", model, revList);
 	this._model = model;
 	if (model) {
 		model.addListener(this._fileAddedCB.bind(this));
@@ -46,21 +48,18 @@ Layout.prototype.setClip = function(x,y,dx,dy) {
 
 
 Layout.prototype._fileAddedCB = function(filename) {
-	ASSERT(this._root);
-	var parent = this._root.getParentDir(filename);
-	ASSERT(parent);
-	if (parent) {
-		parent.addFile(filename);
-	}
+	console.log("add", filename);
+	applyParent(filename, "addFile");
 };
 
-Layout.prototype.layout = function() {
+Layout.prototype.layout = function(from, to) {
 	ASSERT(this._root);
-	this._root.layout();
+	this._root.layout(from, to);
 	this._listeners.forEach(function(cb) {
 		cb();
 	});
 };
+
 
 Layout.prototype.closeAll = function() {
 	ASSERT(this._root);
@@ -79,38 +78,58 @@ Layout.prototype.getLayout = function() {
 };
 
 Layout.prototype.getFileY = function(filename) {
-	ASSERT(this._root);
-	return this._root.getFileY(filename);
+	return applyParent(filename, "getFileY");
 };
 
 Layout.prototype.getFileDY = function(filename) {
-	ASSERT(this._root);
-	return this._root.getFileDY(filename);
-};
-
-Layout.prototype.getFileAtY = function(y) {
-	var self = this;
-	ASSERT(self._layout);
+	return applyParent(filename, "getFileDY");
 };
 
 
+Layout.prototype.fileMaxSize = function(filename) {
+	return applyParent(filename, "fileMaxSize");
+
+};
+
+function applyParent(filename, fn){
+	var parts = parsePath(filename);
+	var parent = node_index[parts.parent];
+	ASSERT(parent);
+	if (parent) {
+		return parent[fn](parts.name);
+	}
+}
+
+function parsePath(path) {
+	var ret = {};
+	var parts = path.split('/');
+	ret.name = parts.pop();
+	ret.parent = parts.join('/');
+	return ret;
+}
 
 /*=======================================================================================
 =======================================================================================*/
 
-var LayoutNode = function(name, model, parent) {
+var LayoutNode = function(name, model, revList, parent) {
 	ASSERT(name.length);
 	var self = this;
 	self._parent = parent;
+	self._revList = revList;
 	self._model = model;
 	self._name = name;
 	self._childDirs = {};
 	self._children = [];
 	self._layout = {}; // filename: {y, dy}
+	self._fromCommit = -1;
+	self._toCommit = -1;
 	self._x = 0;
 	self._y = 0;
 	self._dx = 0;
 	self._dy = 0;
+
+	node_index[self.path()] = self;
+	console.log("dir", self.path());
 };
 
 LayoutNode.prototype.displayOrder = function() {
@@ -216,15 +235,13 @@ LayoutNode.prototype.setModel = function() {
 }
 
 // @filename: full path
-LayoutNode.prototype.addFile = function(filename) {
+LayoutNode.prototype.addFile = function(name) {
 	var self = this;
-	if (!filename || !filename.length)
-		return;
-	var parts = filename.split('/');
-	var name = parts[parts.length-1];
-	if (self._model.isDir(filename)) {
+
+	var path = self.childPath(name);
+	if (self._model.isDir(path)) {
 		if (!self._childDirs.hasOwnProperty(name)) 
-			self._childDirs[name] = new LayoutNode(name, self._model, self);
+			self._childDirs[name] = new LayoutNode(name, self._model, self._revList, self);
 		self._children.push(name);
 	} else {
 		self._children.unshift(name);
@@ -250,7 +267,7 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 			}
 			dy += subdir.requestedHeight(pixelsPerLine, atY + height);
 		} else {
-			dy = pixelsPerLine * self._model.visibleLineCount(self.childPath(name));
+			dy = pixelsPerLine * self.fileMaxSize(name);
 		}
 		height += dy;
 	});
@@ -258,22 +275,27 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 	return (Math.max(height, FONT_DIR.height) + bottom_margin);
 }
 
-LayoutNode.prototype.layout = function() {
+LayoutNode.prototype.layout = function(from, to) {
 	var self = this;
+	ASSERT(to < self._revList.length);
+	if (self._fromCommit != from || self._toCommit != to) {
+		self._calculateRange(from, to);
+	}
 	var y = 0;
 
-	var lineCount = self._model.visibleLineCount(self.path());
+
+	var lineCount = self.visibleLineCount();
 	if (lineCount <= 0)
 		return;
 	var firstOrderPixelsPerLine = (self._dy)/lineCount;
 	var y_adjust = 0;
 
 	self._children.forEach(function(name) {
-		var childLineCount = self._model.visibleLineCount(self.childPath(name));
-		ASSERT(!isNaN(childLineCount));
+		var childLineCount;
 		var dy = 0;
 		
-		if (self._model.isDir(self.childPath(name))) {
+		if (self._childDirs.hasOwnProperty(name)) {
+			childLineCount = self._childDirs[name].visibleLineCount();
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y_adjust += FONT_DIR.height - y;
@@ -282,6 +304,7 @@ LayoutNode.prototype.layout = function() {
 			dy = subdir.requestedHeight(firstOrderPixelsPerLine, y);
 			y_adjust += dy - (childLineCount * firstOrderPixelsPerLine);
 		} else {
+			childLineCount = self.fileMaxSize(name);
 			dy = (childLineCount * firstOrderPixelsPerLine);
 		}
 		y += dy;
@@ -293,10 +316,10 @@ LayoutNode.prototype.layout = function() {
 
 	y = 0;
 	self._children.forEach(function(name) {
-		var childLineCount = self._model.visibleLineCount(self.childPath(name));
-		var childHeight = childLineCount * pixelsPerLine;
+		var childLineCount;
 
 		if (self._childDirs.hasOwnProperty(name)) {
+			childLineCount = self._childDirs[name].visibleLineCount;
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y = FONT_DIR.height;
@@ -305,13 +328,14 @@ LayoutNode.prototype.layout = function() {
 				y, 
 				self._dx, 
 				subdir.requestedHeight(pixelsPerLine, y));
-			subdir.layout();
+			subdir.layout(from, to);
 			self._layout[name] = {
 				'y': y,
 				'dy': subdir._dy
 			};
 			y += subdir._dy;
 		} else {
+			childLineCount = self.fileMaxSize(name);
 			self._layout[name] = {
 				'y': y,
 				'dy': childLineCount * pixelsPerLine
@@ -321,53 +345,63 @@ LayoutNode.prototype.layout = function() {
 	});
 }
 
-
-
-LayoutNode.prototype.getParentDir = function(filename) {
+LayoutNode.prototype._calculateRange = function(from, to) {
 	var self = this;
-	if (!filename || !filename.length)
-		return null;
+	ASSERT(to < self._revList.length);
 
-	var parts = filename.split('/');
+	self._range = {};
+	self._childLines = 0
+	self._children.forEach(function(filename){
+		if (self._childDirs[filename]) {
+			self._childDirs[filename]._calculateRange(from, to);
+		} else {
+			var max = 0;
+			for (var i=from; i<=to; i++) {
+				max = Math.max(max,
+								self._model.fileSize(self.childPath(filename), 
+													self._revList[i])
+								);
+			}
+			self._range[filename] = max;
+			self._childLines += max;
+		}
+	});
+}
 
-	if (parts.length == 1) {
-		return self;
-	} else if (self._childDirs.hasOwnProperty(parts[0])) {
-		var name = parts.shift();
-		return self._childDirs[name].getParentDir(parts.join('/'));
+LayoutNode.prototype.visibleLineCount = function() {
+	var self = this;
+	var total = 0;
+	if (self._model.isOpen(self.path())) {
+		total = self._childLines;
+		Object.keys(self._childDirs).forEach(function(name) {
+			total += self._childDirs[name].visibleLineCount();
+		});
 	}
-	return null;
-};
+	return total;
+}
+
+LayoutNode.prototype.fileMaxSize = function(filename) {
+	var self = this;
+	ASSERT(self._range.hasOwnProperty(filename));
+	return self._range[filename];
+}
+
 
 
 LayoutNode.prototype.getFileY = function(filename) {
 	var self = this;
-	var parent = self.getParentDir(filename);
-	ASSERT(parent);
-	filename = filename.split('/').pop();
-	if (parent == self) {
-		if(self._layout[filename])
-			return self.y() + self._layout[filename].y;
-		else 
-			return self.y();
-	} else {
-		return parent.getFileY(filename);
-	}	
+	if(self._layout[filename])
+		return self.y() + self._layout[filename].y;
+	else 
+		return self.y();	
 };
 
 LayoutNode.prototype.getFileDY = function(filename) {
 	var self = this;
-	var parent = self.getParentDir(filename);
-	ASSERT(parent);
-	filename = filename.split('/').pop();
-	if (parent == self) {
-		if(self._layout[filename])
-			return self._layout[filename].dy;
-		else 
-			return 0;
-	} else {
-		return parent.getFileDY(filename);
-	}	
+	if(self._layout[filename])
+		return self._layout[filename].dy;
+	else 
+		return 0;	
 };
 
 // absolute x relative to canvas

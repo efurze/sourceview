@@ -2,82 +2,19 @@
 
 var Directories = {};
 
-var RepoModel = function() {
+var RepoModel = function(revList) {
 	var self = this;
+	self._revList = revList;
 	self._filesizes = {}; // commit_sha: {filename: length}
 	self._diffs = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
-	self._range = {}; // filname: length
 	self._blame = {};
 	self._selectedFile = "";
+	self._files = {}; // all filenames
 	self._addListeners = [];
 	self._root = new ModelNode(self, '/', true, null);
 };
 
-/*
-@filesizes: [
-	{
-		commit: <sha>
-		tree: {
-			filename: length,
-			...
-		}
-	},
-	...
-]
-
-@diffs: [
-	{
-		commit: {
-			id: <sha>,
-			tree: <sha>,
-			commit_msg: <string>
-		},
-		diffs: {
-			filename: {
-				summary: ["-119,6","+119,7"],
-				raw: <diffstr>
-			}
-			...
-		}
-	},
-...
-]
-*/
-RepoModel.prototype.setData = function(filesizes, diffs) {
-	var self = this;
-
-	// make diffs commit indexed
-	diffs.forEach(function(diff) {
-		self._diffs[diff.commit.id] = {};
-		Object.keys(diff.diffs).forEach(function(filename) {
-			self._diffs[diff.commit.id][filename] = diff.diffs[filename].summary;
-		});
-		self._commits[diff.commit.id] = {
-			'message': diff.commit.commit_msg,
-			'date': '',
-			'author_name': ''
-		};
-	});
-
-	// make size history indexed by commit
-	filesizes.forEach(function(size) {
-		self._filesizes[size.commit] = size.tree;
-	});
-
-	// initialize range
-	filesizes.forEach(function(info) {
-		Object.keys(info.tree).forEach(function(filename) {
-			if (!self._range.hasOwnProperty(filename)) {
-				self._range[filename] = 0;
-			}
-			self._range[filename] = Math.max(self._range[filename], 
-											 info.tree[filename]);
-		});
-	});
-
-	self._root.addChildren(Object.keys(self._range));
-};
 
 RepoModel.prototype.setSelectedFile = function(filename) {
 	var self = this;
@@ -120,16 +57,7 @@ RepoModel.prototype.getSelectedFile = function() {
 		...
 	}
 */
-RepoModel.prototype.setRangeData = function(commits, size_history, diff_summaries) {
-	var self = this;
-	self._filesizes = {}; // commit_sha: {filename: length}
-	self._diffs = {}; // commit_sha: {filename: diff_summary}
-	self._commits = {}; // sha: {message:, date:, author_name:}
-	self._range = {}; // filname: length
 
-	self._root = new ModelNode(self, '/', true, null);
-	self.addData(commits, size_history, diff_summaries);
-};
 
 RepoModel.prototype.addData = function(commits, size_history, diff_summaries, blame) {
 	var self = this;
@@ -160,23 +88,24 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries, bl
 		};
 	});
 
-	// update range
+	// add new files
 	var new_files = [];
 	Object.keys(size_history).forEach(function(sha) {
 		var info = size_history[sha];
 		Object.keys(info).forEach(function(filename) {
-			if (filename && filename.length) {
-				if (!self._range.hasOwnProperty(filename)) {
-					self._range[filename] = 0;
-					new_files.push(filename);
-				}
-				self._range[filename] = Math.max(self._range[filename], 
-												 info[filename]);
+			if (!self._files.hasOwnProperty(filename)) {
+				self._files[filename] = true;
+				new_files.push(filename);
 			}
 		});
 	});
 
 	self._addChildren(new_files);
+}
+
+RepoModel.prototype.setRange = function(fromIndex, toIndex) {
+	var self = this;
+	ASSERT(fromIndex >= 0);
 }
 
 RepoModel.prototype._addChildren = function(files) {
@@ -191,11 +120,7 @@ RepoModel.prototype.hasCommit = function(commit_id) {
 	return this._commits.hasOwnProperty(commit_id);
 }
 
-// returns full path of all filenames
-RepoModel.prototype.getFilenames = function() {
-	var self = this;
-	return Object.keys(self._range);
-}
+
 /*
 returns: {
 	filename: ["-119,6","+119,7" ...],
@@ -232,10 +157,6 @@ RepoModel.prototype.getBlame = function(commit_id) {
 		return self._blame[commit_id];
 }
 
-RepoModel.prototype.fileMaxSize = function(filename) {
-	return this._range[filename];
-}
-
 RepoModel.prototype.fileSize = function(filename, commit_id) {
 	if (this._filesizes.hasOwnProperty(commit_id)
 		&& this._filesizes[commit_id].hasOwnProperty(filename)) {
@@ -266,27 +187,6 @@ RepoModel.prototype.getChildren = function(name) {
 	return children;
 }
 
-// includes subdirectories
-RepoModel.prototype.visibleLineCount = function(name) {
-	var self = this;
-	var total = 0;
-
-	var node = self._getNode(name);
-	if (node) {
-		if (node._isOpen) {
-			if (self._range.hasOwnProperty(name)) {
-				total += self._range[name];
-			}
-
-			node.childNames().forEach(function(child) {
-				total += self.visibleLineCount(child);
-			});
-		}
-	}
-	ASSERT(!isNaN(total));
-	//LOG("visibleLineCount", name, total);
-	return total;
-};
 
 RepoModel.prototype._getNode = function(name) {
 	var self = this;
