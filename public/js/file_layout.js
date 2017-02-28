@@ -253,11 +253,12 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 LayoutNode.prototype.layout = function() {
 	var self = this;
 	var y = 0;
+	var bottom_margin = 5;
 
 	var lineCount = self._model.visibleLineCount(self.path());
 	if (lineCount <= 0)
 		return;
-	var firstOrderPixelsPerLine = self._dy/lineCount;
+	var firstOrderPixelsPerLine = (self._dy-bottom_margin)/lineCount;
 	var y_adjust = 0;
 
 	self._children.forEach(function(name) {
@@ -280,7 +281,7 @@ LayoutNode.prototype.layout = function() {
 		ASSERT(!isNaN(y));
 	});
 
-	var pixelsPerLine = (self._dy - y_adjust) / lineCount;
+	var pixelsPerLine = (self._dy - bottom_margin - y_adjust) / lineCount;
 	ASSERT(!isNaN(pixelsPerLine));
 
 	y = 0;
