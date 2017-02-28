@@ -135,20 +135,22 @@ LayoutNode.prototype.getLayout = function() {
 	var self = this;
 	
 	var layout = {};
-	self._children.forEach(function(child) {
-		layout[child] = {
-			y: self.getFileY(child),
-			dy: self.getFileDY(child)
-		};
-	});
-	Object.keys(self._childDirs).forEach(function(name) {
-		var sub = self._childDirs[name].getLayout();
-		if (sub) {
-			Object.keys(sub).forEach(function(key) {
-				layout[name + "/" + key] = sub[key];
-			});
-		}
-	});
+	if (self._model.isOpen(self.path())) {
+		self._children.forEach(function(child) {
+			layout[child] = {
+				y: self.getFileY(child),
+				dy: self.getFileDY(child)
+			};
+		});
+		Object.keys(self._childDirs).forEach(function(name) {
+			var sub = self._childDirs[name].getLayout();
+			if (sub) {
+				Object.keys(sub).forEach(function(key) {
+					layout[name + "/" + key] = sub[key];
+				});
+			}
+		});
+	}
 	return layout;
 }
 
