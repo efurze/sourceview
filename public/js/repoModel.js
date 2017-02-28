@@ -266,6 +266,7 @@ RepoModel.prototype.getChildren = function(name) {
 	return children;
 }
 
+// includes subdirectories
 RepoModel.prototype.visibleLineCount = function(name) {
 	var self = this;
 	var total = 0;

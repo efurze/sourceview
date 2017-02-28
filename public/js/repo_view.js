@@ -166,7 +166,8 @@ RepoView.prototype.setCommitRange = function(from, to) {
 RepoView.prototype.setYLayout = function(layout) {
 	var self = this;
 	ASSERT(layout);
-	self._layout = layout;
+	self._layoutObj = layout;
+	self._layout = layout.getLayout();
 	Object.keys(self._layout).forEach(function(filename) {
 		self.markFile(filename);
 	});
@@ -297,6 +298,10 @@ RepoView.prototype._renderFile = function(filename) {
 
 RepoView.prototype._renderCell = function(filename, diff_index) {	
 	var self = this;
+
+	if (self._model.isDir(filename) && self._model.isOpen(filename)) {
+		return;
+	}
 
 	var commit_width = self._commit_width;
 	var x = commit_width * (diff_index - self._fromCommit);

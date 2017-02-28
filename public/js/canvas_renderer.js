@@ -89,9 +89,12 @@ var CanvasRenderer = function(revList) {
 	$("#back_button").on('click', self.onPrevClick.bind(self));
 
 
-	this._downloader = new Downloader();	
-	this._dirView = DirectoryView;
-	this._dirView.init(this._filesContext)
+	this._downloader = new Downloader();
+
+	this._layout = new Layout(this._model);
+	this._layout.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
+
+	this._dirView = new DirectoryView(this._layout, this._filesContext, this._model);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
 	this._repoView = new RepoView(this._context, revList);
@@ -102,7 +105,6 @@ CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, fr
 	var self = this;
 	self._fromCommit = from;
 	self._toCommit = to;
-	self._dirView.setModel(self._model);
 	self._repoView.setData(self._model, self._fromCommit, self._toCommit);
 	self.render();
 	setTimeout(self._updateData.bind(self, commits, initial_size, summaries, from, to),
@@ -127,12 +129,12 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
 	self._model.addData(commits, history, summaries, blame);
 
-	//self._filterEmptyFiles();
+	self._filterEmptyFiles();
 
 	var files = Object.keys(history[self._revList[self._toCommit]]);
 	if (files.length > 500) {
 		// collapse all dirs
-		self._dirView.closeAll();
+		self._layout.closeAll();
 	}
 	
 	self.calculateLayout();
@@ -159,6 +161,17 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	};
 	//setTimeout(doBlame, 1);
 
+};
+
+
+CanvasRenderer.prototype.calculateLayout = function() {
+	console.log("calculateLayout()");
+	var self = this;
+
+	self._layout.layout();
+	self._files = self._layout.displayOrder();
+
+	self._repoView.setYLayout(self._layout);
 };
 
 
@@ -418,22 +431,11 @@ CanvasRenderer.prototype.ajaxDone = function(success, data) {
 	}
 };
 
-CanvasRenderer.prototype.calculateLayout = function() {
-	console.log("calculateLayout()");
-	var self = this;
-
-	self._dirView.layout();
-	var layout = self._dirView.getLayout();
-	self._files = Object.keys(layout);
-
-	self._repoView.setYLayout(layout);
-};
-
 
 // in pixels
 CanvasRenderer.prototype.fileYTop = function(filename) {
 	var self = this;
-	return self._dirView.getFileY(filename);
+	return self._layout.getFileY(filename);
 };
 
 
@@ -480,9 +482,16 @@ CanvasRenderer.prototype.filesDoubleClick = function(event) {
 
 CanvasRenderer.prototype.filesClick = function(event) {
 	var self = this;
-	if (self._dirView.handleFilesClick(event)) {
-		self.calculateLayout();
-		self.render();
+	if (self._selectedFile && self._selectedFile.length > 0) {
+		var selectedDir = self._model.isDir(self._selectedFile)
+						? self._selectedFile
+						: self._model.getParent(self._selectedFile)
+
+		if (selectedDir.length && selectedDir != '/') {
+			self._model.toggleOpen(selectedDir);
+			self.calculateLayout();
+			self.render();
+		}
 	}
 };
 
@@ -562,8 +571,8 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		if (file != self._selectedFile) {
 			self._selectedFile = file;
 			self._repoView.setSelectedFile(file);
-			self._dirView.setSelectedFile(file);
 			self.renderFilenames();
+			self._dirView.setSelectedFile(file);
 		}
 	}
 };

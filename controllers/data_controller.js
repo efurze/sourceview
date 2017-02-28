@@ -43,6 +43,7 @@ module.exports = {
 					repo_data: JSON.stringify(data),
 					scripts: [
 						{ path: "/js/repo_view.js" },
+						{ path: "/js/file_layout.js" },
 						{ path: "/js/canvas_renderer.js" },
 						{ path: "/js/repoModel.js" },
 						{ path: "/js/directory_view.js" },
