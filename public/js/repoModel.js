@@ -166,6 +166,14 @@ RepoModel.prototype.fileSize = function(filename, commit_id) {
 	}
 }
 
+RepoModel.prototype.fileSizes = function(commit_id) {
+	if (this._filesizes.hasOwnProperty(commit_id)) {
+		return this._filesizes[commit_id];
+	} else {
+		return {};
+	}
+}
+
 RepoModel.prototype.getParent = function(name) {
 	var self = this;
 	var parent = null;
@@ -227,10 +235,6 @@ RepoModel.prototype.isOpen = function(name) {
 		return node._isOpen;
 	}
 	return false;
-};
-
-RepoModel.prototype.isDir = function(name) {
-	return Directories.hasOwnProperty(name);
 };
 
 

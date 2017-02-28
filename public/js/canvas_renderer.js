@@ -471,7 +471,7 @@ CanvasRenderer.prototype.filesDoubleClick = function(event) {
 CanvasRenderer.prototype.filesClick = function(event) {
 	var self = this;
 	if (self._selectedFile && self._selectedFile.length > 0) {
-		var selectedDir = self._model.isDir(self._selectedFile)
+		var selectedDir = self._layout.isDir(self._selectedFile)
 						? self._selectedFile
 						: self._model.getParent(self._selectedFile)
 

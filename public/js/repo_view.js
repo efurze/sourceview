@@ -67,7 +67,7 @@ var RepoView = function(context, model, layout, revList) {
 	this._dirtyCommitsAry = [];
 	this._revIndex = {};
 	this._authorColors = {};
-	this._layoutObj = layout;
+	this._layoutModel = layout;
 	this._model = model;
 	this._layout = {};
 
@@ -110,7 +110,7 @@ RepoView.prototype.markAll = function() {
 
 RepoView.prototype.layoutChanged = function() {
 	var self = this;
-	self._layout = self._layoutObj.getLayout();
+	self._layout = self._layoutModel.getLayout();
 }
 
 RepoView.prototype.setSelectedFile = function(file) {
@@ -200,11 +200,11 @@ RepoView.prototype.fileHeight = function(filename) {
 // @commit_index = index into self._history
 RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	var self = this;
-	if (self._model.isDir(filename)) {
+	if (self._layoutModel.isDir(filename)) {
 		return self.fileHeight(filename);
 	} else {
 		return  self._model.fileSize(filename, self._revList[commit_index]) 
-		 	* self.fileHeight(filename) / self._layoutObj.fileMaxSize(filename);
+		 	* self.fileHeight(filename) / self._layoutModel.fileMaxSize(filename);
 	}
 };
 
@@ -213,7 +213,7 @@ RepoView.prototype.isDrawn = function(filename) {
 	if (!self._model.isVisible(filename)) {
 		return false;
 	}
-	if (self._model.isDir(filename) && self._model.isOpen(filename)) {
+	if (self._layoutModel.isDir(filename) && self._model.isOpen(filename)) {
 		return false;
 	}
 	return true;
@@ -302,7 +302,7 @@ RepoView.prototype._renderFile = function(filename) {
 RepoView.prototype._renderCell = function(filename, diff_index) {	
 	var self = this;
 
-	if (self._model.isDir(filename) && self._model.isOpen(filename)) {
+	if (self._layoutModel.isDir(filename) && self._model.isOpen(filename)) {
 		return;
 	}
 
@@ -331,7 +331,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	if (filename === self._selectedFile) {
 		self._context.fillStyle = "grey";
 	} else {
-		if (self._model.isDir(filename)) {
+		if (self._layoutModel.isDir(filename)) {
 			self._context.fillStyle = COLORS.REPO_DIR
 		} else {
 			self._context.fillStyle = COLORS.REPO;
@@ -359,7 +359,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	
 	if (blame && blame[filename] && filename != self._selectedFile) {
 		blame[filename].forEach(function(chunk) {
-			var fileLen = self._layoutObj.fileMaxSize(filename); // lines
+			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
 			var linenum = chunk.from;
 			var editLen = chunk.to - chunk.from;
 			var dy =  (editLen*maxFileHeight)/fileLen;
@@ -388,7 +388,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 
 	// diff
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
-	self._context.fillStyle = self._model.isDir(filename) 
+	self._context.fillStyle = self._layoutModel.isDir(filename) 
 		? COLORS.DIFF_DIR
 		: self._authorColors[author];
 	if (self._selectedCommitIndex == diff_index
@@ -397,7 +397,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	}
 
 
-	if (self._model.isDir(filename) && diff_summary) {
+	if (self._layoutModel.isDir(filename) && diff_summary) {
 		var changed_files = Object.keys(diff_summary);
 		var mark_commit = false;
 		for (var i=0; i < changed_files.length; i++) {
@@ -417,7 +417,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 
 		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
 			var edits = diff_summary[filename];
-			var fileLen = self._layoutObj.fileMaxSize(filename); // lines
+			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
 
 			edits.forEach(function(edit) { // "+1,9"
 				var parts = edit.split(",");

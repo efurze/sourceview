@@ -31,10 +31,10 @@ var node_index = {};
 var Layout = function(model, revList) {
 	this._root = new LayoutNode("/", model, revList);
 	this._model = model;
-	if (model) {
-		model.addListener(this._fileAddedCB.bind(this));
-	}
+	this._revList = revList;
 	this._listeners = [];
+	this._fromCommit = -1;
+	this._toCommit = -1;
 }
 
 Layout.prototype.addListener = function(cb) {
@@ -47,19 +47,54 @@ Layout.prototype.setClip = function(x,y,dx,dy) {
 };
 
 
-Layout.prototype._fileAddedCB = function(filename) {
-	console.log("add", filename);
-	applyParent(filename, "addFile");
+Layout.prototype._addFile = function(filename) {
+	var parts = parsePath(filename);
+	if (!node_index[parts.parent]) {
+		this._addDir(parts.parent);
+	}
+	ASSERT(node_index[parts.parent]);
+	node_index[parts.parent].addFile(parts.name);
+};
+
+Layout.prototype._addDir = function(filename) {
+	var self = this;
+	var parts = parsePath(filename);
+	if (!node_index[parts.parent]) {
+		self._addDir(parts.parent);
+	}
+	ASSERT(node_index[parts.parent]);
+	node_index[filename] = new LayoutNode(parts.name,
+										self._model,
+										self._revList,
+										node_index[parts.parent]);
+	node_index[parts.parent].addFile(parts.name);
 };
 
 Layout.prototype.layout = function(from, to) {
-	ASSERT(this._root);
-	this._root.layout(from, to);
-	this._listeners.forEach(function(cb) {
+	var self = this;
+	ASSERT(self._root);
+
+	self._updateFiles(from, to);
+
+	self._root.layout(from, to);
+	self._listeners.forEach(function(cb) {
 		cb();
 	});
 };
 
+Layout.prototype._updateFiles = function(from, to) {
+	var self = this;
+	if (from != self._fromCommit || to != self._toCommit) {
+		self._fromCommit = from;
+		self._toCommit = to;
+		for (var i=from; i<=to; i++) {
+			var sha = self._revList[i];
+			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
+				self._addFile(path);
+			});
+		}
+	}
+}
 
 Layout.prototype.closeAll = function() {
 	ASSERT(this._root);
@@ -85,6 +120,10 @@ Layout.prototype.getFileDY = function(filename) {
 	return applyParent(filename, "getFileDY");
 };
 
+Layout.prototype.isDir = function(filename) {
+	return isDir(filename);
+};
+
 
 Layout.prototype.fileMaxSize = function(filename) {
 	return applyParent(filename, "fileMaxSize");
@@ -105,8 +144,14 @@ function parsePath(path) {
 	var parts = path.split('/');
 	ret.name = parts.pop();
 	ret.parent = parts.join('/');
+	if (!ret.parent.length && ret.name !== '/')
+		ret.parent = '/';
 	return ret;
 }
+
+function isDir(filename) {
+	return node_index.hasOwnProperty(filename);
+};
 
 /*=======================================================================================
 =======================================================================================*/
@@ -120,6 +165,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._name = name;
 	self._childDirs = {};
 	self._children = [];
+	self._childHash = {};
 	self._layout = {}; // filename: {y, dy}
 	self._fromCommit = -1;
 	self._toCommit = -1;
@@ -128,8 +174,11 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._dx = 0;
 	self._dy = 0;
 
-	node_index[self.path()] = self;
-	console.log("dir", self.path());
+	if (self.isRoot()) {
+		node_index[self._name] = self;
+	} else {
+		node_index[self.path()] = self;
+	}
 };
 
 LayoutNode.prototype.displayOrder = function() {
@@ -138,7 +187,7 @@ LayoutNode.prototype.displayOrder = function() {
 	self._children.forEach(function(name) {
 		var path = self.childPath(name);
 		names.push(path);
-		if (self._model.isDir(path)) {
+		if (isDir(path)) {
 			if (self._model.isOpen(path)) {
 				names = names.concat(self._childDirs[name].displayOrder());
 			}
@@ -238,14 +287,19 @@ LayoutNode.prototype.setModel = function() {
 LayoutNode.prototype.addFile = function(name) {
 	var self = this;
 
+	if (self._childHash.hasOwnProperty(name))
+		return;
+
 	var path = self.childPath(name);
-	if (self._model.isDir(path)) {
+	if (isDir(path)) {
 		if (!self._childDirs.hasOwnProperty(name)) 
-			self._childDirs[name] = new LayoutNode(name, self._model, self._revList, self);
+			self._childDirs[name] = node_index[path];
 		self._children.push(name);
 	} else {
 		self._children.unshift(name);
 	}
+
+	self._childHash[name] = true;
 }
 
 LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
@@ -260,7 +314,7 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 
 	self._children.forEach(function(name) {
 		var dy = 0;
-		if (self._model.isDir(self.childPath(name))) {
+		if (isDir(self.childPath(name))) {
 			var subdir = self._childDirs[name];
 			if (height + atY < FONT_DIR.height && self._parent._parent) {
 				dy = FONT_DIR.height - height - atY;
@@ -279,7 +333,7 @@ LayoutNode.prototype.layout = function(from, to) {
 	var self = this;
 	ASSERT(to < self._revList.length);
 	if (self._fromCommit != from || self._toCommit != to) {
-		self._calculateRange(from, to);
+		self._setRange(from, to);
 	}
 	var y = 0;
 
@@ -345,7 +399,7 @@ LayoutNode.prototype.layout = function(from, to) {
 	});
 }
 
-LayoutNode.prototype._calculateRange = function(from, to) {
+LayoutNode.prototype._setRange = function(from, to) {
 	var self = this;
 	ASSERT(to < self._revList.length);
 
@@ -353,7 +407,7 @@ LayoutNode.prototype._calculateRange = function(from, to) {
 	self._childLines = 0
 	self._children.forEach(function(filename){
 		if (self._childDirs[filename]) {
-			self._childDirs[filename]._calculateRange(from, to);
+			self._childDirs[filename]._setRange(from, to);
 		} else {
 			var max = 0;
 			for (var i=from; i<=to; i++) {

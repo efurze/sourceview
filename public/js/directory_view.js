@@ -66,15 +66,15 @@ DirectoryView.prototype.render = function() {
 		self._renderItem(path, layout[path].y, layout[path].dy)
 	});
 
-	if (self._selectedFile && !self._model.isDir(self._selectedFile))
+	if (self._selectedFile && !self._layout.isDir(self._selectedFile))
 		self._renderSelected(self._selectedFile);
 }
 
 DirectoryView.prototype._renderItem = function(path, y, dy) {
 	var self = this;
 
-	if (self._model.isDir(path)) {
-		var selectedDir = self._model.isDir(self._selectedFile)
+	if (self._layout.isDir(path)) {
+		var selectedDir = self._layout.isDir(self._selectedFile)
 			? self._selectedFile 
 			: self._model.getParent(self._selectedFile);
 
