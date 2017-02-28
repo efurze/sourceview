@@ -571,8 +571,8 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		if (file != self._selectedFile) {
 			self._selectedFile = file;
 			self._repoView.setSelectedFile(file);
-			self.renderFilenames();
 			self._dirView.setSelectedFile(file);
+			self.renderFilenames();
 		}
 	}
 };
@@ -624,10 +624,12 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var offset = 0;
 	var next_index = self._files.length - 1;
 	var next_offset = self._height;
-
+	console.log("y:", y);
 	while (next_index - index > 1) {
 		var bisect_index = Math.round((next_index+index)/2);
 		var bisect_offset = self.fileYTop(self._files[bisect_index]);
+
+		console.log("bisect:", bisect_index, bisect_offset);
 
 		if (y <= bisect_offset) {
 			next_index = bisect_index;
@@ -636,7 +638,13 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 			index = bisect_index;
 			offset = bisect_offset;
 		}
+		console.log(index, next_index);
 	}
+	
+	if (y >= self.fileYTop(self._files[next_index])) 
+		index = next_index;
+
+	console.log("returning", index, self._files[index]);
 	return self._files[index];
 }
 

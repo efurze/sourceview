@@ -198,7 +198,7 @@ RepoView.prototype.fileHeight = function(filename) {
 RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	var self = this;
 	if (self._model.isDir(filename)) {
-		return FONT_DIR.height;
+		return self.fileHeight(filename);
 	} else {
 		return  self._model.fileSize(filename, self._revList[commit_index]) 
 		 	* self.fileHeight(filename) / self._model.fileMaxSize(filename);

@@ -226,9 +226,10 @@ LayoutNode.prototype.addFile = function(filename) {
 
 LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 	var self = this;
+	var bottom_margin = 2;
 
 	if (!self._model.isOpen(self.path())) {
-		return FONT_DIR.height;
+		return FONT_DIR.height + bottom_margin;
 	}
 
 	var height = 0;
@@ -247,18 +248,17 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 		height += dy;
 	});
 
-	return Math.max(height, FONT_DIR.height);
+	return (Math.max(height, FONT_DIR.height) + bottom_margin);
 }
 
 LayoutNode.prototype.layout = function() {
 	var self = this;
 	var y = 0;
-	var bottom_margin = 5;
 
 	var lineCount = self._model.visibleLineCount(self.path());
 	if (lineCount <= 0)
 		return;
-	var firstOrderPixelsPerLine = (self._dy-bottom_margin)/lineCount;
+	var firstOrderPixelsPerLine = (self._dy)/lineCount;
 	var y_adjust = 0;
 
 	self._children.forEach(function(name) {
@@ -281,13 +281,11 @@ LayoutNode.prototype.layout = function() {
 		ASSERT(!isNaN(y));
 	});
 
-	var pixelsPerLine = (self._dy - bottom_margin - y_adjust) / lineCount;
+	var pixelsPerLine = (self._dy - y_adjust) / lineCount;
 	ASSERT(!isNaN(pixelsPerLine));
 
 	y = 0;
-	ASSERT(!isNaN(y));
 	self._children.forEach(function(name) {
-		ASSERT(!isNaN(y));
 		var childLineCount = self._model.visibleLineCount(self.childPath(name));
 		var childHeight = childLineCount * pixelsPerLine;
 
@@ -301,21 +299,17 @@ LayoutNode.prototype.layout = function() {
 				self._dx, 
 				subdir.requestedHeight(pixelsPerLine, y));
 			subdir.layout();
-			//if (!self._model.isOpen(self.path())) {
-				self._layout[name] = {
-					'y': y,
-					'dy': subdir._dy
-				};
-			//}
+			self._layout[name] = {
+				'y': y,
+				'dy': subdir._dy
+			};
 			y += subdir._dy;
-			ASSERT(!isNaN(y));
 		} else {
 			self._layout[name] = {
 				'y': y,
 				'dy': childLineCount * pixelsPerLine
 			};
 			y += childLineCount * pixelsPerLine;
-			ASSERT(!isNaN(y));
 		}
 	});
 }
