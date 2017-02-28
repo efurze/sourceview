@@ -346,8 +346,10 @@ LayoutNode.prototype.getFileY = function(filename) {
 	ASSERT(parent);
 	filename = filename.split('/').pop();
 	if (parent == self) {
-		ASSERT(self._layout[filename]);
-		return self.y() + self._layout[filename].y;
+		if(self._layout[filename])
+			return self.y() + self._layout[filename].y;
+		else 
+			return self.y();
 	} else {
 		return parent.getFileY(filename);
 	}	
@@ -359,8 +361,10 @@ LayoutNode.prototype.getFileDY = function(filename) {
 	ASSERT(parent);
 	filename = filename.split('/').pop();
 	if (parent == self) {
-		ASSERT(self._layout[filename]);
-		return self._layout[filename].dy;
+		if(self._layout[filename])
+			return self._layout[filename].dy;
+		else 
+			return 0;
 	} else {
 		return parent.getFileDY(filename);
 	}	

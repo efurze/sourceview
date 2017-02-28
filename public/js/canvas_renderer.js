@@ -496,6 +496,7 @@ CanvasRenderer.prototype.filesClick = function(event) {
 		if (selectedDir.length && selectedDir != '/') {
 			self._model.toggleOpen(selectedDir);
 			self.calculateLayout();
+			self._repoView.markAll();
 			self.render();
 		}
 	}
