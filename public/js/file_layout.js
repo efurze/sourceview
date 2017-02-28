@@ -32,8 +32,12 @@ var Layout = function(model) {
 	if (model) {
 		model.addListener(this._fileAddedCB.bind(this));
 	}
+	this._listeners = [];
 }
 
+Layout.prototype.addListener = function(cb) {
+	this._listeners.push(cb);
+}
 
 Layout.prototype.setClip = function(x,y,dx,dy) {
 	ASSERT(this._root);
@@ -53,6 +57,9 @@ Layout.prototype._fileAddedCB = function(filename) {
 Layout.prototype.layout = function() {
 	ASSERT(this._root);
 	this._root.layout();
+	this._listeners.forEach(function(cb) {
+		cb();
+	});
 };
 
 Layout.prototype.closeAll = function() {

@@ -72,6 +72,14 @@ var CanvasRenderer = function(revList) {
 		x: -1,
 		y: -1
 	};
+	this._mouseDownRange = {
+		from: -1,
+		to: -1
+	};
+	this._lastFetchRange = {
+		from: -1,
+		to: -1
+	};
 	this._xForLastCanvasShift = 0;
 	this._isScrolling = false;
 	this._selectionFrozen = false;
@@ -97,7 +105,7 @@ var CanvasRenderer = function(revList) {
 	this._dirView = new DirectoryView(this._layout, this._filesContext, this._model);
 	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
 
-	this._repoView = new RepoView(this._context, revList);
+	this._repoView = new RepoView(this._context, this._model, this._layout, revList);
 	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
 };
 
@@ -105,8 +113,9 @@ CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, fr
 	var self = this;
 	self._fromCommit = from;
 	self._toCommit = to;
-	self._repoView.setData(self._model, self._fromCommit, self._toCommit);
-	self.render();
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+	self.clearHistory();
+	self.renderFilenames();
 	setTimeout(self._updateData.bind(self, commits, initial_size, summaries, from, to),
 		1);
 }
@@ -131,10 +140,14 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 
 	self._filterEmptyFiles();
 
-	var files = Object.keys(history[self._revList[self._toCommit]]);
+	var files = Object.keys(history[self._revList[to]]);
 	if (files.length > 500) {
 		// collapse all dirs
 		self._layout.closeAll();
+	}
+
+	for (var i=from; i<=to; i++) {
+		self._repoView.markCommit(self._revList[i]);
 	}
 	
 	self.calculateLayout();
@@ -170,8 +183,6 @@ CanvasRenderer.prototype.calculateLayout = function() {
 
 	self._layout.layout();
 	self._files = self._layout.displayOrder();
-
-	self._repoView.setYLayout(self._layout);
 };
 
 
@@ -371,12 +382,10 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	var img = self._context.getImageData(0,0,self._width, self._height);
 	
 	// clear canvas
-	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
-	self._context.clearRect(0, 0, self._width, self._height);
-	self._context.fillRect(0, 0, self._width, self._height);
+	self.clearHistory();
 
 	self._context.putImageData(img, -(count*commit_width), 0);
+	self._repoView.render();
 }
 
 CanvasRenderer.prototype.onNextClick = function() {
@@ -442,7 +451,7 @@ CanvasRenderer.prototype.fileYTop = function(filename) {
 CanvasRenderer.prototype.render = function() {
 	var self = this;
 	self.renderFilenames();
-	self.renderHistory();
+	self._repoView.render();
 };
 
 CanvasRenderer.prototype.renderFilenames = function() {
@@ -457,16 +466,13 @@ CanvasRenderer.prototype.renderFilenames = function() {
 };
 
 
-CanvasRenderer.prototype.renderHistory = function() {
-	console.log("renderHistory");
+CanvasRenderer.prototype.clearHistory = function() {
 	var self = this;
 
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
 	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
 	self._context.clearRect(0, 0, self._width, self._height);
 	self._context.fillRect(0, 0, self._width, self._height);
-
-	self._repoView.render();
 };
 
 
@@ -508,20 +514,30 @@ CanvasRenderer.prototype.repoClick = function(event) {
 
 CanvasRenderer.prototype._endScroll = function() {
 	var self = this;
-	var from = self._toCommit;
-	for (var i=self._fromCommit; i <= self._toCommit; i++) {
-		if (!self._model.hasCommit(self._revList[i])) {
-			from = i;
-			break;
-		}
+
+	if (self._mouseDownRange.from != self._lastFetchRange.from) {
+		self._repoView.markAll();
+		self._repoView.render();
 	}
-	var to = from;
-	for (var i=self._toCommit; i > from; i--) {
-		if (!self._model.hasCommit(self._revList[i])) {
-			to = i;
-			break;
-		}	
+}
+
+CanvasRenderer.prototype._fetchMoreData = function() {
+	var self = this;
+	var from, to;
+
+	if (self._lastFetchRange.from < self._fromCommit) {
+		from = self._lastFetchRange.to;
+		to = Math.min(self._revList.length-1, self._toCommit + 10);
+	} else {
+		from = Math.max(0, self._fromCommit-10);
+		to = self._lastFetchRange.from;
 	}
+
+	for (; from<=to; from++) {
+		if (!self._model.hasCommit(self._revList[from])) 
+			break;
+	}
+
 	if (from < to) {
 		var repo = urlParam("repo");
 		self._downloader.get("/rangeJSON?repo=" 
@@ -541,6 +557,7 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	}
 
 	if (self._mouseDown) {
+		var SCROLL_THRESHOLD = 10;
 		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
 		var delta = self._xForLastCanvasShift - self._lastMouseX;
 		
@@ -548,8 +565,13 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 		if (count != 0) {
 			self._isScrolling = true;
 			self._scrollCanvas(count);
-			self._repoView.render();
 			self._xForLastCanvasShift = self._lastMouseX;
+			if (Math.abs(self._lastFetchRange.from - self._fromCommit) 
+			>= SCROLL_THRESHOLD) {
+				self._fetchMoreData();
+				self._lastFetchRange.from = self._fromCommit;
+				self._lastFetchRange.to = self._toCommit;
+			}
 		}
 
 		self._lastMouseY = event.offsetY;
@@ -606,6 +628,10 @@ CanvasRenderer.prototype.mouseDown = function(event) {
 	self._xForLastCanvasShift = event.offsetX;
 	self._mouseDownPos.x = event.offsetX;
 	self._mouseDownPos.y = event.offsetY;
+	self._lastFetchRange.from = self._fromCommit;
+	self._lastFetchRange.to = self._toCommit;
+	self._mouseDownRange.from = self._fromCommit;
+	self._mouseDownRange.to = self._toCommit;
 	self._mouseDown = true;
 }
 
@@ -624,12 +650,9 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var offset = 0;
 	var next_index = self._files.length - 1;
 	var next_offset = self._height;
-	console.log("y:", y);
 	while (next_index - index > 1) {
 		var bisect_index = Math.round((next_index+index)/2);
 		var bisect_offset = self.fileYTop(self._files[bisect_index]);
-
-		console.log("bisect:", bisect_index, bisect_offset);
 
 		if (y <= bisect_offset) {
 			next_index = bisect_index;
@@ -638,13 +661,10 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 			index = bisect_index;
 			offset = bisect_offset;
 		}
-		console.log(index, next_index);
 	}
-	
 	if (y >= self.fileYTop(self._files[next_index])) 
 		index = next_index;
 
-	console.log("returning", index, self._files[index]);
 	return self._files[index];
 }
 

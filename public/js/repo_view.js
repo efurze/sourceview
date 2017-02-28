@@ -53,7 +53,7 @@ var AUTHOR_COLORS = [
 
 var rect_count = 0;
 
-var RepoView = function(context, revList) {
+var RepoView = function(context, model, layout, revList) {
 	var self = this;
 	this._context = context;
 	this._revList = revList;
@@ -67,6 +67,11 @@ var RepoView = function(context, revList) {
 	this._dirtyCommitsAry = [];
 	this._revIndex = {};
 	this._authorColors = {};
+	this._layoutObj = layout;
+	this._model = model;
+	this._layout = {};
+
+	layout.addListener(this.layoutChanged.bind(this));
 
 	revList.forEach(function(sha, index) {
 		self._revIndex[sha] = index;
@@ -88,12 +93,24 @@ RepoView.prototype.markFile = function(file) {
 	}
 }
 
-RepoView.prototype.markCommit = function(commit) {
+RepoView.prototype.markCommit = function(commit_sha) {
 	var self = this;
-	if (!self._dirtyCommits.hasOwnProperty(commit)) {
-		self._dirtyCommits[commit] = true;
-		self._dirtyCommitsAry.push(commit);
+	if (!self._dirtyCommits.hasOwnProperty(commit_sha)) {
+		self._dirtyCommits[commit_sha] = true;
+		self._dirtyCommitsAry.push(commit_sha);
 	}
+}
+
+RepoView.prototype.markAll = function() {
+	var self = this;
+	for(var i=self._fromCommit; i<=self._toCommit; i++) {
+		self.markCommit(self._revList[i]);
+	}
+}
+
+RepoView.prototype.layoutChanged = function() {
+	var self = this;
+	self._layout = self._layoutObj.getLayout();
 }
 
 RepoView.prototype.setSelectedFile = function(file) {
@@ -111,13 +128,6 @@ RepoView.prototype.setSelectedFile = function(file) {
 	}
 }
 
-RepoView.prototype.setData = function(model, from, to) {
-	var self = this;
-	this._model = model;
-	this._fromCommit = from;
-	this._toCommit = to;
-	this._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
-}
 
 RepoView.prototype.setSelectedCommit = function(index) {
 	var self = this;
@@ -161,17 +171,10 @@ RepoView.prototype.setCommitRange = function(from, to) {
 
 	self._fromCommit = from;
 	self._toCommit = to;
+	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 }
 
-RepoView.prototype.setYLayout = function(layout) {
-	var self = this;
-	ASSERT(layout);
-	self._layoutObj = layout;
-	self._layout = layout.getLayout();
-	Object.keys(self._layout).forEach(function(filename) {
-		self.markFile(filename);
-	});
-}
+
 
 // in pixels
 RepoView.prototype.fileYTop = function(filename) {
@@ -224,10 +227,10 @@ RepoView.prototype.isDescendantOf = function(filename, dir) {
 
 RepoView.prototype.render = function() {
 	var self = this;
-	if (self._dirtyFilesAry.length)
-		requestAnimationFrame(self._renderFiles.bind(self));
-	else if (self._dirtyCommitsAry.length)
+	if (self._dirtyCommitsAry.length)
 		requestAnimationFrame(self._renderCommits.bind(self));
+	else if (self._dirtyFilesAry.length)
+		requestAnimationFrame(self._renderFiles.bind(self));
 }
 
 RepoView.prototype._renderFiles = function() {
