@@ -338,7 +338,6 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		}
 	}
 
-	var fileLen = self._layoutObj.fileMaxSize(filename); // lines
 	var heightAtCommit = self.fileHeightAtCommit(filename, diff_index);
 	var blame = self._model.getBlame(sha);
 
@@ -360,6 +359,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	
 	if (blame && blame[filename] && filename != self._selectedFile) {
 		blame[filename].forEach(function(chunk) {
+			var fileLen = self._layoutObj.fileMaxSize(filename); // lines
 			var linenum = chunk.from;
 			var editLen = chunk.to - chunk.from;
 			var dy =  (editLen*maxFileHeight)/fileLen;
@@ -417,6 +417,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 
 		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
 			var edits = diff_summary[filename];
+			var fileLen = self._layoutObj.fileMaxSize(filename); // lines
 
 			edits.forEach(function(edit) { // "+1,9"
 				var parts = edit.split(",");

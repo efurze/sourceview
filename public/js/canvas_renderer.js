@@ -141,7 +141,7 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	var files = Object.keys(history[self._revList[to]]);
 	if (files.length > 500) {
 		// collapse all dirs
-		//self._layout.closeAll();
+		self._layout.closeAll();
 	}
 
 	for (var i=from; i<=to; i++) {
