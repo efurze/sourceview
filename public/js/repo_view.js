@@ -219,7 +219,7 @@ RepoView.prototype._renderCommit = function(diff_index) {
 
 	//console.log("Drawing commit", diff_index, self._revList[diff_index],
 	//	"at column", diff_index - self._fromCommit);
-	
+	self._clearColumn(diff_index);
 	Object.keys(self._layout).forEach(function(filename) {
 		if (self._layoutModel.isVisible(filename)) {
 			self._renderCell(filename, diff_index);
@@ -227,17 +227,43 @@ RepoView.prototype._renderCommit = function(diff_index) {
 	})
 };
 
+RepoView.prototype._clearColumn = function(diff_index) { 
+	var self = this;
+	var x = self._commit_width * (diff_index - self._fromCommit);
+	self._context.beginPath();
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._fillRect(x,
+		self._y,
+		self._commit_width,
+		self._height
+	);
+
+}
+
 // draw a row
 RepoView.prototype._renderFile = function(filename) {	
 	var self = this;
 	if (!self._layout.hasOwnProperty(filename)) {
 		return;
 	}
+	self._clearRow(filename);
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
 		self._renderCell(filename, index);
-	};
+	}
 }
 
+
+RepoView.prototype._clearRow = function(filename) { 
+	var self = this;
+	
+	self._context.beginPath();
+	self._context.fillStyle = COLORS.REPO_BACKGROUND;
+	self._fillRect(self._x,
+		self.fileYTop(filename),
+		self._width,
+		self.fileHeight(filename)
+	);
+}
 
 RepoView.prototype._renderCell = function(filename, diff_index) {	
 	var self = this;
@@ -259,14 +285,6 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		self._authorColors[author] = AUTHOR_COLORS[author_count % AUTHOR_COLORS.length];
 	}
 
-	// size
-	self._context.beginPath();
-	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._fillRect(x,
-		fileTop,
-		commit_width,
-		maxFileHeight
-	);
 
 	if (filename === self._highlightedFile) {
 		self._context.fillStyle = self._isSelected
