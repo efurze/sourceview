@@ -138,6 +138,8 @@ RepoModel.prototype.getBlame = function(commit_id) {
 	var self = this;
 	if (self._blame.hasOwnProperty(commit_id))
 		return self._blame[commit_id];
+	else
+		return {}
 }
 
 RepoModel.prototype.fileSize = function(filename, commit_id) {
