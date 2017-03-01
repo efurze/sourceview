@@ -42,13 +42,14 @@ module.exports = {
 					title: "Source View",
 					repo_data: JSON.stringify(data),
 					scripts: [
+						{ path: "/js/globals.js" },
 						{ path: "/js/repo_view.js" },
 						{ path: "/js/file_layout.js" },
 						{ path: "/js/canvas_renderer.js" },
 						{ path: "/js/repoModel.js" },
 						{ path: "/js/directory_view.js" },
 						{ path: "/js/downloader.js" },
-						{ path: "/js/range_view.js" }
+						{ path: "/js/branch_viewer.js" }
 					]
 				});
 			});

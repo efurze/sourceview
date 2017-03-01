@@ -1,31 +1,7 @@
 'use strict';
 
-var FILES_BACKGROUND_COLOR = '#F0DAA4';
-var REPO_BACKGROUND_COLOR = '#A2BCCD'; // light blue
-var REPO_COLOR = '#8296A4'; // medium blue
-var DIFF_COLOR = '#FFFFD5'; 
 
 var MARGIN = 5;
-
-var FONT_NORMAL = {
-	'name': '10px Helvetica',
-	'height': 10,
-	'color': 'black'
-};
-
-var FONT_LARGE = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'black'
-};
-
-var FONT_DIR = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'BLUE'
-};
-
-
 
 /*=======================================================================================
 =======================================================================================*/
@@ -34,7 +10,7 @@ var DirectoryView = function(layout, context) {
 	var self = this;
 	self._context = context;
 	self._layout = layout; // filename: {y, dy}
-	self._selectedFile = '';
+	self._highlightedFile = '';
 };
 
 DirectoryView.prototype.setClip = function(x,y,dx,dy) {
@@ -47,9 +23,9 @@ DirectoryView.prototype.setClip = function(x,y,dx,dy) {
 	//LOG("setClip", self._name, self.y(), dy);
 }
 
-DirectoryView.prototype.setSelectedFile = function(path) {
+DirectoryView.prototype.setHighlightedFile = function(path) {
 	var self = this;
-	self._selectedFile = path;
+	self._highlightedFile = path;
 }
 
 
@@ -64,17 +40,17 @@ DirectoryView.prototype.render = function() {
 		self._renderItem(path, layout[path].y, layout[path].dy)
 	});
 
-	if (self._selectedFile && !self._layout.isDir(self._selectedFile))
-		self._renderSelected(self._selectedFile);
+	if (self._highlightedFile && !self._layout.isDir(self._highlightedFile))
+		self._renderHighlighted(self._highlightedFile);
 }
 
 DirectoryView.prototype._renderItem = function(path, y, dy) {
 	var self = this;
 
 	if (self._layout.isDir(path)) {
-		var selectedDir = self._layout.isDir(self._selectedFile)
-			? self._selectedFile 
-			: self._layout.getParent(self._selectedFile);
+		var selectedDir = self._layout.isDir(self._highlightedFile)
+			? self._highlightedFile 
+			: self._layout.getParent(self._highlightedFile);
 
 		var parts = path.split('/');
 
@@ -88,7 +64,7 @@ DirectoryView.prototype._renderItem = function(path, y, dy) {
 	}
 }
 
-DirectoryView.prototype._renderSelected = function(path) {
+DirectoryView.prototype._renderHighlighted = function(path) {
 	var self = this;
 	ASSERT(path);
 	var parts = path.split('/');

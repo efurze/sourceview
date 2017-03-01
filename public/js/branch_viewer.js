@@ -3,7 +3,7 @@
 
 $(function() {
 
-	window.RangeView = {
+	window.BranchViewer = {
 
 		_renderer: null,
 /*
@@ -35,8 +35,8 @@ $(function() {
 }
 */
 		init: function(data) {
-			RangeView._renderer = new CanvasRenderer(data.history);
-			RangeView._renderer.setData(data.commits,
+			BranchViewer._renderer = new CanvasRenderer(data.history);
+			BranchViewer._renderer.setData(data.commits,
 				data.size_history,
 				data.diff_summaries,
 				parseInt(data.fromRev), 

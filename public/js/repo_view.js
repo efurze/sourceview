@@ -1,56 +1,5 @@
 'use strict'
 
-var COLORS = {
- FILES_BACKGROUND: 	'#F0DAA4', 	// goldenrod
- REPO_BACKGROUND: 	'#A2BCCD', 	// light blue
- REPO: 				'rgb(130,150,164)', // medium blue
- DIFF: 				'rgb(66, 77, 84)',	// blue-black
- DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
-
- REPO_DIR: 			'#686a83', 	// 
- DIFF_DIR: 			'#414252',	// 
-};
-
-var REPO_RGB = {
-	r: 130,
-	g: 150,
-	b: 164
-};
-
-var DIFF_RGB = {
-	r: 66,
-	g: 77,
-	b: 84
-};
-
-var MARGIN = 5;
-
-var FONT_NORMAL = {
-	'name': '8px Helvetica',
-	'height': 8,
-	'color': 'black'
-};
-
-var FONT_LARGE = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'black'
-};
-
-var FONT_DIR = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'BLUE'
-};
-
-var AUTHOR_COLORS = [
-	'rgb(200,0,0)',
-	'rgb(0,0,200)',
-	'rgb(0,200,0)',
-	'rgb(200,200,0)',
-	'rgb(255,165,0)'
-];
-
 var rect_count = 0;
 
 var RepoView = function(context, model, layout, revList) {
@@ -59,14 +8,15 @@ var RepoView = function(context, model, layout, revList) {
 	this._revList = revList;
 	this._width = 0;
 	this._height = 0;
-	this._selectedFile = "";
-	this._selectedCommitIndex = -1;
+	this._highlightedFile = "";
+	this._highlightedCommitIndex = -1;
 	this._dirtyFiles = {};
 	this._dirtyFilesAry = [];
 	this._dirtyCommits = {};
 	this._dirtyCommitsAry = [];
 	this._revIndex = {};
 	this._authorColors = {};
+	this._isSelected = false;
 	this._layoutModel = layout;
 	this._model = model;
 	this._layout = {};
@@ -113,12 +63,18 @@ RepoView.prototype.layoutChanged = function() {
 	self._layout = self._layoutModel.getLayout();
 }
 
-RepoView.prototype.setSelectedFile = function(file) {
+RepoView.prototype.setSelected = function(isSelected) {
+	var self = this;
+	self._isSelected = isSelected;
+	self.markFile(self._highlightedFile);
+}
+
+RepoView.prototype.setHighlightedFile = function(file) {
 	var self = this;
 
-	if (file != self._selectedFile) {
-		var previous = self._selectedFile;
-		self._selectedFile = file;
+	if (file != self._highlightedFile) {
+		var previous = self._highlightedFile;
+		self._highlightedFile = file;
 
 		if (previous) {
 			self.markFile(previous)
@@ -129,16 +85,16 @@ RepoView.prototype.setSelectedFile = function(file) {
 }
 
 
-RepoView.prototype.setSelectedCommit = function(index) {
+RepoView.prototype.setHighlightedCommit = function(index) {
 	var self = this;
 
-	if (index != self._selectedCommitIndex) {
-		var previous = self._selectedCommitIndex;
+	if (index != self._highlightedCommitIndex) {
+		var previous = self._highlightedCommitIndex;
 		var msg = "";
-		self._selectedCommitIndex = index;
+		self._highlightedCommitIndex = index;
 		if (index >= 0 && index < self._revList.length) {
 			msg = "[" + self._model.getCommitDate(self._revList[index]) + "]: ";
-			msg += self._model.getCommitMsg(self._revList[self._selectedCommitIndex]);
+			msg += self._model.getCommitMsg(self._revList[self._highlightedCommitIndex]);
 		}
 		$("#commit_info").text(msg);
 		
@@ -183,12 +139,6 @@ RepoView.prototype.fileYTop = function(filename) {
 	return self._layout[filename].y;
 };
 
-// in pixels
-RepoView.prototype.fileYBottom = function(filename) {
-	var self = this;
-	ASSERT(self._layout.hasOwnProperty(filename));
-	return self.fileYTop(filename) + self.fileHeight(filename);
-};
 
 // in pixels
 RepoView.prototype.fileHeight = function(filename) {
@@ -208,16 +158,6 @@ RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	}
 };
 
-RepoView.prototype.isDrawn = function(filename) {
-	var self = this;
-	if (!self._layoutModel.isVisible(filename)) {
-		return false;
-	}
-	if (self._layoutModel.isDir(filename) && self._layoutModel.isOpen(filename)) {
-		return false;
-	}
-	return true;
-}
 
 RepoView.prototype.isDescendantOf = function(filename, dir) {
 	var self = this;
@@ -328,8 +268,10 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		maxFileHeight
 	);
 
-	if (filename === self._selectedFile) {
-		self._context.fillStyle = "grey";
+	if (filename === self._highlightedFile) {
+		self._context.fillStyle = self._isSelected
+									? COLORS.REPO_SELECT
+									: COLORS.REPO_HIGHLIGHT;
 	} else {
 		if (self._layoutModel.isDir(filename)) {
 			self._context.fillStyle = COLORS.REPO_DIR
@@ -357,7 +299,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	);
 	self._context.clip();
 	
-	if (blame && blame[filename] && filename != self._selectedFile) {
+	if (blame && blame[filename] && filename != self._highlightedFile) {
 		blame[filename].forEach(function(chunk) {
 			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
 			var linenum = chunk.from;
@@ -391,7 +333,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	self._context.fillStyle = self._layoutModel.isDir(filename) 
 		? COLORS.DIFF_DIR
 		: self._authorColors[author];
-	if (self._selectedCommitIndex == diff_index
+	if (self._highlightedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
 		self._context.fillStyle = COLORS.DIFF_HIGHLIGHT;
 	}

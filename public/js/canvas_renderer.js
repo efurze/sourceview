@@ -1,18 +1,5 @@
 'use strict'
 
-var COLORS = {
- FILES_BACKGROUND: 	'#F0DAA4', 	// goldenrod
- REPO_BACKGROUND: 	'#A2BCCD', 	// light blue
- REPO: 				'#8296A4', 	// medium blue
- DIFF: 				'#424D54',	// blue-black
- DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
-
- REPO_DIR: 			'#686a83', 	// 
- DIFF_DIR: 			'#414252',	// 
-};
-
-var MARGIN = 5;
-
 /*
 @history_data: [
 	{
@@ -65,7 +52,7 @@ var CanvasRenderer = function(revList) {
 	this._revCount = revList.length;
 	this._revList = revList;
 
-	this._selectedFile = "";
+	this._highlightedFile = "";
 	this._filter = "";
 	this._mouseDown = false;
 	this._mouseDownPos = {
@@ -462,18 +449,18 @@ CanvasRenderer.prototype.clearHistory = function() {
 CanvasRenderer.prototype.filesDoubleClick = function(event) {
 	var self = this;
 	// show file history
-	if (self._selectedFile) {
-		$("#filter_input").val(self._selectedFile);
+	if (self._highlightedFile) {
+		$("#filter_input").val(self._highlightedFile);
 		self.onFilterClick();
 	}
 };
 
 CanvasRenderer.prototype.filesClick = function(event) {
 	var self = this;
-	if (self._selectedFile && self._selectedFile.length > 0) {
-		var selectedDir = self._layout.isDir(self._selectedFile)
-						? self._selectedFile
-						: self._layout.getParent(self._selectedFile)
+	if (self._highlightedFile && self._highlightedFile.length > 0) {
+		var selectedDir = self._layout.isDir(self._highlightedFile)
+						? self._highlightedFile
+						: self._layout.getParent(self._highlightedFile)
 
 		if (selectedDir.length && selectedDir != '/') {
 			self._layout.toggleOpen(selectedDir);
@@ -492,7 +479,9 @@ CanvasRenderer.prototype.repoClick = function(event) {
 		return;
 
 	self._selectionFrozen = !self._selectionFrozen;
+	self._repoView.setSelected(self._selectionFrozen);
 	self.mouseMoveHistoryWindow(event);
+	self._repoView.render();
 };
 
 CanvasRenderer.prototype._endScroll = function() {
@@ -567,16 +556,16 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 
 	if (self._lastMouseX != event.offsetX) {
 		self._lastMouseX = event.offsetX;
-		self._repoView.setSelectedCommit(self.commitIndexFromXCoord(event.offsetX));
+		self._repoView.setHighlightedCommit(self.commitIndexFromXCoord(event.offsetX));
 	}
 
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
 		var file = self.fileFromYCoord(event.offsetY);
-		if (file != self._selectedFile) {
-			self._selectedFile = file;
-			self._repoView.setSelectedFile(file);
-			self._dirView.setSelectedFile(file);
+		if (file != self._highlightedFile) {
+			self._highlightedFile = file;
+			self._repoView.setHighlightedFile(file);
+			self._dirView.setHighlightedFile(file);
 			self.renderFilenames();
 		}
 	}
@@ -595,10 +584,10 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 	if (self._lastMouseY != event.offsetY) {
 		self._lastMouseY = event.offsetY;
 		var file = self.fileFromYCoord(event.offsetY);
-		if (file != self._selectedFile) {
-			self._selectedFile = file;
-			self._repoView.setSelectedFile(file);
-			self._dirView.setSelectedFile(file);
+		if (file != self._highlightedFile) {
+			self._highlightedFile = file;
+			self._repoView.setHighlightedFile(file);
+			self._dirView.setHighlightedFile(file);
 			self.renderFilenames();
 		}
 	}
