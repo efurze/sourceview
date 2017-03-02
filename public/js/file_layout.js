@@ -50,7 +50,7 @@ Layout.prototype.layout = function(from, to) {
 	var self = this;
 	ASSERT(self._root);
 
-	self._updateFileList(from, to);
+	self.updateFileList(from, to);
 
 	self._root.layout(from, to);
 	self._listeners.forEach(function(cb) {
@@ -145,7 +145,7 @@ Layout.prototype._addDir = function(filename) {
 	ensures that we have an entry for every file 
 	in all commits between <from> and <to>
 */
-Layout.prototype._updateFileList = function(from, to) {
+Layout.prototype.updateFileList = function(from, to) {
 	var self = this;
 	if (from != self._fromCommit || to != self._toCommit) {
 		self._fromCommit = from;

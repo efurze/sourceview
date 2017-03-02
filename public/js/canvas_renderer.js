@@ -79,8 +79,8 @@ var CanvasRenderer = function(revList) {
 	//$("#filenames").dblclick(this.filesDoubleClick.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
 	//$("#filter_button").on('click', self.onFilterClick.bind(self));
-	$("#next_button").on('click', self.onNextClick.bind(self));
-	$("#back_button").on('click', self.onPrevClick.bind(self));
+	$("#next_button").on('click', self.onLastClick.bind(self));
+	$("#back_button").on('click', self.onFirstClick.bind(self));
 
 
 	this._downloader = new Downloader();
@@ -111,7 +111,7 @@ CanvasRenderer.prototype._createSlider = function (from, to, revList) {
 
 	self._rangeBar = RangeBar({
           min: 0,
-          max: revList.length,
+          max: revList.length-1,
           values: [
             [
               from,
@@ -161,9 +161,12 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
 	self._model.addData(commits, history, summaries, blame);
 
+
 	var files = Object.keys(history[self._revList[to]]);
 	if (files.length > 500) {
 		// collapse all dirs
+		self._layout.layout(self._fromCommit, self._toCommit);
+		self._layout.updateFileList();
 		self._layout.closeAll();
 	}
 
@@ -395,48 +398,60 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	self._repoView.render();
 }
 
-CanvasRenderer.prototype.onNextClick = function() {
+CanvasRenderer.prototype._rescaleX = function(from, to) {
+	var self = this;
+	ASSERT(to < self._revList.length);
+
+	var oldFrom = self._fromCommit,
+		oldTo = self._toCommit,
+		oldRange = self._toCommit - self._fromCommit,
+		newRange = to - from;
+	var commit_width = self._width/(oldTo - oldFrom + 1);
+	
+	if (oldRange > newRange) {
+		// expand
+		self._repoView.markAll();	
+	} else {
+		// contract
+		var x = 0;
+		if (to == oldTo) {
+			x = self._width*(1 - oldRange/newRange); 
+		}
+		self._context.drawImage(self._canvas, 0,0, 
+			self._width, self._height,
+			x,0,
+			self._width*oldRange/newRange, self._height);
+	}
+
+	self._fromCommit = from;
+	self._toCommit = to;
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+	self._fetchMoreData();
+	self._repoView.render();
+}
+
+CanvasRenderer.prototype.onLastClick = function() {
 	var self = this;
 
-	if (self._toCommit >= self._revCount-1)
-		return;
-	
-	self._scrollCanvas(1);
-
-	var repo = urlParam("repo");
-
-	if (!self._model.hasCommit(self._revList[self._toCommit]))
-	{
-		var to = Math.min(self._revCount, self._toCommit + 10);
-		var from = to - 10;
-		ASSERT(!isNaN(from));
-		ASSERT(!isNaN(to));
-		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
-			self.ajaxDone.bind(self));
-	} else {
-		self._repoView.render();
-	}
-	
+	var range = self._toCommit - self._fromCommit;
+	self._toCommit = self._revList.length - 1;
+	self._fromCommit = self._toCommit - range;
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+	self._repoView.markAll();
+	self._fetchMoreData();
+	self._repoView.render();	
 };
 
-CanvasRenderer.prototype.onPrevClick = function() {
+CanvasRenderer.prototype.onFirstClick = function() {
 	var self = this;
 
-	if (self._fromCommit <= 0)
-		return;
-
-	self._scrollCanvas(-1);
-
-	var repo = urlParam("repo");
-	if (!self._model.hasCommit(self._revList[self._fromCommit]))
-	{
-		var from = Math.max(self._fromCommit - 10, 0);
-		var to = from + 10;
-		self._downloader.get("/rangeJSON?repo=" + repo + "&from="+from+"&to="+to,
-			self.ajaxDone.bind(self));
-	} else {
-		self._repoView.render();
-	}
+	var range = self._toCommit - self._fromCommit;
+	self._fromCommit = 0;
+	self._toCommit = self._fromCommit + range;
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+	self._repoView.markAll();
+	self._fetchMoreData();
+	self._repoView.render();
 };
 
 CanvasRenderer.prototype.ajaxDone = function(success, data) {
@@ -552,17 +567,6 @@ CanvasRenderer.prototype._fetchMoreData = function() {
 	});
 }
 
-CanvasRenderer.prototype._rescale = function(from, to) {
-	var self = this;
-
-	self._fromCommit = from;
-	self._toCommit = to;
-	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
-	self._repoView.markAll();
-	self._fetchMoreData();
-	self._repoView.render();
-}
-
 // scroll done
 CanvasRenderer.prototype._sliderChanged = function(event, range) {
 	var self = this;
@@ -579,7 +583,7 @@ CanvasRenderer.prototype._sliderChanged = function(event, range) {
 
 	if ((range[1] - range[0]) != (oldTo - oldFrom)) {
 		// resized
-		self._rescale(range[0], range[1]);
+		self._rescaleX(range[0], range[1]);
 	}
 
 	if (self._lastScroll.min != self._lastFetchRange.from) {
