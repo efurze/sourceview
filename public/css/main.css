@@ -5,11 +5,17 @@
   width: 100%;
 }
 
-.main-row {
+#main-row {
   height: 85%;
-  //height: 2000px;
-  //width: 2000px;
   margin-bottom: 10px;
+}
+
+.row {
+  margin-right: 10px;
+}
+
+#slider-div {
+  margin-bottom: 2px;
 }
 
 #canvas_div, #diff_container, #code_div, #filenames, #directories {
@@ -43,3 +49,11 @@ textarea {
    padding-right: 2;
 }
 
+.elessar-range {
+  background: grey;
+  height: 15px;
+}
+
+.elessar-rangebar {
+  height: 15px;
+}

@@ -20,6 +20,8 @@ app.use('/node-uuid', express.static(path.join(__dirname, '/node_modules/node-uu
 app.use('/socket.io-client', express.static(path.join(__dirname, '/node_modules/socket.io-client')));
 app.use('/bootstrap', express.static(path.join(__dirname, '/node_modules/bootstrap/dist')));
 app.use('/font-awesome', express.static(path.join(__dirname, '/node_modules/font-awesome')));
+app.use('/elessar', express.static(path.join(__dirname, '/node_modules/elessar/dist')));
+
 
 app.use(cookieParser());
 app.use(bodyParser.json({limit: '50mb'}));       // to support JSON-encoded bodies
@@ -41,6 +43,7 @@ app.use(function(req, res, next) {
   res.locals.user = req.user;
   next();
 });
+
 
 
 // Routes

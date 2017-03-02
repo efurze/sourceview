@@ -59,16 +59,15 @@ var CanvasRenderer = function(revList) {
 		x: -1,
 		y: -1
 	};
-	this._mouseDownRange = {
-		from: -1,
-		to: -1
+	this._scrollbarScaleFactor = 1;
+	this._lastScroll = {
+		min: 0,
+		max: 0
 	};
 	this._lastFetchRange = {
 		from: -1,
 		to: -1
 	};
-	this._xForLastCanvasShift = 0;
-	this._isScrolling = false;
 	this._selectionFrozen = false;
 	this._model = new RepoModel(revList);
 
@@ -94,13 +93,50 @@ var CanvasRenderer = function(revList) {
 
 	this._repoView = new RepoView(this._context, this._model, this._layout, revList);
 	this._repoView.setClip(0, 0, this._canvas.width, this._canvas.height);
+	
 };
+
+CanvasRenderer.prototype._createSlider = function (from, to, revList) {
+	var self = this;
+
+	var pixelsPerCommit = self._width/revList.length;
+
+	self._minSliderSize = Math.ceil(20 / pixelsPerCommit);
+	self._lastScroll = {
+		min: from, 
+		max: Math.max(to, from + self._minSliderSize)
+	}
+
+	self._scrollbarScaleFactor = (to - from)/(self._lastScroll.to - from);
+
+	self._rangeBar = RangeBar({
+          min: 0,
+          max: revList.length,
+          values: [
+            [
+              from,
+              self._lastScroll.max
+            ],
+
+          ],
+          minSize: self._minSliderSize,
+          label: function(a){return '';},
+          snap: 1
+        });
+
+	self._rangeBar.on('changing', self._sliderChanging.bind(self));
+	self._rangeBar.on('change', self._sliderChanged.bind(self));
+	$('#slider-div').prepend(self._rangeBar.$el);
+}
 
 CanvasRenderer.prototype.setData = function(commits, initial_size, summaries, from, to) {
 	var self = this;
 	self._fromCommit = from;
 	self._toCommit = to;
+	self._lastFetchRange.from = from;
+	self._lastFetchRange.to = to;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+	self._createSlider(from, to, self._revList);
 	self.clearHistory();
 	self.renderFilenames();
 	setTimeout(self._updateData.bind(self, commits, initial_size, summaries, from, to),
@@ -139,8 +175,10 @@ CanvasRenderer.prototype._updateData = function(commits, initial_size, summaries
 	self.render();
 
 
-	blame = {};
-	var counter = 1;
+	blame = from > 0 
+			? self._model.getBlame(self._revList[from-1])
+			: {};
+	var counter = 0;
 	var doBlame = function() {
 		var sha = self._revList[from+counter];
 		blame = self._updateBlame(blame,
@@ -445,7 +483,6 @@ CanvasRenderer.prototype.clearHistory = function() {
 };
 
 
-
 CanvasRenderer.prototype.filesDoubleClick = function(event) {
 	var self = this;
 	// show file history
@@ -484,14 +521,6 @@ CanvasRenderer.prototype.repoClick = function(event) {
 	self._repoView.render();
 };
 
-CanvasRenderer.prototype._endScroll = function() {
-	var self = this;
-
-	if (self._mouseDownRange.from != self._lastFetchRange.from) {
-		self._repoView.markAll();
-		self._repoView.render();
-	}
-}
 
 CanvasRenderer.prototype._fetchMoreData = function() {
 	var self = this;
@@ -520,6 +549,43 @@ CanvasRenderer.prototype._fetchMoreData = function() {
 	}
 }
 
+// scroll done
+CanvasRenderer.prototype._sliderChanged = function(event, range) {
+	var self = this;
+
+	if (self._lastScroll.min != self._lastFetchRange.from) {
+		self._repoView.markAll();
+		self._repoView.render();
+	}
+}
+
+// scroll in progress
+CanvasRenderer.prototype._sliderChanging = function(event, range) {
+	var self = this;
+	range = range[0];
+	if ((range[1] - range[0]) != (self._lastScroll.max - self._lastScroll.min)) {
+		// resize event
+		return;
+	}
+
+
+	var SCROLL_THRESHOLD = 10;
+	var delta = range[0] - self._lastScroll.min;
+	var count = delta;
+	
+	if (count != 0) {
+		self._scrollCanvas(count);
+		self._lastScroll.min = range[0];
+		self._lastScroll.max = range[1];
+		if (Math.abs(self._lastFetchRange.from - self._fromCommit) 
+		>= SCROLL_THRESHOLD) {
+			self._fetchMoreData();
+			self._lastFetchRange.from = self._fromCommit;
+			self._lastFetchRange.to = self._toCommit;
+		}
+	}
+}
+
 CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	var self = this;
 
@@ -529,23 +595,6 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 	}
 
 	if (self._mouseDown) {
-		var SCROLL_THRESHOLD = 10;
-		var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
-		var delta = self._xForLastCanvasShift - self._lastMouseX;
-		
-		var count = Math.round(delta/commit_width);
-		if (count != 0) {
-			self._isScrolling = true;
-			self._scrollCanvas(count);
-			self._xForLastCanvasShift = self._lastMouseX;
-			if (Math.abs(self._lastFetchRange.from - self._fromCommit) 
-			>= SCROLL_THRESHOLD) {
-				self._fetchMoreData();
-				self._lastFetchRange.from = self._fromCommit;
-				self._lastFetchRange.to = self._toCommit;
-			}
-		}
-
 		self._lastMouseY = event.offsetY;
 		self._lastMouseX = event.offsetX;
 		return;
@@ -596,30 +645,23 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 
 CanvasRenderer.prototype.mouseDown = function(event) {
 	var self = this;
-	self._isScrolling = false;
-	self._xForLastCanvasShift = event.offsetX;
 	self._mouseDownPos.x = event.offsetX;
 	self._mouseDownPos.y = event.offsetY;
 	self._lastFetchRange.from = self._fromCommit;
 	self._lastFetchRange.to = self._toCommit;
-	self._mouseDownRange.from = self._fromCommit;
-	self._mouseDownRange.to = self._toCommit;
 	self._mouseDown = true;
 }
 
 CanvasRenderer.prototype.mouseUp = function(event) {
 	var self = this;
-	if (self._isScrolling) {
-		self._endScroll();
-	}
 	self._mouseDown = false;
-	self._isScrolling = false;
 }
 
 CanvasRenderer.prototype.fileFromYCoord = function(y) {
 	var self = this;
 	var index = 0;
 	var offset = 0;
+	ASSERT(self._files);
 	var next_index = self._files.length - 1;
 	var next_offset = self._height;
 	while (next_index - index > 1) {
