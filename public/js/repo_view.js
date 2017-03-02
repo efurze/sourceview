@@ -218,8 +218,8 @@ RepoView.prototype._renderCommit = function(diff_index) {
 		return;
 
 	
-	LOG("Drawing commit", diff_index, self._revList[diff_index],
-		"at column", diff_index - self._fromCommit);
+	//console.log("Drawing commit", diff_index, self._revList[diff_index],
+	//	"at column", diff_index - self._fromCommit);
 	self._clearColumn(diff_index);
 	Object.keys(self._layout).forEach(function(filename) {
 		if (self._layoutModel.isVisible(filename)) {
@@ -247,7 +247,7 @@ RepoView.prototype._renderFile = function(filename) {
 	if (!self._layout.hasOwnProperty(filename)) {
 		return;
 	}
-	LOG("renderFile", filename);
+	//LOG("renderFile", filename);
 	if (!self._layoutModel.isDir(filename))
 		self._clearRow(filename);
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
@@ -440,7 +440,4 @@ function ASSERT(cond) {
 	}
 }
 
-function LOG() {
-	console.log.apply(console, arguments);
-}
 
