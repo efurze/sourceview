@@ -34,14 +34,8 @@ $(function() {
 	}
 }
 */
-		init: function(data) {
-			BranchViewer._renderer = new CanvasRenderer(data.history);
-			BranchViewer._renderer.setData(data.commits,
-				data.size_history,
-				data.diff_summaries,
-				parseInt(data.fromRev), 
-				parseInt(data.toRev)
-			);
+		init: function(revList) {
+			BranchViewer._renderer = new CanvasRenderer(revList);
 		},
 
 	};

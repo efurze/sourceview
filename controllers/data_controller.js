@@ -7,8 +7,12 @@ Promise.promisifyAll(fs);
 
 function getData(req) {
 	var repo = req.query['repo'];
-	var from = parseInt(req.query['from']) || 0;
-	var to = parseInt(req.query['to']) || 100;
+	var from = parseInt(req.query['from']);
+	var to = parseInt(req.query['to']);
+
+	if (typeof(from) == 'undefined' || typeof(to) == 'undefined') {
+
+	}
 	
 	var data = {};
 	return persist.getRevList(repo, 'master')
@@ -16,7 +20,6 @@ function getData(req) {
 			data.commits = history.slice(from, to+1);
 			data.fromRev = from;
 			data.toRev = from + data.commits.length-1;
-			data.history = history;
 			return Promise.map(data.commits, function(commit_id) {
 				return persist.getCommit(repo, commit_id);
 			});
@@ -33,14 +36,17 @@ function getData(req) {
 		});
 }
 
+
 module.exports = {
 
 	requestRange: function(req, res) {
-		getData(req)
-			.then(function(data) {
+		var repo = req.query['repo'];
+	
+		persist.getRevList(repo, 'master')
+			.then(function(revList) {
 				res.render("range", {
 					title: "Source View",
-					repo_data: JSON.stringify(data),
+					repo_data: JSON.stringify(revList),
 					scripts: [
 						{ path: "/js/globals.js" },
 						{ path: "/js/repo_view.js" },
@@ -58,7 +64,6 @@ module.exports = {
 	requestRangeJSON: function(req, res) {
 		getData(req)
 			.then(function(data) {
-				delete data.history;
 				res.send(data);
 			});
 	}

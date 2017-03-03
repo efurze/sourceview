@@ -127,7 +127,6 @@ RepoView.prototype.setCommitRange = function(from, to) {
 
 	self._fromCommit = from;
 	self._toCommit = to;
-	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 }
 
 
@@ -179,6 +178,8 @@ RepoView.prototype._renderFiles = function() {
 	rect_count = 0;
 	//console.time("repo render");
 
+	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
+
 	while (counter++ < 2 && self._dirtyFilesAry.length) {
 		var filename = self._dirtyFilesAry.shift();
 		delete self._dirtyFiles[filename];
@@ -198,6 +199,8 @@ RepoView.prototype._renderCommits = function() {
 	var counter = 0;
 	rect_count = 0;
 	//console.time("repo render");
+
+	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 
 	while (counter++ < 2 && self._dirtyCommitsAry.length) {
 		var sha = self._dirtyCommitsAry.shift();
