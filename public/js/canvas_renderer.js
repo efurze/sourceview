@@ -401,6 +401,7 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	self.clearHistory();
 
 	self._context.putImageData(img, -(count*commit_width), 0);
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 	self._repoView.render();
 }
 

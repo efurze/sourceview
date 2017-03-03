@@ -344,8 +344,9 @@ LayoutNode.prototype.requestedHeight = function(pixelsPerLine, atY) {
 
 	self._children.forEach(function(name) {
 		var dy = 0;
-		if (isDir(self.childPath(name))) {
+		if (self._childDirs.hasOwnProperty(name)) {
 			var subdir = self._childDirs[name];
+			ASSERT(subdir);
 			if (height + atY < FONT_DIR.height && self._parent._parent) {
 				dy = FONT_DIR.height - height - atY;
 			}
