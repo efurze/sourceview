@@ -27,8 +27,21 @@ module.exports = function(grunt) {
         separator: ';'
       },
       dist: {
-        src: ['public/**/*.js'],
+        src: ['public/**/*.js', 'lib/logger.js'],
         dest: 'dist/<%= pkg.name %>.js'
+      }
+    },
+    babel: {
+      "options": {
+        "sourceMap": true,
+        "minified": true
+      },
+      dist: {
+          files: [{
+              "src": ["dist/<%= pkg.name %>.js"],
+              "dest": "dist/<%= pkg.name %>.min.js",
+              "ext": ".js"
+          }]
       }
     },
     uglify: {
@@ -58,7 +71,7 @@ module.exports = function(grunt) {
     },
     watch: {
       files: ['<%= jshint.files %>', 'views/**/*.hbs'],
-      tasks: []//['jshint', 'qunit']
+      tasks: ['concat', 'babel']//['jshint', 'qunit']
     },
     nodemon: {
         dev: {
@@ -69,15 +82,16 @@ module.exports = function(grunt) {
 
   grunt.loadNpmTasks('grunt-concurrent');
   grunt.loadNpmTasks('grunt-nodemon');
+  grunt.loadNpmTasks('grunt-babel');
   grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.loadNpmTasks('grunt-contrib-jshint');
+  //grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-concat');
   grunt.loadNpmTasks('grunt-shell');
 
-  grunt.registerTask('test', ['jshint', 'qunit']);
-  grunt.registerTask('default', ['jshint', 'concat', 'uglify']);
+  grunt.registerTask('test', ['qunit']);
+  grunt.registerTask('default', ['concat', 'babel']);
   grunt.registerTask('small', ['concat', 'uglify']);
   grunt.registerTask('server', ['concurrent']);
 

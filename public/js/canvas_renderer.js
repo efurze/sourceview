@@ -341,12 +341,12 @@ CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
 			parts.forEach(function(chunk) {
 				if (!chunk.length)
 					return;
-				let parts = chunk.split(",");
-				let sign = parts[0].slice(0, 1);
+				let pieces = chunk.split(",");
+				let sign = pieces[0].slice(0, 1);
 				let count = 0;
-				if (parts.length > 1) {
-					count = parseInt(parts[1]);
-				} else if (parts.length == 1){
+				if (pieces.length > 1) {
+					count = parseInt(pieces[1]);
+				} else if (pieces.length == 1){
 					count = 1;
 				}
 				if (sign === "+") {

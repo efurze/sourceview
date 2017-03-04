@@ -1,6 +1,6 @@
 'use strict'
 
-var rect_count = 0;
+let rect_count = 0;
 
 var RepoView = function(context, model, layout, revList) {
 	var self = this;

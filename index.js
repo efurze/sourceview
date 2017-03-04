@@ -21,6 +21,7 @@ app.use('/socket.io-client', express.static(path.join(__dirname, '/node_modules/
 app.use('/bootstrap', express.static(path.join(__dirname, '/node_modules/bootstrap/dist')));
 app.use('/font-awesome', express.static(path.join(__dirname, '/node_modules/font-awesome')));
 app.use('/elessar', express.static(path.join(__dirname, '/node_modules/elessar/dist')));
+app.use('/dist', express.static(path.join(__dirname, '/dist')));
 
 
 app.use(cookieParser());

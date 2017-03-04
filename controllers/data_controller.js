@@ -46,17 +46,7 @@ module.exports = {
 			.then(function(revList) {
 				res.render("range", {
 					title: "Source View",
-					repo_data: JSON.stringify(revList),
-					scripts: [
-						{ path: "/js/globals.js" },
-						{ path: "/js/repo_view.js" },
-						{ path: "/js/file_layout.js" },
-						{ path: "/js/canvas_renderer.js" },
-						{ path: "/js/repoModel.js" },
-						{ path: "/js/directory_view.js" },
-						{ path: "/js/downloader.js" },
-						{ path: "/js/branch_viewer.js" }
-					]
+					repo_data: JSON.stringify(revList)
 				});
 			});
 	},
