@@ -31,7 +31,7 @@
 ]
 */
 var CanvasRenderer = function(revList) {
-	console.log("CanvasRenderer()");
+	Logger.INFO("CanvasRenderer()", Logger.CHANNEL.RENDERER);
 	var self = this;
 
 	this._canvas = document.getElementById("repo_canvas");
@@ -210,7 +210,7 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 
 
 CanvasRenderer.prototype.calculateLayout = function() {
-	console.log("calculateLayout()");
+	Logger.INFO("calculateLayout()", Logger.CHANNEL.RENDERER);
 	var self = this;
 
 	self._layout.layout(self._fromCommit, self._toCommit);

@@ -27,7 +27,7 @@ module.exports = function(grunt) {
         separator: ';'
       },
       dist: {
-        src: ['public/**/*.js', 'lib/logger.js'],
+        src: ['lib/logger.js', 'public/**/*.js'],
         dest: 'dist/<%= pkg.name %>.js'
       }
     },
@@ -58,7 +58,7 @@ module.exports = function(grunt) {
       files: ['test/**/*.html']
     },
     jshint: {
-      files: ['Gruntfile.js', 'public/**/*.js', 'test/**/*.js', 'index.js', 'controllers/**/*.js'],
+      files: ['Gruntfile.js', 'lib/logger.js', 'public/js/*.js', 'index.js', 'controllers/*.js'],
       options: {
         // options here to override JSHint defaults
         globals: {

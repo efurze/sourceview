@@ -221,8 +221,13 @@ RepoView.prototype._renderCommit = function(diff_index) {
 		return;
 
 	
-	//console.log("Drawing commit", diff_index, self._revList[diff_index],
-	//	"at column", diff_index - self._fromCommit);
+	Logger.DEBUG("Drawing commit", 
+		diff_index, 
+		self._revList[diff_index],
+		"at column", 
+		diff_index - self._fromCommit,
+		Logger.CHANNEL.REPO_VIEW);
+
 	self._clearColumn(diff_index);
 	Object.keys(self._layout).forEach(function(filename) {
 		if (self._layoutModel.isVisible(filename)) {
@@ -443,4 +448,4 @@ function ASSERT(cond) {
 	}
 }
 
-
+Logger.channels[Logger.CHANNEL.REPO_VIEW] = Logger.LEVEL.DEBUG;
