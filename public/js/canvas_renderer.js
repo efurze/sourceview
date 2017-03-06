@@ -141,6 +141,7 @@ CanvasRenderer.prototype._initialRequest = function() {
 }
 
 CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries, from, to) {
+	Logger.INFO("updateData", from, "=>", to, Logger.CHANNEL.RENDERER);
 	var self = this;
 	ASSERT(!isNaN(from));
 	ASSERT(!isNaN(to));
@@ -377,6 +378,7 @@ CanvasRenderer.prototype.onFilterClick = function() {
 	@count: # of commits to scroll. < 0 means right (prev)
 */
 CanvasRenderer.prototype._scrollCanvas = function(count) {
+	Logger.DEBUG("scrollCanvas", count, Logger.CHANNEL.RENDERER);
 	var self = this;
 
 	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
@@ -416,6 +418,7 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 	var oldFrom = self._fromCommit,
 		oldTo = self._toCommit,
 		oldRange = self._toCommit - self._fromCommit + 1,
+		oldWidth = self._width,
 		commit_width = self._width/(oldRange);
 
 	if (from == oldFrom) {
@@ -439,6 +442,20 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 			self._width, self._height,
 			x,0,
 			self._width*oldRange/newRange, self._height);
+	}
+
+	Logger.INFO("rescaleX", 
+		"from", 
+		self._fromCommit, "=>", from,
+		"to",
+		self._toCommit, "=>", to,
+		"width",
+		oldWidth, "=>", self._width,
+		Logger.CHANNEL.RENDERER);
+
+	if (oldWidth > self._width) {
+		self._context.fillStyle = COLORS.REPO_BACKGROUND;
+		self._context.fillRect(self._width, 0, oldWidth, self._height);
 	}
 
 	self._fromCommit = from;
@@ -474,6 +491,7 @@ CanvasRenderer.prototype.onFirstClick = function() {
 };
 
 CanvasRenderer.prototype.ajaxDone = function(success, data) {
+	Logger.INFO("ajaxDone", Logger.CHANNEL.RENDERER);
 	var self = this;
 	if (success) {
 		self.updateData(data.commits, data.size_history, data.diff_summaries,
@@ -767,3 +785,4 @@ function ASSERT(cond) {
 	}
 }
 
+Logger.channels[Logger.CHANNEL.RENDERER] = Logger.LEVEL.DEBUG;

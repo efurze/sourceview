@@ -29,6 +29,7 @@ var RepoView = function(context, model, layout, revList) {
 }
 
 RepoView.prototype.setClip = function(x, y, dx, dy) {
+	Logger.DEBUG("setClip", x, y, dx, dy, Logger.CHANNEL.REPO_VIEW);
 	this._x = x;
 	this._y = y;
 	this._width = dx;
@@ -52,6 +53,7 @@ RepoView.prototype.markCommit = function(commit_sha) {
 }
 
 RepoView.prototype.markAll = function() {
+	Logger.DEBUG("markAll", Logger.CHANNEL.REPO_VIEW);
 	var self = this;
 	for(var i=self._fromCommit; i<=self._toCommit; i++) {
 		self.markCommit(self._revList[i]);
@@ -60,6 +62,7 @@ RepoView.prototype.markAll = function() {
 
 RepoView.prototype.layoutChanged = function() {
 	var self = this;
+	Logger.DEBUG("layoutChanged", Logger.CHANNEL.REPO_VIEW);
 	self._layout = self._layoutModel.getLayout();
 }
 
@@ -125,6 +128,8 @@ RepoView.prototype.setCommitRange = function(from, to) {
 		}
 	}
 
+	Logger.DEBUG("setRange", from, "=>", to, Logger.CHANNEL.REPO_VIEW);
+
 	self._fromCommit = from;
 	self._toCommit = to;
 }
@@ -174,13 +179,13 @@ RepoView.prototype.render = function() {
 
 RepoView.prototype._renderFiles = function() {
 	var self = this;
-	var counter = 0;
+	Logger.DEBUGHI("renderFiles", self._dirtyFilesAry.length, Logger.CHANNEL.REPO_VIEW);
 	rect_count = 0;
 	//console.time("repo render");
 
 	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 
-	while (counter++ < 2 && self._dirtyFilesAry.length) {
+	if (self._dirtyFilesAry.length) {
 		var filename = self._dirtyFilesAry.shift();
 		delete self._dirtyFiles[filename];
 		if (self._layoutModel.isVisible(filename)) {
@@ -196,13 +201,14 @@ RepoView.prototype._renderFiles = function() {
 
 RepoView.prototype._renderCommits = function() {
 	var self = this;
-	var counter = 0;
+	Logger.DEBUGHI("renderCommits", self._dirtyCommitsAry.length, Logger.CHANNEL.REPO_VIEW);
 	rect_count = 0;
+	var startTime = Date.now();
 	//console.time("repo render");
 
 	self._commit_width = self._width/(self._toCommit - self._fromCommit + 1);	
 
-	while (counter++ < 2 && self._dirtyCommitsAry.length) {
+	while ((Date.now() - startTime) < 200 && self._dirtyCommitsAry.length) {
 		var sha = self._dirtyCommitsAry.shift();
 		delete self._dirtyCommits[sha];
 		self._renderCommit(self._revIndex[sha]);
@@ -221,7 +227,7 @@ RepoView.prototype._renderCommit = function(diff_index) {
 		return;
 
 	
-	Logger.DEBUG("Drawing commit", 
+	Logger.DEBUGHI("Drawing commit", 
 		diff_index, 
 		self._revList[diff_index],
 		"at column", 
@@ -256,6 +262,13 @@ RepoView.prototype._renderFile = function(filename) {
 		return;
 	}
 	//LOG("renderFile", filename);
+
+	Logger.DEBUG("Drawing file", 
+		filename, 
+		"at y", 
+		self.fileYTop(filename),
+		Logger.CHANNEL.REPO_VIEW);
+
 	if (!self._layoutModel.isDir(filename))
 		self._clearRow(filename);
 	for (var index = self._fromCommit; index <= self._toCommit; index++) {
@@ -448,4 +461,4 @@ function ASSERT(cond) {
 	}
 }
 
-Logger.channels[Logger.CHANNEL.REPO_VIEW] = Logger.LEVEL.DEBUG;
+Logger.channels[Logger.CHANNEL.REPO_VIEW] = Logger.LEVEL.INFO;
