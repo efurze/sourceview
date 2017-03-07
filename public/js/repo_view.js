@@ -374,7 +374,7 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	// diff
 	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 	self._context.fillStyle = self._layoutModel.isDir(filename) 
-		? COLORS.DIFF_DIR
+		? self._authorColors[author] //COLORS.DIFF_DIR
 		: self._authorColors[author];
 	if (self._highlightedCommitIndex == diff_index
 		&& self._toCommit != self._fromCommit) {
