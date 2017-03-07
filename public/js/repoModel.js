@@ -223,11 +223,11 @@ RepoModel.prototype._updateBlame = function(upToIndex) {
 
 	if (index < 0) {
 		index = 0;
-		self._blame(self._revList[0]) = {};
+		self._blame[self._revList[0]] = {};
 	}
 
 	for(index=index+1; index <= upToIndex; index++) {
-		self._blame(self._revList[index]) = self._blameForCommit(self._revList[index-1],
+		self._blame[self._revList[index]] = self._blameForCommit(self._revList[index-1],
 													self._revList[index])
 	}
 }
@@ -344,12 +344,3 @@ function insertEdit(ary, edit, commit_id) {
 	}
 }
 
-function LOG() {
-	//console.log.apply(console, arguments);
-}
-
-function ASSERT(cond) {
-	if (!cond) {
-		debugger
-	}
-}

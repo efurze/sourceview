@@ -161,10 +161,11 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	self._model.addData(commits, initial_size, summaries);
 
 
-	var files = Object.keys(self._model.fileSizes(self._revList[to]));
+	self._layout.updateFileList(self._fromCommit, self._toCommit);
+	var files = Object.keys(self._layout.getLayout());
 	if (files.length > 500) {
 		// collapse all dirs
-		self._layout.updateFileList(self._fromCommit, self._toCommit);
+		
 		self._layout.closeAll();
 	}
 
@@ -622,10 +623,5 @@ var urlParam = function(name){
     }
 }
 
-function ASSERT(cond) {
-	if (!cond) {
-		debugger
-	}
-}
 
 Logger.channels[Logger.CHANNEL.RENDERER] = Logger.LEVEL.DEBUG;

@@ -1,29 +1,6 @@
 'use strict';
 
-var FILES_BACKGROUND_COLOR = '#F0DAA4';
-var REPO_BACKGROUND_COLOR = '#A2BCCD'; // light blue
-var REPO_COLOR = '#8296A4'; // medium blue
-var DIFF_COLOR = '#FFFFD5'; 
-
-var MARGIN = 5;
-
-var FONT_NORMAL = {
-	'name': '10px Helvetica',
-	'height': 10,
-	'color': 'black'
-};
-
-var FONT_LARGE = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'black'
-};
-
-var FONT_DIR = {
-	'name': '12px Helvetica',
-	'height': 12,
-	'color': 'BLUE'
-};
+var FILTER_FOR_DIFFS = false;
 
 var Layout = function(model, revList) {
 	this._root = new LayoutNode("/", model, revList);
@@ -58,6 +35,30 @@ Layout.prototype.doLayout = function(from, to) {
 		cb();
 	});
 };
+
+/*
+	ensures that we have an entry for every file 
+	in all commits between <from> and <to>
+*/
+Layout.prototype.updateFileList = function(from, to) {
+	var self = this;
+	if (from != self._fromCommit || to != self._toCommit) {
+		if (FILTER_FOR_DIFFS) {
+			FilesWithDiffs.update(self._model, from, to, self._revList);
+		}
+		self._root.reset();
+		self._fromCommit = from;
+		self._toCommit = to;
+		for (var i=from; i<=to; i++) {
+			var sha = self._revList[i];
+			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
+				if (!FILTER_FOR_DIFFS || FilesWithDiffs.hasFile(path)) {
+					self._addFile(path);
+				}
+			});
+		}
+	}
+}
 
 Layout.prototype.closeAll = function() {
 	ASSERT(this._root);
@@ -151,24 +152,6 @@ Layout.prototype._addDir = function(filename) {
 	Layout.node_index[parts.parent].addFile(parts.name);
 };
 
-/*
-	ensures that we have an entry for every file 
-	in all commits between <from> and <to>
-*/
-Layout.prototype.updateFileList = function(from, to) {
-	var self = this;
-	if (from != self._fromCommit || to != self._toCommit) {
-		self._root.reset();
-		self._fromCommit = from;
-		self._toCommit = to;
-		for (var i=from; i<=to; i++) {
-			var sha = self._revList[i];
-			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
-				self._addFile(path);
-			});
-		}
-	}
-}
 
 function applyParent(filename, fn){
 	var parts = parsePath(filename);
@@ -206,6 +189,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._childDirs = {};
 	self._children = [];
 	self._childHash = {};
+	self._range = {};
 	self._layout = {}; // filename: {y, dy}
 	self._fromCommit = -1;
 	self._toCommit = -1;
@@ -220,6 +204,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	} else {
 		Layout.node_index[self.path()] = self;
 	}
+	Logger.INFO("Added dir", name, Logger.CHANNEL.FILE_LAYOUT);
 };
 
 LayoutNode.prototype.reset = function() {
@@ -251,7 +236,7 @@ LayoutNode.prototype.getAllFiles = function() {
 LayoutNode.prototype.displayOrder = function() {
 	var self = this;
 	var names = [];
-	self._children.forEach(function(name) {
+	Object.keys(self._layout).forEach(function(name) {
 		var path = self.childPath(name);
 		names.push(path);
 		if (self._childDirs[name]) {
@@ -598,8 +583,6 @@ LayoutNode.prototype.setClip = function(x,y,dx,dy) {
 	self._y = y;
 	self._dx = dx;
 	self._dy = dy;
-	//LOG("relative setClip", self._name, x, y, dx, dy);
-	//LOG("setClip", self._name, self.y(), dy);
 }
 
 LayoutNode.prototype.setOpen = function(open) {
@@ -610,12 +593,24 @@ LayoutNode.prototype.isOpen = function() {
 	return this._isOpen;
 }
 
-function LOG() {
-	console.log.apply(console, arguments);
+
+//====================================================================
+
+var FilesWithDiffs = {
+	_files: {}
+};
+
+FilesWithDiffs.update = function(model, from, to, revList) {
+	FilesWithDiffs._files = {};
+	for (var i=from; i<=to; i++) {
+		var sha = revList[i];
+		var diff = model.getDiffSummary(sha);
+		if (diff) {
+			FilesWithDiffs._files = Object.assign(FilesWithDiffs._files, diff);
+		}
+	}
 }
 
-function ASSERT(cond) {
-	if (!cond) {
-		debugger
-	}
+FilesWithDiffs.hasFile = function(filename) {
+	return FilesWithDiffs._files.hasOwnProperty(filename);
 }

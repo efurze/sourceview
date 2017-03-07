@@ -45,3 +45,9 @@ var AUTHOR_COLORS = [
 	'rgb(200,200,0)',
 	'rgb(255,165,0)'
 ];
+
+function ASSERT(cond) {
+	if (!cond) {
+		debugger
+	}
+}

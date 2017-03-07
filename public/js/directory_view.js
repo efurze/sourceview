@@ -19,8 +19,6 @@ DirectoryView.prototype.setClip = function(x,y,dx,dy) {
 	self._y = y;
 	self._dx = dx;
 	self._dy = dy;
-	//LOG("relative setClip", self._name, x, y, dx, dy);
-	//LOG("setClip", self._name, self.y(), dy);
 }
 
 DirectoryView.prototype.setHighlightedFile = function(path) {
@@ -106,13 +104,3 @@ DirectoryView.prototype._renderText = function(text, x, y, font, selected) {
 }
 
 
-
-function LOG() {
-	console.log.apply(console, arguments);
-}
-
-function ASSERT(cond) {
-	if (!cond) {
-		debugger
-	}
-}
