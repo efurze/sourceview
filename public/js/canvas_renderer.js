@@ -173,7 +173,6 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	var files = Object.keys(history[self._revList[to]]);
 	if (files.length > 500) {
 		// collapse all dirs
-		//self._layout.layout(self._fromCommit, self._toCommit);
 		self._layout.updateFileList(self._fromCommit, self._toCommit);
 		self._layout.closeAll();
 	}
@@ -215,7 +214,7 @@ CanvasRenderer.prototype.calculateLayout = function() {
 	Logger.INFO("calculateLayout()", Logger.CHANNEL.RENDERER);
 	var self = this;
 
-	self._layout.layout(self._fromCommit, self._toCommit);
+	self._layout.doLayout(self._fromCommit, self._toCommit);
 	self._files = self._layout.displayOrder();
 };
 
@@ -477,7 +476,9 @@ CanvasRenderer.prototype.onLastClick = function() {
 	self._fromCommit = self._toCommit - range;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 	self._repoView.markAll();
-	self._fetchMoreData();
+	if (!self._fetchMoreData()) {
+		self.calculateLayout()
+	}
 	self._repoView.render();	
 };
 
@@ -491,7 +492,9 @@ CanvasRenderer.prototype.onFirstClick = function() {
 	self._toCommit = self._fromCommit + range;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 	self._repoView.markAll();
-	self._fetchMoreData();
+	if (!self._fetchMoreData()) {
+		self.calculateLayout()
+	}
 	self._repoView.render();
 };
 
@@ -584,6 +587,7 @@ CanvasRenderer.prototype.repoClick = function(event) {
 */
 CanvasRenderer.prototype._fetchMoreData = function() {
 	var self = this;
+	var request_made = false;
 	var from = Math.max(0, self._fromCommit-10),
 		to = Math.min(self._revList.length-1, self._toCommit + 10);
 
@@ -604,12 +608,15 @@ CanvasRenderer.prototype._fetchMoreData = function() {
 
 	var repo = urlParam("repo");
 	chunks.forEach(function(chunk) {
+		request_made = true;
 		self._downloader.get("/rangeJSON?repo=" 
 			+ repo 
 			+ "&from=" + chunk[0]
 			+"&to=" + chunk[chunk.length-1],
 			self.ajaxDone.bind(self));
 	});
+
+	return request_made;
 }
 
 // scroll done

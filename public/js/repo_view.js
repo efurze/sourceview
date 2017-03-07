@@ -64,6 +64,7 @@ RepoView.prototype.layoutChanged = function() {
 	var self = this;
 	Logger.DEBUG("layoutChanged", Logger.CHANNEL.REPO_VIEW);
 	self._layout = self._layoutModel.getLayout();
+	self.markAll();
 }
 
 RepoView.prototype.setSelected = function(isSelected) {
