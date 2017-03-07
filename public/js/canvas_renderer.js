@@ -157,20 +157,11 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	ASSERT(!isNaN(to));
 	ASSERT(from < to);
 
-	// construct history
-	var history = {};
-	history[commits[0].id] = initial_size[commits[0].id];
-	for (var i=1; i<commits.length; i++) {
-		var sha = self._revList[from+i];
-		history[sha] = self._updateSizes(history[self._revList[from+i-1]],
-										summaries[sha]);
-	}
 
-	var blame = {}; // sha: {filename : [{from: to: commit:}]}	
-	self._model.addData(commits, history, summaries, blame);
+	self._model.addData(commits, initial_size, summaries);
 
 
-	var files = Object.keys(history[self._revList[to]]);
+	var files = Object.keys(self._model.fileSizes(self._revList[to]));
 	if (files.length > 500) {
 		// collapse all dirs
 		self._layout.updateFileList(self._fromCommit, self._toCommit);
@@ -183,30 +174,6 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	
 	self.calculateLayout();
 	self.render();
-
-
-	blame = from > 0 
-			? self._model.getBlame(self._revList[from-1])
-			: {};
-	var counter = 0;
-	var doBlame = function() {
-		var sha = self._revList[from+counter];
-		blame = self._updateBlame(blame,
-									summaries[sha],
-									commits[counter],
-									history);
-		var blame_hash = {};
-		blame_hash[sha] = blame;
-		self._model.addData([], {}, {}, blame_hash);
-		self._repoView.markCommit(sha);
-		self._repoView.render();
-		counter ++;
-		if (counter < commits.length) {
-			setTimeout(doBlame, 1);
-		}
-	};
-	//setTimeout(doBlame, 1);
-
 };
 
 
@@ -219,151 +186,6 @@ CanvasRenderer.prototype.calculateLayout = function() {
 };
 
 
-/*
-	@blame = {
-			filename : [ // sorted by start line
-			{
-				from: 
-				to: 
-				author:
-			}
-		]
-	}
-*/
-CanvasRenderer.prototype._updateBlame = function(blame, diff, commit, size_history) {
-	var self = this;
-
-	ASSERT(blame);
-	ASSERT(commit);
-
-	var updated = JSON.parse(JSON.stringify(blame));
-
-	Object.keys(diff).forEach(function(filename) {
-
-		updated[filename] = arrayify(updated[filename], 
-							size_history[commit.id][filename]);
-
-		var edits = diff[filename]
-		edits.forEach(function(edit) { // "-1,8 +1,9"
-			var parts = edit.split(' ');
-			parts.forEach(function(part) {
-				insertEdit(updated[filename], part, commit.id);
-			});
-		});
-
-		updated[filename] = chunkify(updated[filename]);
-	});
-
-	return updated;
-}
-
-/* 
-chunks = [{
-	from:
-	to:
-	commit:
-}...]
-*/
-function arrayify(chunks, filelength) {
-	var ary = new Array(filelength);
-	ary.fill(null);
-	if (chunks) {
-		chunks.forEach(function(chunk) {
-			for (var i=chunk.from; i <= chunk.to; i++) {
-				ary[i] = chunk.commit;
-			}
-		});
-	}
-	return ary;
-}
-
-function chunkify(ary) {
-	var chunks = [];
-	var chunk;
-	var current_commit = "";
-	for (var i=0; i < ary.length; i++) {
-		if (!ary[i])
-			continue;
-
-		if (ary[i] != current_commit) {
-			current_commit = ary[i];
-			if (chunk) {
-				chunk.to = i-1;
-				chunks.push(chunk)
-			}
-			chunk = {
-				from: i,
-				commit: ary[i]
-			}
-		} 
-	}
-	if (chunk) {
-		chunk.to = i-1;
-		chunks.push(chunk);
-	}
-	return chunks;
-}
-
-/*
-	edit: +1,9
-*/
-function insertEdit(ary, edit, commit_id) {
-	var parts = edit.split(",");
-	var sign = parts[0].charAt(0);
-	var linenum = parseInt(parts[0].slice(1)) - 1;
-	var editLen = parseInt(parts[1]);
-	if (sign === "+") {
-		for (var i=0; i<editLen; i++) {
-			if (!ary[i+linenum]) {
-				ary[i+linenum] = commit_id;
-			} else {
-				ary.splice(i+linenum, 0, commit_id);
-			}
-		}
-	} else {
-		ary.splice(linenum, editLen);
-	}
-}
-
-
-CanvasRenderer.prototype._updateSizes = function(sizes, diff) {
-	var self = this;
-	var updated = JSON.parse(JSON.stringify(sizes));
-
-	Object.keys(diff).forEach(function(filename) {
-		var delta = 0;
-		diff[filename].forEach(function(chunk) {
-			// @@ -33,6 +35,12 @@
-			// @@ -0,0 +1 @@
-			if (!chunk.length) 
-				return;
-			let parts = chunk.split(" ");
-
-			parts.forEach(function(chunk) {
-				if (!chunk.length)
-					return;
-				let pieces = chunk.split(",");
-				let sign = pieces[0].slice(0, 1);
-				let count = 0;
-				if (pieces.length > 1) {
-					count = parseInt(pieces[1]);
-				} else if (pieces.length == 1){
-					count = 1;
-				}
-				if (sign === "+") {
-					delta += count;
-				} else {
-					delta -= count;
-				}
-			});
-			if (!updated.hasOwnProperty(filename)) {
-				updated[filename] = 0;
-			}
-		});
-		updated[filename] += delta;
-	});
-	return updated;
-}
 
 CanvasRenderer.prototype.onFilterClick = function() {
 	var self = this;
