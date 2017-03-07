@@ -204,8 +204,8 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	$(document).mouseup(this.mouseUp.bind(this));
 	$("#filenames").mousemove(this.mouseMoveFilesWindow.bind(this));
 	$("#filenames").click(this.filesClick.bind(this));
-	$("#next_button").on('click', self.onLastClick.bind(self));
-	$("#back_button").on('click', self.onFirstClick.bind(self));
+	$("#last_button").on('click', self.onLastClick.bind(self));
+	$("#first_button").on('click', self.onFirstClick.bind(self));
 
 };
 
@@ -469,6 +469,8 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 CanvasRenderer.prototype.onLastClick = function() {
 	var self = this;
 
+	Logger.INFO("onLastClick", Logger.CHANNEL.RENDERER);
+
 	var range = self._toCommit - self._fromCommit;
 	self._toCommit = self._revList.length - 1;
 	self._fromCommit = self._toCommit - range;
@@ -480,6 +482,8 @@ CanvasRenderer.prototype.onLastClick = function() {
 
 CanvasRenderer.prototype.onFirstClick = function() {
 	var self = this;
+
+	Logger.INFO("onFirstClick", Logger.CHANNEL.RENDERER);
 
 	var range = self._toCommit - self._fromCommit;
 	self._fromCommit = 0;
