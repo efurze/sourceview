@@ -48,9 +48,12 @@ DirectoryView.prototype._renderItem = function(path, y, dy) {
 	var self = this;
 
 	if (self._layout.isDir(path)) {
-		var selectedDir = self._layout.isDir(self._highlightedFile)
-			? self._highlightedFile 
-			: self._layout.getParent(self._highlightedFile);
+		var selectedDir;
+		if (self._highlightedFile) {
+			selectedDir = self._layout.isDir(self._highlightedFile)
+				? self._highlightedFile 
+				: self._layout.getParent(self._highlightedFile);
+		}
 
 		var parts = path.split('/');
 
