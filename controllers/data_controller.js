@@ -65,7 +65,7 @@ module.exports = {
 		persist.getRevList(repo, 'master')
 			.then(function(revList) {
 				data.revList = revList;
-				var sizes = [];
+				var lineCount = [];
 
 				return Promise.each(revList, function(sha, index) {
 					return persist.sizeSnapshot(repo, [{id:sha}])
@@ -74,13 +74,46 @@ module.exports = {
 							Object.keys(filesizes[sha]).forEach(function(filename) {
 								total += filesizes[sha][filename];
 							});
-							sizes.push(total);
+							lineCount.push(total);
 						});
 				}).then(function() {
-					return sizes;
+					return lineCount;
 				});
-			}).then(function(sizes) {
-				data.lineCount = sizes;
+			}).then(function(lineCount) {
+				data.lineCount = lineCount;
+				var linesChanged = [];
+				return Promise.each(data.revList, function(sha, index) {
+					return persist.diffSummary(repo, [{id:sha}])
+						.then(function(summaries) {
+							summaries = summaries[sha];
+							var delta = 0;
+							Object.keys(summaries).forEach(function(filename) {
+								var edits = summaries[filename];
+								edits.forEach(function(change) { // "-0,0 +1,9"
+									change.split(' ').forEach(function(chunk) {
+										var parts = chunk.split(",");
+										var sign = parts[0].slice(0, 1);
+										var count = 0;
+										if (parts.length > 1) {
+											count = parseInt(parts[1]);
+										} else if (parts.length == 1){
+											count = 1;
+										}
+										if (sign === "+") {
+											delta += count;
+										} else {
+											delta -= count;
+										}
+									});
+								});
+							});
+							linesChanged.push(delta);
+						});
+				}).then(function() {
+					return linesChanged;
+				});
+			}).then(function(linesChanged) {
+				data.linesChanged = linesChanged;
 				res.render("chart", {
 						title: "Source View",
 						data: JSON.stringify(data),
