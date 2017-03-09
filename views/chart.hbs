@@ -1,0 +1,14 @@
+<div id="chart_div">
+</div>
+
+
+
+<script>
+   google.load("visualization", "1.1", {packages:["bar"]});
+   $(function() {
+        var cv = new ChartViewer({{{data}}});
+        cv.drawChart(); 
+   });
+
+
+</script>

@@ -48,39 +48,7 @@ app.use(function(req, res, next) {
 
 
 // Routes
-app.get('/', function(req, res) { 
-	var data = {};
-	var repo = req.param('repo');
-	var dir = __dirname + "/model/data/" + repo + "/";
-	fs.readFileAsync(dir + "master.filesizehistory.json")
-		.then(function(history) {
-			data['history_data'] = history;
-			return fs.readFileAsync(dir + "/master.filesizerange.json");	
-		}).then(function(range) {
-			data['range_data'] = range;
-			if (fs.existsSync(dir + "/master.diffhistory.json")) {
-				return fs.readFileAsync(dir + "/master.diffhistory.json");	
-			} else {
-				return {};
-			}
-		}).then(function(diffs) {
-			data['diffs'] = diffs;
-			res.render("index", {
-				title: "Source View",
-				repo_data: data,
-				scripts: [
-					{ path: "/js/canvas_renderer.js" },
-					//{ path: "/js/renderer.js" },
-					{ path: "/js/repoModel.js" },
-					//{ path: "/js/directory_view.js" },
-					//{ path: "/js/file_view.js" },
-					{ path: "/js/view.js" }
-				]
-			});
-		}).catch(function(err) {
-			res.send(err.toString());
-		});	    
-});
+app.get('/chart', dataController.chart);
 
 app.get('/range', dataController.requestRange);
 app.get('/rangeJSON', dataController.requestRangeJSON);

@@ -56,6 +56,39 @@ module.exports = {
 			.then(function(data) {
 				res.send(data);
 			});
+	},
+
+	chart: function(req, res) {
+		var repo = req.query['repo'];
+		var data = {};
+
+		persist.getRevList(repo, 'master')
+			.then(function(revList) {
+				data.revList = revList;
+				var sizes = [];
+
+				return Promise.each(revList, function(sha, index) {
+					return persist.sizeSnapshot(repo, [{id:sha}])
+						.then(function(filesizes) {
+							var total = 0;
+							Object.keys(filesizes[sha]).forEach(function(filename) {
+								total += filesizes[sha][filename];
+							});
+							sizes.push(total);
+						});
+				}).then(function() {
+					return sizes;
+				});
+			}).then(function(sizes) {
+				data.lineCount = sizes;
+				res.render("chart", {
+						title: "Source View",
+						data: JSON.stringify(data),
+						scripts: [
+							{ path: "//www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}" }
+						]
+					}); 
+			});
 	}
 
 };
