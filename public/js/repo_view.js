@@ -334,12 +334,6 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	);
 
 	self._context.save();
-
-	self._context.rect(x,
-		fileTop,
-		commit_width,
-		heightAtCommit
-	);
 	self._context.clip();
 	
 	if (blame && blame[filename] && filename != self._highlightedFile) {
@@ -376,8 +370,9 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	self._context.fillStyle = self._layoutModel.isDir(filename) 
 		? self._authorColors[author] //COLORS.DIFF_DIR
 		: self._authorColors[author];
-	if (self._highlightedCommitIndex == diff_index
-		&& self._toCommit != self._fromCommit) {
+	if (self._highlightedFile == filename
+		|| (self._highlightedCommitIndex == diff_index
+		&& self._toCommit != self._fromCommit)) {
 		self._context.fillStyle = COLORS.DIFF_HIGHLIGHT;
 	}
 
@@ -405,6 +400,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
 
 			edits.forEach(function(change) { // [169,7]
+				if (change[1] < 0)
+					return;
 				var dy =  (change[1]*maxFileHeight)/fileLen;
 				var y = fileTop + (change[0] * maxFileHeight)/fileLen;
 
