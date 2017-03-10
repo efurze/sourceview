@@ -138,12 +138,7 @@ RepoModel.prototype.getBlame = function(commit_id) {
 }
 
 RepoModel.prototype.fileSize = function(filename, commit_id) {
-	if (this._filesizes.hasOwnProperty(commit_id)
-		&& this._filesizes[commit_id].hasOwnProperty(filename)) {
-		return this._filesizes[commit_id][filename];
-	} else {
-		return 0;
-	}
+	return this._filesizes[commit_id][filename] || 0;
 }
 
 RepoModel.prototype.fileSizes = function(commit_id) {
@@ -178,6 +173,9 @@ RepoModel.prototype._updateSizes = function(sizes, diff) {
 
 	Object.keys(diff).forEach(function(filename) {
 		var delta = 0;
+		if (!updated.hasOwnProperty(filename)) {
+			updated[filename] = 0;
+		}
 		diff[filename].forEach(function(chunk) {
 			// @@ -33,6 +35,12 @@
 			// @@ -0,0 +1 @@
@@ -202,9 +200,6 @@ RepoModel.prototype._updateSizes = function(sizes, diff) {
 					delta -= count;
 				}
 			});
-			if (!updated.hasOwnProperty(filename)) {
-				updated[filename] = 0;
-			}
 		});
 		updated[filename] += delta;
 	});

@@ -163,13 +163,17 @@ function applyParent(filename, fn){
 }
 
 function parsePath(path) {
-	var ret = {};
-	var parts = path.split('/');
-	ret.name = parts.pop();
-	ret.parent = parts.join('/');
-	if (!ret.parent.length && ret.name !== '/')
-		ret.parent = '/';
-	return ret;
+	var index = path.lastIndexOf('/');
+	if (index == -1) {
+		return {
+			name: path,
+			parent: '/'
+		}
+	}
+	return {
+		name: path.slice(index+1),
+		parent: path.slice(0, index)
+	};
 }
 
 function isDir(filename) {
@@ -204,7 +208,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	} else {
 		Layout.node_index[self.path()] = self;
 	}
-	Logger.INFO("Added dir", name, Logger.CHANNEL.FILE_LAYOUT);
+	Logger.DEBUG("Added dir", name, Logger.CHANNEL.FILE_LAYOUT);
 };
 
 LayoutNode.prototype.reset = function() {
