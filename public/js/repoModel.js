@@ -177,29 +177,8 @@ RepoModel.prototype._updateSizes = function(sizes, diff) {
 			updated[filename] = 0;
 		}
 		diff[filename].forEach(function(chunk) {
-			// @@ -33,6 +35,12 @@
-			// @@ -0,0 +1 @@
-			if (!chunk.length) 
-				return;
-			let parts = chunk.split(" ");
-
-			parts.forEach(function(chunk) {
-				if (!chunk.length)
-					return;
-				let pieces = chunk.split(",");
-				let sign = pieces[0].slice(0, 1);
-				let count = 0;
-				if (pieces.length > 1) {
-					count = parseInt(pieces[1]);
-				} else if (pieces.length == 1){
-					count = 1;
-				}
-				if (sign === "+") {
-					delta += count;
-				} else {
-					delta -= count;
-				}
-			});
+			// [linenum, count]
+			delta += chunk[1];
 		});
 		updated[filename] += delta;
 	});

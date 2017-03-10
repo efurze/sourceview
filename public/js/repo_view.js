@@ -401,23 +401,18 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	} else {
 
 		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
-			var edits = diff_summary[filename];
+			var edits = diff_summary[filename]; // [[169,-7], [169,7], ... ],
 			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
 
-			edits.forEach(function(change) { // "-0,0 +1,9"
-				change.split(' ').forEach(function(edit) {
-					var parts = edit.split(","); // +1,9"
-					var linenum = parseInt(parts[0].slice(1));
-					var editLen = parseInt(parts[1]);
-					var dy =  (editLen*maxFileHeight)/fileLen;
-					var y = fileTop + (linenum * maxFileHeight)/fileLen;
+			edits.forEach(function(change) { // [169,7]
+				var dy =  (change[1]*maxFileHeight)/fileLen;
+				var y = fileTop + (change[0] * maxFileHeight)/fileLen;
 
-					self._fillRect(x,
-						y,
-						commit_width,
-						dy
-					);
-				});
+				self._fillRect(x,
+					y,
+					commit_width,
+					dy
+				);
 			});
 		}
 	}
