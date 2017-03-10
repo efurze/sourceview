@@ -64,10 +64,15 @@ module.exports = {
 
 		persist.getRevList(repo, 'master')
 			.then(function(revList) {
-				data.revList = revList;
+				return Promise.mapSeries(revList, function(sha) {
+					return persist.getCommit(repo, sha);
+				});
+			}).then(function(commitList) {
+				data.revList = commitList;
 				var lineCount = [];
 
-				return Promise.each(revList, function(sha, index) {
+				return Promise.each(commitList, function(commit, index) {
+					var sha = commit.id
 					return persist.sizeSnapshot(repo, [{id:sha}])
 						.then(function(filesizes) {
 							var total = 0;
@@ -82,7 +87,8 @@ module.exports = {
 			}).then(function(lineCount) {
 				data.lineCount = lineCount;
 				var linesChanged = [];
-				return Promise.each(data.revList, function(sha, index) {
+				return Promise.each(data.revList, function(commit, index) {
+					var sha = commit.id;
 					return persist.diffSummary(repo, [{id:sha}])
 						.then(function(summaries) {
 							summaries = summaries[sha];
