@@ -94,23 +94,9 @@ module.exports = {
 							summaries = summaries[sha];
 							var delta = 0;
 							Object.keys(summaries).forEach(function(filename) {
-								var edits = summaries[filename];
-								edits.forEach(function(change) { // "-0,0 +1,9"
-									change.split(' ').forEach(function(chunk) {
-										var parts = chunk.split(",");
-										var sign = parts[0].slice(0, 1);
-										var count = 0;
-										if (parts.length > 1) {
-											count = parseInt(parts[1]);
-										} else if (parts.length == 1){
-											count = 1;
-										}
-										if (sign === "+") {
-											delta += count;
-										} else {
-											delta -= count;
-										}
-									});
+								var edits = summaries[filename]; // [[169,-7], [169,7], ... ],
+								edits.forEach(function(change) { // [169,-7]
+									delta += change[1];
 								});
 							});
 							linesChanged.push(delta);

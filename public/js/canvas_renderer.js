@@ -158,9 +158,13 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	ASSERT(from < to);
 
 
+	Logger.INFO("adding data to model", Logger.CHANNEL.RENDERER);
+
 	self._model.addData(commits, initial_size, summaries);
 
 
+
+	Logger.INFO("Update file list", Logger.CHANNEL.RENDERER);
 	self._layout.updateFileList(self._fromCommit, self._toCommit);
 	var files = Object.keys(self._layout.getLayout());
 	if (files.length > 500) {
@@ -339,6 +343,7 @@ CanvasRenderer.prototype.fileYTop = function(filename) {
 
 
 CanvasRenderer.prototype.render = function() {
+	Logger.INFO("render", Logger.CHANNEL.RENDERER);
 	var self = this;
 	self.renderFilenames();
 	self._repoView.render();
