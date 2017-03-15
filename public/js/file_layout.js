@@ -163,16 +163,17 @@ function applyParent(filename, fn){
 }
 
 function parsePath(path) {
-	var index = path.lastIndexOf('/');
-	if (index == -1) {
-		return {
-			name: path,
-			parent: '/'
-		}
+	if (!path.startsWith('/')) {
+		path = '/' + path;
 	}
+	var index = path.lastIndexOf('/');
+	if (index == path.length-1) {
+		index = path.lastIndexOf('/', index-1);
+	}
+
 	return {
 		name: path.slice(index+1),
-		parent: path.slice(0, index)
+		parent: path.slice(0, index+1)
 	};
 }
 
@@ -190,6 +191,9 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._revList = revList;
 	self._model = model;
 	self._name = name;
+	if (name.slice(-1) !== '/') {
+		self._name += '/';
+	}
 	self._childDirs = {};
 	self._children = [];
 	self._childHash = {};
@@ -203,11 +207,7 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._dy = 0;
 	self._isOpen = true;
 
-	if (self.isRoot()) {
-		Layout.node_index[self._name] = self;
-	} else {
-		Layout.node_index[self.path()] = self;
-	}
+	Layout.node_index[self.path()] = self;
 	Logger.DEBUG("Added dir", name, Logger.CHANNEL.FILE_LAYOUT);
 };
 
@@ -268,18 +268,14 @@ LayoutNode.prototype.getLayout = function() {
 	var layout = {};
 	if (self._isOpen) {
 		self._children.forEach(function(child) {
-			layout[child] = {
+			layout[self.childPath(child)] = {
 				y: self.getFileY(child),
 				dy: self.getFileDY(child)
 			};
 		});
 		Object.keys(self._childDirs).forEach(function(name) {
 			var sub = self._childDirs[name].getLayout();
-			if (sub) {
-				Object.keys(sub).forEach(function(key) {
-					layout[name + "/" + key] = sub[key];
-				});
-			}
+			layout = Object.assign(layout, sub);
 		});
 	}
 	return layout;
@@ -303,26 +299,14 @@ LayoutNode.prototype.closeAll = function() {
 
 LayoutNode.prototype.path = function() {
 	var self = this;
-	var path = "";
-	if (self._parent) {
-		path = self._parent.path();
-	} else {
-		return "";
-	}
-	if (path.length) {
-		path += '/';
-	}
-	path += self._name;
-	return path;
+	return self._parent 
+		? self._parent.path() + self._name
+		: self._name;
 }
 
 LayoutNode.prototype.childPath = function(name) {
 	var self = this;
-	var path = self.path();
-	if (path.length) {
-		path += '/';
-	}
-	return path + name;
+	return self.path() + name;
 }
 
 
@@ -618,3 +602,6 @@ FilesWithDiffs.update = function(model, from, to, revList) {
 FilesWithDiffs.hasFile = function(filename) {
 	return FilesWithDiffs._files.hasOwnProperty(filename);
 }
+
+
+Logger.channels[Logger.CHANNEL.FILE_LAYOUT] = Logger.LEVEL.DEBUG;

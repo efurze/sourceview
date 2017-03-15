@@ -56,7 +56,7 @@ DirectoryView.prototype._renderItem = function(path, y, dy) {
 		var parts = path.split('/');
 
 		var handle = self._layout.isOpen(path) ? '- ' : '+ ';
-		self._renderText(handle + parts[parts.length-1] + '/', 
+		self._renderText(handle + parts[parts.length-2] + '/', 
 			parts.length * MARGIN, 
 			y, 
 			FONT_DIR, 
