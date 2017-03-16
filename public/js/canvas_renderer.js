@@ -157,8 +157,11 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	ASSERT(!isNaN(to));
 	ASSERT(from < to);
 
-
-	Logger.INFO("adding data to model", Logger.CHANNEL.RENDERER);
+	var lineCount = getLineCount(initial_size[self._revList[from]]);
+	Logger.INFO("adding data to model, lineCount:", lineCount, Logger.CHANNEL.RENDERER);
+	if (lineCount > 10 * 1024) {
+		self._model.addFilter("/*");
+	}
 
 	self._model.addData(commits, initial_size, summaries);
 
@@ -615,6 +618,18 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 		return self._fromCommit+index;
 	}
 	return -1;
+}
+
+
+var getLineCount = function (size_tree) {
+	var count = size_tree.size;
+	Object.keys(size_tree.children).forEach(function(child) {
+		if (typeof(size_tree.children[child]) == 'object') {
+			count += getLineCount(size_tree.children[child]);
+		}
+	});
+
+	return count;
 }
 
 
