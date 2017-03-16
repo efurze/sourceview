@@ -7,60 +7,6 @@ Promise.promisifyAll(fs);
 
 
 
-/*
-	@dir = {
-		'foo.txt': 3,
-		'bar.txt': 245,
-		'subdir' : {
-			
-		}
-	}
-
-	returns: {
-		size: ,
-		subdir_count: ,
-		children: {
-			'foo.txt': 3,
-			'bar.txt': 245,
-			'subdir' : {
-				
-			}
-		}
-	}
-*/
-function formatDir(dir) {
-	var tree = {
-		size: 0,
-		subdir_count: 0,
-		children: {}
-	};
-	Object.keys(dir).forEach(function(name) {
-		tree.children[name] = dir[name];
-		if (typeof(dir[name]) == 'object') {
-			// subdir
-			tree.subdir_count ++;
-		} else {
-			tree.size += dir[name];
-		}
-	});
-	return tree;
-}
-
-
-function elideTree(root) {
-	var count = 0;
-	var ret = {};
-	ret = formatDir(root);
-	Object.keys(ret.children).forEach(function(child) {
-		if (typeof(ret.children[child]) == 'object') {
-			ret.children[child] = elideTree(root[child]);
-		} 
-	});
-
-	return ret;
-}
-
-
 
 function getData(repo, from, to) {
 
@@ -77,15 +23,10 @@ function getData(repo, from, to) {
 			data.commits = commits;
 			return persist.sizeTree(repo, [data.commits[0]]);
 		}).then(function(sizes) {
-			data.size_history = {};
-			Object.keys(sizes).forEach(function(sha){
-				data.size_history[sha] = elideTree(sizes[sha]);
-			});
-			
+			data.size_history = sizes;
 			return persist.diffSummary(repo, data.commits);
 		}).then(function(diffs) {
 			data.diff_summaries = diffs;
-
 			return data;
 		});
 }
