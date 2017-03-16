@@ -5,15 +5,65 @@ var Promise = require('bluebird');
 Promise.promisifyAll(fs);
 
 
-function getData(req) {
-	var repo = req.query['repo'];
-	var from = parseInt(req.query['from']);
-	var to = parseInt(req.query['to']);
 
-	if (typeof(from) == 'undefined' || typeof(to) == 'undefined') {
 
+/*
+	@dir = {
+		'foo.txt': 3,
+		'bar.txt': 245,
+		'subdir' : {
+			
+		}
 	}
-	
+
+	returns: {
+		size: ,
+		subdir_count: ,
+		children: {
+			'foo.txt': 3,
+			'bar.txt': 245,
+			'subdir' : {
+				
+			}
+		}
+	}
+*/
+function formatDir(dir) {
+	var tree = {
+		size: 0,
+		subdir_count: 0,
+		children: {}
+	};
+	Object.keys(dir).forEach(function(name) {
+		tree.children[name] = dir[name];
+		if (typeof(dir[name]) == 'object') {
+			// subdir
+			tree.subdir_count ++;
+		} else {
+			tree.size += dir[name];
+		}
+	});
+	return tree;
+}
+
+
+function elideTree(root) {
+	var count = 0;
+	var ret = {};
+	ret = formatDir(root);
+	Object.keys(ret.children).forEach(function(child) {
+		if (typeof(ret.children[child]) == 'object') {
+			ret.children[child] = elideTree(root[child]);
+		} 
+	});
+
+	return ret;
+}
+
+
+
+function getData(repo, from, to) {
+
 	var data = {};
 	return persist.getRevList(repo, 'master')
 		.then(function(history) {
@@ -25,9 +75,13 @@ function getData(req) {
 			});
 		}).then(function(commits) {
 			data.commits = commits;
-			return persist.sizeSnapshot(repo, [data.commits[0]]);
+			return persist.sizeTree(repo, [data.commits[0]]);
 		}).then(function(sizes) {
-			data.size_history = sizes;
+			data.size_history = {};
+			Object.keys(sizes).forEach(function(sha){
+				data.size_history[sha] = elideTree(sizes[sha]);
+			});
+			
 			return persist.diffSummary(repo, data.commits);
 		}).then(function(diffs) {
 			data.diff_summaries = diffs;
@@ -39,7 +93,7 @@ function getData(req) {
 
 module.exports = {
 
-	requestRange: function(req, res) {
+	revList: function(req, res) {
 		var repo = req.query['repo'];
 	
 		persist.getRevList(repo, 'master')
@@ -52,8 +106,10 @@ module.exports = {
 	},
 
 	requestRangeJSON: function(req, res) {
-		getData(req)
-			.then(function(data) {
+		getData(req.query['repo'], 
+				parseInt(req.query['from']), 
+				parseInt(req.query['to'])
+			).then(function(data) {
 				res.send(data);
 			});
 	},

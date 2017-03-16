@@ -53,10 +53,12 @@ DirectoryView.prototype._renderItem = function(path, y, dy) {
 				: self._layout.getParent(self._highlightedFile);
 		}
 
-		var parts = path.split('/');
+		var parts = path.split('/').filter(function(part) {
+			return part.trim().length;
+		});
 
 		var handle = self._layout.isOpen(path) ? '- ' : '+ ';
-		self._renderText(handle + parts[parts.length-2] + '/', 
+		self._renderText(handle + parts[parts.length-1] + '/', 
 			parts.length * MARGIN, 
 			y, 
 			FONT_DIR, 

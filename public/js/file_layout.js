@@ -51,13 +51,27 @@ Layout.prototype.updateFileList = function(from, to) {
 		self._toCommit = to;
 		for (var i=from; i<=to; i++) {
 			var sha = self._revList[i];
-			Object.keys(self._model.fileSizes(sha)).forEach(function(path) {
-				if (!FILTER_FOR_DIFFS || FilesWithDiffs.hasFile(path)) {
-					self._addFile(path);
-				}
-			});
+			var size_tree = self._model.fileSizes(sha);
+			self._addTree(size_tree.getTree());
 		}
 	}
+}
+
+Layout.prototype._addTree = function(tree, path) {
+	var self = this;
+	path = path || '/';
+	if (!Layout.node_index[path]) {
+		self._addDir(path);
+	} 
+
+	Object.keys(tree.children).forEach(function(child) {
+		if (typeof(tree.children[child]) == 'object') {
+			self._addTree(tree.children[child], path + child + '/');
+		} else {
+			self._addFile(path + child);
+		}
+	});
+
 }
 
 Layout.prototype.closeAll = function() {
@@ -477,6 +491,7 @@ LayoutNode.prototype._setRange = function(from, to) {
 													self._revList[i])
 								);
 			}
+			ASSERT(!isNaN(max));
 			self._range[filename] = max;
 			self._childLines += max;
 		}

@@ -1,10 +1,73 @@
 'use strict';
 
+var SizeTree = function(root) {
+	var self = this;
+	self._root = root || {}; 
+}
+
+SizeTree.prototype.clone = function() {
+	return new SizeTree(JSON.parse(JSON.stringify(this._root)));
+}
+
+SizeTree.prototype.getTree = function() {
+	return this._root;
+}
+
+SizeTree.prototype.hasFile = function(path) {
+	var self = this;
+	var parts = path.split('/').filter(function(item) {
+			return item.trim().length;
+		});
+	var dir = self._root;
+	for (var i=0; i < parts.length-1; i++) {
+		if (dir.hasOwnProperty('children') && dir.children.hasOwnProperty(parts[i]))
+			dir = dir.children[parts[i]];
+		else
+			return false;
+	}
+
+	var name = parts[parts.length-1];
+	if (dir.hasOwnProperty('children') && dir.children.hasOwnProperty(name))
+		return dir.children[name];
+	else
+		return false;
+}
+
+SizeTree.prototype.getFileSize = function(path) {
+	var self = this;
+	var parts = path.split('/').filter(function(item) {
+			return item.trim().length;
+		});
+	var dir = self._root;
+	for (var i=0; i < parts.length-1; i++) {
+		ASSERT(dir);
+		ASSERT(dir.children);
+		dir = dir.children[parts[i]];
+	}
+	ASSERT(dir && dir.children);
+	ASSERT(dir.children.hasOwnProperty(parts[parts.length-1]));
+	return dir.children[parts[parts.length-1]];
+}
+
+SizeTree.prototype.setFileSize = function(path, size) {
+	var self = this;
+	var parts = path.split('/').filter(function(item) {
+			return item.trim().length;
+		});
+	var parent = self._root;
+	for (var i=0; i < parts.length-1; i++) {
+		ASSERT(parent);
+		parent = parent.children[parts[i]];
+	}
+	ASSERT(parent);
+	parent.children[parts[parts.length-1]] = size;
+}
+ 
 
 var RepoModel = function(revList) {
 	var self = this;
 	self._revList = revList;
-	self._filesizes = {}; // commit_sha: {filename: length}
+	self._filesizes = {}; // commit_sha: {SizeTree}
 	self._diffs = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._blame = {}; // sha: filename : [{from: ,to: , author:}] 
@@ -65,7 +128,7 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 
 	Object.keys(size_history).forEach(function(sha) {
 		if (!self._filesizes.hasOwnProperty(sha)) {
-			self._filesizes[sha] = size_history[sha];
+			self._filesizes[sha] = new SizeTree(size_history[sha]);
 		}
 	});
 
@@ -138,7 +201,11 @@ RepoModel.prototype.getBlame = function(commit_id) {
 }
 
 RepoModel.prototype.fileSize = function(filename, commit_id) {
-	return this._filesizes[commit_id][filename] || 0;
+	 if (this._filesizes.hasOwnProperty(commit_id)) {
+	 	return this._filesizes[commit_id].getFileSize(filename);
+	 } else {
+	 	return 0;
+	 }
 }
 
 RepoModel.prototype.fileSizes = function(commit_id) {
@@ -168,19 +235,19 @@ RepoModel.prototype._updateHistory = function(upToIndex) {
 											self._diffs[sha]);
 }
 
-RepoModel.prototype._updateSizes = function(sizes, diff) {
-	var updated = JSON.parse(JSON.stringify(sizes));
+RepoModel.prototype._updateSizes = function(size_tree, diff) {
+	var updated = size_tree.clone();
 
 	Object.keys(diff).forEach(function(filename) {
 		var delta = 0;
-		if (!updated.hasOwnProperty(filename)) {
-			updated[filename] = 0;
+		if (updated.hasFile(filename)) {
+			var current_size = updated.getFileSize(filename);
+			diff[filename].forEach(function(chunk) {
+				// [linenum, count]
+				delta += chunk[1];
+			});
+			updated.setFileSize(filename, current_size + delta);
 		}
-		diff[filename].forEach(function(chunk) {
-			// [linenum, count]
-			delta += chunk[1];
-		});
-		updated[filename] += delta;
 	});
 	return updated;
 }
@@ -234,7 +301,7 @@ RepoModel.prototype._blameForCommit = function(prev_sha, commit_sha) {
 	Object.keys(diff).forEach(function(filename) {
 
 		updated[filename] = arrayify(updated[filename], 
-							self._filesizes[commit_sha][filename]);
+							self._filesizes[commit_sha].getFileSize(filename));
 
 		var edits = diff[filename]
 		edits.forEach(function(edit) { // "-1,8 +1,9"

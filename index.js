@@ -50,7 +50,8 @@ app.use(function(req, res, next) {
 // Routes
 app.get('/chart', dataController.chart);
 
-app.get('/range', dataController.requestRange);
+app.get('/range', dataController.revList);
+app.get('/', dataController.revList);
 app.get('/rangeJSON', dataController.requestRangeJSON);
 
 app.get('/diff', function(req, res) { 
