@@ -1,5 +1,25 @@
 'use strict';
 
+/*
+
+
+	@root = {
+		size: ,
+		subdir_count: ,
+		children: {
+			'foo.txt': 3,
+			'bar.txt': 245,
+			'views' : {
+				size:,
+				subdir_count:,
+				children: {
+	
+				}
+			}
+		}
+	}
+*/
+
 var SizeTree = function(root) {
 	var self = this;
 	self._root = root || {}; 
@@ -13,25 +33,6 @@ SizeTree.prototype.getTree = function() {
 	return this._root;
 }
 
-SizeTree.prototype.hasFile = function(path) {
-	var self = this;
-	var parts = path.split('/').filter(function(item) {
-			return item.trim().length;
-		});
-	var dir = self._root;
-	for (var i=0; i < parts.length-1; i++) {
-		if (dir.hasOwnProperty('children') && dir.children.hasOwnProperty(parts[i]))
-			dir = dir.children[parts[i]];
-		else
-			return false;
-	}
-
-	var name = parts[parts.length-1];
-	if (dir.hasOwnProperty('children') && dir.children.hasOwnProperty(name))
-		return dir.children[name];
-	else
-		return false;
-}
 
 SizeTree.prototype.getFileSize = function(path) {
 	var self = this;
@@ -42,11 +43,18 @@ SizeTree.prototype.getFileSize = function(path) {
 	for (var i=0; i < parts.length-1; i++) {
 		ASSERT(dir);
 		ASSERT(dir.children);
+		if (!dir.children[parts[i]]) {
+			dir.children[parts[i]] = {
+				size: 0,
+				subdir_count: 0,
+				children: {}
+			};
+		}
 		dir = dir.children[parts[i]];
 	}
 	ASSERT(dir && dir.children);
-	ASSERT(dir.children.hasOwnProperty(parts[parts.length-1]));
-	return dir.children[parts[parts.length-1]];
+	
+	return dir.children[parts[parts.length-1]] || 0;
 }
 
 SizeTree.prototype.setFileSize = function(path, size) {
@@ -57,6 +65,13 @@ SizeTree.prototype.setFileSize = function(path, size) {
 	var parent = self._root;
 	for (var i=0; i < parts.length-1; i++) {
 		ASSERT(parent);
+		if (!parent.children[parts[i]]) {
+			parent.children[parts[i]] = {
+				size: 0,
+				subdir_count: 0,
+				children: {}
+			};
+		}
 		parent = parent.children[parts[i]];
 	}
 	ASSERT(parent);
@@ -240,14 +255,12 @@ RepoModel.prototype._updateSizes = function(size_tree, diff) {
 
 	Object.keys(diff).forEach(function(filename) {
 		var delta = 0;
-		if (updated.hasFile(filename)) {
-			var current_size = updated.getFileSize(filename);
-			diff[filename].forEach(function(chunk) {
-				// [linenum, count]
-				delta += chunk[1];
-			});
-			updated.setFileSize(filename, current_size + delta);
-		}
+		var current_size = updated.getFileSize(filename);
+		diff[filename].forEach(function(chunk) {
+			// [linenum, count]
+			delta += chunk[1];
+		});
+		updated.setFileSize(filename, current_size + delta);
 	});
 	return updated;
 }
