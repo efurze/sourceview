@@ -111,7 +111,6 @@ var RepoModel = function(revList) {
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._blame = {}; // sha: filename : [{from: ,to: , author:}] 
 	self._selectedFile = "";
-	self._filter = new FileFilter();
 
 	self._revIndex = {};
 	revList.forEach(function(commit, index) {
@@ -119,10 +118,6 @@ var RepoModel = function(revList) {
 	});
 };
 
-RepoModel.prototype.addFilter = function(globstr) {
-	var self = this;
-	self._filter.addFilter(globstr);
-}
 
 RepoModel.prototype.setSelectedFile = function(filename) {
 	var self = this;
@@ -172,7 +167,7 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 
 	Object.keys(size_history).forEach(function(sha) {
 		if (!self._filesizes.hasOwnProperty(sha)) {
-			self._filesizes[sha] = new FileTree(self._filter.filterTree(size_history[sha]));
+			self._filesizes[sha] = new FileTree(size_history[sha]);
 		}
 	});
 
@@ -284,15 +279,13 @@ RepoModel.prototype._updateSizes = function(size_tree, diff) {
 	var updated = size_tree.clone();
 
 	Object.keys(diff).forEach(function(filename) {
-		if (self._filter.matches(filename)) {
-			var delta = 0;
-			var current_size = updated.getFileSize(filename);
-			diff[filename].forEach(function(chunk) {
-				// [linenum, count]
-				delta += chunk[1];
-			});
-			updated.setFileSize(filename, current_size + delta);
-		}
+		var delta = 0;
+		var current_size = updated.getFileSize(filename);
+		diff[filename].forEach(function(chunk) {
+			// [linenum, count]
+			delta += chunk[1];
+		});
+		updated.setFileSize(filename, current_size + delta);
 	});
 	return updated;
 }

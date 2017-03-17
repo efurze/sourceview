@@ -9,6 +9,7 @@ var Layout = function(model, revList) {
 	this._listeners = [];
 	this._fromCommit = -1;
 	this._toCommit = -1;
+	this._filter = new FileFilter();
 }
 
 Layout.node_index = {};
@@ -21,6 +22,11 @@ Layout.prototype.setClip = function(x,y,dx,dy) {
 	ASSERT(this._root);
 	this._root.setClip(x,y,dx,dy);
 };
+
+Layout.prototype.addFilter = function(globstr) {
+	var self = this;
+	self._filter.addFilter(globstr);
+}
 
 Layout.prototype.doLayout = function(from, to) {
 	var self = this;
@@ -52,7 +58,7 @@ Layout.prototype.updateFileList = function(from, to) {
 		for (var i=from; i<=to; i++) {
 			var sha = self._revList[i];
 			var size_tree = self._model.fileSizes(sha);
-			self._addTree(size_tree.getTree());
+			self._addTree(self._filter.filterTree(size_tree.getTree()));
 		}
 	}
 }
