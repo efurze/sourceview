@@ -48,18 +48,16 @@ Layout.prototype.doLayout = function(from, to) {
 */
 Layout.prototype.updateFileList = function(from, to) {
 	var self = this;
-	if (from != self._fromCommit || to != self._toCommit) {
-		if (FILTER_FOR_DIFFS) {
-			FilesWithDiffs.update(self._model, from, to, self._revList);
-		}
-		self._root.reset();
-		self._fromCommit = from;
-		self._toCommit = to;
-		for (var i=from; i<=to; i++) {
-			var sha = self._revList[i];
-			var size_tree = self._model.fileSizes(sha);
-			self._addTree(self._filter.filterTree(size_tree.getTree()));
-		}
+	if (FILTER_FOR_DIFFS) {
+		FilesWithDiffs.update(self._model, from, to, self._revList);
+	}
+	self._root.reset();
+	self._fromCommit = from;
+	self._toCommit = to;
+	for (var i=from; i<=to; i++) {
+		var sha = self._revList[i];
+		var size_tree = self._model.fileSizes(sha);
+		self._addTree(self._filter.filterTree(size_tree.getTree()));
 	}
 }
 
@@ -68,9 +66,11 @@ Layout.prototype._addTree = function(tree, path) {
 	path = path || '/';
 	if (!Layout.node_index[path]) {
 		self._addDir(path);
+		Layout.node_index[path].setOpen(false);
 	} 
 
 	Object.keys(tree.children).forEach(function(child) {
+		Layout.node_index[path].setOpen(true);
 		if (typeof(tree.children[child]) == 'object') {
 			self._addTree(tree.children[child], path + child + '/');
 		} else {
@@ -107,8 +107,17 @@ Layout.prototype.isOpen = function(path) {
 
 Layout.prototype.toggleOpen = function(path) {
 	ASSERT(Layout.node_index[path]);
+	var self = this;
 	if (Layout.node_index[path]) {
-		Layout.node_index[path].setOpen(!Layout.node_index[path].isOpen());
+		var glob = path + "*";
+		if (Layout.node_index[path].isOpen()) {
+			self._filter.removeFilter(glob);
+			Layout.node_index[path].setOpen(false);
+		} else {
+			self._filter.addFilter(glob);
+			Layout.node_index[path].setOpen(true);
+		}
+		
 	}
 }
 

@@ -160,21 +160,11 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	var lineCount = getLineCount(initial_size[self._revList[from]]);
 	Logger.INFO("adding data to model, lineCount:", lineCount, Logger.CHANNEL.RENDERER);
 	if (lineCount > 10 * 1024) {
-		self._model.addFilter("/*");
+		self._layout.addFilter("/*");
 	}
 
 	self._model.addData(commits, initial_size, summaries);
 
-
-
-	Logger.INFO("Update file list", Logger.CHANNEL.RENDERER);
-	self._layout.updateFileList(self._fromCommit, self._toCommit);
-	var files = Object.keys(self._layout.getLayout());
-	if (files.length > 500) {
-		// collapse all dirs
-		
-		self._layout.closeAll();
-	}
 
 	for (var i=from; i<=to; i++) {
 		self._repoView.markCommit(self._revList[i]);
