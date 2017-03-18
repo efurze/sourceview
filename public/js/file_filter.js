@@ -42,17 +42,14 @@ FileFilter.prototype.filterTree = function(tree, path) {
     children: {}
   };
   
-  var testchild = path + "a";
-  if (self.matches(testchild)) {
-    Object.keys(tree.children).forEach(function(child) {
-      if (self.matches(path + child)) {
-        if (typeof(tree.children[child]) == 'object') {
-          ret.children[child] = self.filterTree(tree.children[child], path+child+'/');
-        } else {
-          ret.children[child] = tree.children[child];
-        }
+  Object.keys(tree.children).forEach(function(child) {
+    if (self.matches(path + child)) {
+      if (typeof(tree.children[child]) == 'object') {
+        ret.children[child] = self.filterTree(tree.children[child], path+child+'/');
+      } else {
+        ret.children[child] = tree.children[child];
       }
-    });
-  }
+    }
+  });
   return ret;
 }

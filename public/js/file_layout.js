@@ -51,7 +51,9 @@ Layout.prototype.updateFileList = function(from, to) {
 	if (FILTER_FOR_DIFFS) {
 		FilesWithDiffs.update(self._model, from, to, self._revList);
 	}
-	self._root.reset();
+	if (from != self._fromCommit || to != self._toCommit) {
+		self._root.reset();
+	}
 	self._fromCommit = from;
 	self._toCommit = to;
 	for (var i=from; i<=to; i++) {
@@ -64,13 +66,17 @@ Layout.prototype.updateFileList = function(from, to) {
 Layout.prototype._addTree = function(tree, path) {
 	var self = this;
 	path = path || '/';
+	var newly_added = false;
 	if (!Layout.node_index[path]) {
 		self._addDir(path);
 		Layout.node_index[path].setOpen(false);
+		newly_added = true;
 	} 
 
 	Object.keys(tree.children).forEach(function(child) {
-		Layout.node_index[path].setOpen(true);
+		if (newly_added) {
+			Layout.node_index[path].setOpen(true);
+		}
 		if (typeof(tree.children[child]) == 'object') {
 			self._addTree(tree.children[child], path + child + '/');
 		} else {
@@ -427,6 +433,7 @@ LayoutNode.prototype.doLayout = function(from, to) {
 	}
 	var y = 0;
 
+	Logger.DEBUG("doLayout", self.path(), Logger.CHANNEL.FILE_LAYOUT);
 
 	var lineCount = self.visibleLineCount();
 	if (lineCount <= 0)
