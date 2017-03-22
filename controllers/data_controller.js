@@ -55,6 +55,16 @@ module.exports = {
 			});
 	},
 
+	getDiffJSON: function(req, res) {
+		const sha = req.query['commit'];
+		persist.getDiff(req.query['repo'], sha)
+			.then(function(diff) {
+				const ret = {};
+				ret[sha] = diff;
+				res.send(ret);
+			});
+	},
+
 	chart: function(req, res) {
 		var repo = req.query['repo'];
 		var data = {};

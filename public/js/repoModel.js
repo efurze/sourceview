@@ -103,13 +103,18 @@ FileTree.prototype.setFileSize = function(path, size) {
 }
  
 
+
+//======================================================================
+
+
 var RepoModel = function(revList) {
 	var self = this;
 	self._revList = revList;
 	self._filesizes = {}; // commit_sha: {FileTree}
-	self._diffs = {}; // commit_sha: {filename: diff_summary}
+	self._diffSummaries = {}; // commit_sha: {filename: diff_summary}
 	self._commits = {}; // sha: {message:, date:, author_name:}
 	self._blame = {}; // sha: filename : [{from: ,to: , author:}] 
+	self._diffs = {}; // commit_sha: {filename: {summary:[], raw: <str>}}
 	self._selectedFile = "";
 
 	self._revIndex = {};
@@ -171,11 +176,7 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 		}
 	});
 
-	Object.keys(diff_summaries).forEach(function(sha) {
-		if (!self._diffs.hasOwnProperty(sha)) {
-			self._diffs[sha] = diff_summaries[sha];
-		}
-	});
+	self._diffSummaries = Object.assign(diff_summaries);
 
 	commits.forEach(function(commit) {
 		self._commits[commit.id] = {
@@ -196,6 +197,29 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 */
 }
 
+/*
+	@diffs: {
+		commit_sha: {
+			filepath: {
+				summary: [[12, -4], [12, 5] ...],
+				raw: <diffstr>	
+			}
+		}
+	}
+*/
+RepoModel.prototype.addDiffData = function(diffs) {
+	var self = this;
+	self._diffs = Object.assign(self._diffs, diffs);
+}
+
+RepoModel.prototype.hasDiff = function(commit_id) {
+	return this._diffs.hasOwnProperty(commit_id);
+}
+
+RepoModel.prototype.getDiff = function(commit_id) {
+	return this._diffs[commit_id];
+}
+
 RepoModel.prototype.hasCommit = function(commit_id) {
 	return this._commits.hasOwnProperty(commit_id);
 }
@@ -210,7 +234,7 @@ returns: {
 RepoModel.prototype.getDiffSummary = function(commit_id) {
 	var self = this;
 	if (self.hasCommit(commit_id))
-		return self._diffs[commit_id];
+		return self._diffSummaries[commit_id];
 }
 
 RepoModel.prototype.getCommitMsg = function(commit_id) {
@@ -268,10 +292,10 @@ RepoModel.prototype._updateHistory = function(upToIndex) {
 	}
 	
 	ASSERT(self._filesizes.hasOwnProperty(prev_sha));
-	ASSERT(self._diffs.hasOwnProperty(sha));
+	ASSERT(self._diffSummaries.hasOwnProperty(sha));
 
 	self._filesizes[sha] = self._updateSizes(self._filesizes[prev_sha],
-											self._diffs[sha]);
+											self._diffSummaries[sha]);
 }
 
 RepoModel.prototype._updateSizes = function(size_tree, diff) {
@@ -321,7 +345,7 @@ RepoModel.prototype._updateBlame = function(upToIndex) {
 RepoModel.prototype._blameForCommit = function(prev_sha, commit_sha) {
 	var self = this;
 
-	var diff = self._diffs[commit_sha];
+	var diff = self._diffSummaries[commit_sha];
 	var blame = self._blame[prev_sha];
 	ASSERT(blame);
 	ASSERT(diff);

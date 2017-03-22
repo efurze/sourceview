@@ -54,9 +54,7 @@ app.get('/range', dataController.revList);
 app.get('/', dataController.revList);
 app.get('/rangeJSON', dataController.requestRangeJSON);
 
-app.get('/diff', function(req, res) { 
-	res.render("diff");
-});
+app.get('/diff', dataController.getDiffJSON);
 
 app.get('/repo/range', function(req, res) { 
 	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")

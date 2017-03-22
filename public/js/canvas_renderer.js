@@ -390,12 +390,61 @@ CanvasRenderer.prototype.filesClick = function(event) {
 	}
 };
 
+CanvasRenderer.prototype.diffAjaxDone = function(success, data) {
+	Logger.INFO("diffAjaxDone", Logger.CHANNEL.RENDERER);
+	var self = this;
+	if (success) {
+		self._model.addDiffData(data);
+		const sha = Object.keys(data)[0];
+		const filename = self._repoView.getHighlightedFile();
+		if (data[sha].hasOwnProperty(filename)) {
+			showDiffPopup(data[sha][filename].raw);
+		}
+	}
+};
+
+function showDiffPopup(diffstr) {
+	const html = Diff2Html.getPrettyHtml(diffstr);
+    const parsed = $(html);
+    parsed.find('.d2h-code-linenumber').remove();
+    parsed.find('td.d2h-info').remove();
+    parsed.find('.d2h-code-line').css('margin-left', '0');
+    $('#diff-popup').html(parsed.prop('outerHTML'));
+}
 
 CanvasRenderer.prototype.repoClick = function(event) {
 	var self = this;
 	if (event.offsetX != self._mouseDownPos.x
 	|| event.offsetY != self._mouseDownPos.y)
 		return;
+
+	const elem = $("#diff-popup");
+	const sha = self._revList[self._repoView.getHighlightedCommit()];
+	var diff = self._model.getDiff(sha);
+	if (diff) {
+		const filename = self._repoView.getHighlightedFile();
+		if (diff.hasOwnProperty(filename)) {
+			showDiffPopup(diff[filename].raw);
+		}
+	} else {
+		$('#diff-popup').html('');
+		const repo = urlParam("repo");
+		self._downloader.get("/diff?repo=" 
+			+ repo 
+			+ "&commit=" + sha,
+			self.diffAjaxDone.bind(self));
+	}
+
+
+	if(elem.hasClass("show-left")) {
+		elem.removeClass("show-left");
+	} else if(elem.hasClass("show-right")) {
+		elem.removeClass("show-right");
+	} else if (event.offsetX < self._width/2) {
+		elem.addClass("show-right");
+	} else {
+		elem.addClass("show-left");
+	}
 
 	self._selectionFrozen = !self._selectionFrozen;
 	self._repoView.setSelected(self._selectionFrozen);

@@ -6,7 +6,7 @@ var COLORS = {
  REPO_BACKGROUND: 	'#A2BCCD', 	// light blue
  REPO: 				'rgb(130,150,164)', // medium blue
  REPO_HIGHLIGHT:	'#808080',
- REPO_SELECT:		'#f0dba5',
+ REPO_SELECT:		'#a0a0a0',
  DIFF: 				'rgb(66, 77, 84)',	// blue-black
  DIFF_HIGHLIGHT: 	'#FFFFD5',	// light yellow 
 

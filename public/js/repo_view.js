@@ -88,6 +88,10 @@ RepoView.prototype.setHighlightedFile = function(file) {
 	}
 }
 
+RepoView.prototype.getHighlightedFile = function() {
+	return this._highlightedFile;
+}
+
 
 RepoView.prototype.setHighlightedCommit = function(index) {
 	var self = this;
@@ -110,6 +114,9 @@ RepoView.prototype.setHighlightedCommit = function(index) {
 	}
 }
 
+RepoView.prototype.getHighlightedCommit = function() {
+	return this._highlightedCommitIndex;
+}
 
 RepoView.prototype.setCommitRange = function(from, to) {
 	var self = this;
