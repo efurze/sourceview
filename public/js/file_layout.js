@@ -1,7 +1,5 @@
 'use strict';
 
-var FILTER_FOR_DIFFS = false;
-
 var Layout = function(model, revList) {
 	this._root = new LayoutNode("/", model, revList);
 	this._model = model;
@@ -48,9 +46,7 @@ Layout.prototype.doLayout = function(from, to) {
 */
 Layout.prototype.updateFileList = function(from, to) {
 	var self = this;
-	if (FILTER_FOR_DIFFS) {
-		FilesWithDiffs.update(self._model, from, to, self._revList);
-	}
+
 	if (from != self._fromCommit || to != self._toCommit) {
 		self._root.reset();
 	}
@@ -86,10 +82,6 @@ Layout.prototype._addTree = function(tree, path) {
 
 }
 
-Layout.prototype.closeAll = function() {
-	ASSERT(this._root);
-	this._root.closeAll();
-};
 
 // returns full path of parent dir
 Layout.prototype.getParent = function(path) {
@@ -259,18 +251,6 @@ LayoutNode.prototype.reset = function() {
 	}
 }
 
-LayoutNode.prototype.getAllFiles = function() {
-	var self = this;
-	var names = {};
-	self._children.forEach(function(name) {
-		var path = self.childPath(name);
-		names[path]=true;
-		if (self._childDirs[name]) {
-			names = Object.assign(names, self._childDirs[name].getAllFiles())
-		}
-	});
-	return names;
-}
 
 LayoutNode.prototype.displayOrder = function() {
 	var self = this;
@@ -320,17 +300,6 @@ LayoutNode.prototype.isRoot = function() {
 	return !this._parent;
 }
 
-LayoutNode.prototype.closeAll = function() {
-	var self = this;
-
-	Object.keys(self._childDirs).forEach(function(name) {
-		self._childDirs[name].closeAll();
-	});
-
-	if (!self.isRoot()) {
-		self._isOpen = false;
-	}
-}
 
 LayoutNode.prototype.path = function() {
 	var self = this;
@@ -616,28 +585,6 @@ LayoutNode.prototype.setOpen = function(open) {
 
 LayoutNode.prototype.isOpen = function() {
 	return this._isOpen;
-}
-
-
-//====================================================================
-
-var FilesWithDiffs = {
-	_files: {}
-};
-
-FilesWithDiffs.update = function(model, from, to, revList) {
-	FilesWithDiffs._files = {};
-	for (var i=from; i<=to; i++) {
-		var sha = revList[i];
-		var diff = model.getDiffSummary(sha);
-		if (diff) {
-			FilesWithDiffs._files = Object.assign(FilesWithDiffs._files, diff);
-		}
-	}
-}
-
-FilesWithDiffs.hasFile = function(filename) {
-	return FilesWithDiffs._files.hasOwnProperty(filename);
 }
 
 
