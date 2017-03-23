@@ -176,7 +176,7 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 		}
 	});
 
-	self._diffSummaries = Object.assign(diff_summaries);
+	self._diffSummaries = Object.assign(self._diffSummaries, diff_summaries);
 
 	commits.forEach(function(commit) {
 		self._commits[commit.id] = {
