@@ -81,7 +81,7 @@ DirectoryView.prototype._renderHighlighted = function(path) {
 	var x = self._dx - context.measureText(filename).width - 2*MARGIN;
 
 	context.beginPath();
-	context.fillStyle = FILES_BACKGROUND_COLOR;
+	context.fillStyle = COLORS.FILES_BACKGROUND;
 	context.fillRect(x, y, self._dx, font.height);
 	context.beginPath();
 	context.fillStyle = font.color;
@@ -94,7 +94,7 @@ DirectoryView.prototype._renderText = function(text, x, y, font, selected) {
 
 	var context = self._context;
 	context.beginPath();
-	context.fillStyle = FILES_BACKGROUND_COLOR;
+	context.fillStyle = COLORS.FILES_BACKGROUND;
 	context.fillRect(x, y, self._dx, font.height);
 
 	context.beginPath();

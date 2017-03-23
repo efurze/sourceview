@@ -301,16 +301,19 @@ RepoModel.prototype._updateHistory = function(upToIndex) {
 RepoModel.prototype._updateSizes = function(size_tree, diff) {
 	var self = this;
 	var updated = size_tree.clone();
+	var i, j, filename, delta, current_size;
 
-	Object.keys(diff).forEach(function(filename) {
-		var delta = 0;
-		var current_size = updated.getFileSize(filename);
-		diff[filename].forEach(function(chunk) {
+	var files = Object.keys(diff);
+	for (i=0; i<files.length; i++) {
+		filename = files[i];
+		delta = 0;
+		current_size = updated.getFileSize(filename);
+		for (j=0; j < diff[filename].length; j++) {
 			// [linenum, count]
-			delta += chunk[1];
-		});
+			delta += diff[filename][j][1];
+		}
 		updated.setFileSize(filename, current_size + delta);
-	});
+	}
 	return updated;
 }
 

@@ -165,8 +165,13 @@ RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	if (self._layoutModel.isDir(filename)) {
 		return self.fileHeight(filename);
 	} else {
-		return  self._model.fileSize(filename, self._revList[commit_index]) 
-		 	* self.fileHeight(filename) / self._layoutModel.fileMaxSize(filename);
+		let len = self._layoutModel.fileMaxSize(filename);
+		if (len < 0) {
+			return self.fileHeight(filename);
+		} else {
+			return  self._model.fileSize(filename, self._revList[commit_index]) 
+			 	* self.fileHeight(filename) / len;
+		}
 	}
 };
 
@@ -225,7 +230,10 @@ RepoView.prototype._renderCommits = function() {
 	//console.log(rect_count);
 	//console.timeEnd("repo render");
 
-	self.render();
+	if (self._dirtyCommitsAry.length) 
+		self.render();
+	else 
+		Logger.INFO("render done", Logger.CHANNEL.REPO_VIEW);
 }
 
 // draw a column
@@ -243,11 +251,14 @@ RepoView.prototype._renderCommit = function(diff_index) {
 		Logger.CHANNEL.REPO_VIEW);
 
 	self._clearColumn(diff_index);
-	Object.keys(self._layout).forEach(function(filename) {
+	const files = Object.keys(self._layout);
+	let i, filename;
+	for (i=0; i < files.length; i++) {
+		filename = files[i];
 		if (self._layoutModel.isVisible(filename)) {
 			self._renderCell(filename, diff_index);
 		}
-	})
+	}
 };
 
 RepoView.prototype._clearColumn = function(diff_index) { 
@@ -304,16 +315,16 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		return;
 	}
 
-	var commit_width = self._commit_width;
-	var x = commit_width * (diff_index - self._fromCommit);
-	var fileTop = self.fileYTop(filename);
-	var maxFileHeight = self.fileHeight(filename); // pixels
-	var sha = self._revList[diff_index];
-	var author = self._model.getCommitAuthor(sha);
-	var linesAtCommit = self._model.fileSize(filename, self._revList[diff_index]);
+	let commit_width = self._commit_width;
+	let x = commit_width * (diff_index - self._fromCommit);
+	let fileTop = self.fileYTop(filename);
+	let maxFileHeight = self.fileHeight(filename); // pixels
+	let sha = self._revList[diff_index];
+	let author = self._model.getCommitAuthor(sha);
+	let linesAtCommit = self._model.fileSize(filename, self._revList[diff_index]);
 
 	if (!self._authorColors.hasOwnProperty(author)) {
-		var author_count = Object.keys(self._authorColors).length;
+		let author_count = Object.keys(self._authorColors).length;
 		self._authorColors[author] = AUTHOR_COLORS[author_count % AUTHOR_COLORS.length];
 	}
 
@@ -330,8 +341,8 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		}
 	}
 
-	var heightAtCommit = self.fileHeightAtCommit(filename, diff_index);
-	var blame = self._model.getBlame(sha);
+	let heightAtCommit = self.fileHeightAtCommit(filename, diff_index);
+	let blame = self._model.getBlame(sha);
 
 	self._context.beginPath();
 	self._fillRect(x,
@@ -340,16 +351,20 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		heightAtCommit
 	);
 
-	self._context.save();
-	self._context.clip();
+	//self._context.save();
+	//self._context.clip();
 	
 	if (blame && blame[filename] && filename != self._highlightedFile) {
 		blame[filename].forEach(function(chunk) {
-			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
-			var linenum = chunk.from;
-			var editLen = chunk.to - chunk.from;
-			var dy =  (editLen*maxFileHeight)/fileLen;
-			var y = fileTop + (linenum * maxFileHeight)/fileLen;
+			let fileLen = self._layoutModel.fileMaxSize(filename); // lines
+			let linenum = chunk.from;
+			let editLen = chunk.to - chunk.from;
+			let dy =  fileLen < 0 
+						? maxFileHeight
+						: (editLen*maxFileHeight)/fileLen;
+			let y = fileLen < 0
+						? fileTop
+						: fileTop + (linenum * maxFileHeight)/fileLen;
  
 			self._context.fillStyle = 
 				self._commitColor(diff_index-self._revIndex[chunk.commit],
@@ -370,10 +385,10 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 		});
 	}
 
-	self._context.restore();
+	//self._context.restore();
 
 	// diff
-	var diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
+	let diff_summary = self._model.getDiffSummary(self._revList[diff_index]);
 	self._context.fillStyle = self._layoutModel.isDir(filename) 
 		? self._authorColors[author] //COLORS.DIFF_DIR
 		: self._authorColors[author];
@@ -385,9 +400,9 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 
 
 	if (self._layoutModel.isDir(filename) && diff_summary) {
-		var changed_files = Object.keys(diff_summary);
-		var mark_commit = false;
-		for (var i=0; i < changed_files.length; i++) {
+		let changed_files = Object.keys(diff_summary);
+		let mark_commit = false;
+		for (let i=0; i < changed_files.length; i++) {
 			if (self.isDescendantOf(changed_files[i], filename)) {
 				mark_commit = true;
 				break;
@@ -403,21 +418,28 @@ RepoView.prototype._renderCell = function(filename, diff_index) {
 	} else {
 
 		if (diff_summary && diff_summary.hasOwnProperty(filename)) {
-			var edits = diff_summary[filename]; // [[169,-7], [169,7], ... ],
-			var fileLen = self._layoutModel.fileMaxSize(filename); // lines
-
-			edits.forEach(function(change) { // [169,7]
+			let edits = diff_summary[filename]; // [[169,-7], [169,7], ... ],
+			let fileLen = self._layoutModel.fileMaxSize(filename); // lines
+			
+			let i, change, dy, y;
+			for (i=0; i < edits.length; i++) {
+				change = edits[i]; // [169,7]
 				if (change[1] < 0)
-					return;
-				var dy =  (change[1]*maxFileHeight)/fileLen;
-				var y = fileTop + (change[0] * maxFileHeight)/fileLen;
+					continue;
+				dy =  fileLen < 0
+							? maxFileHeight
+							: (change[1]*maxFileHeight)/fileLen;
+				y = fileLen < 0
+							? fileTop
+							: fileTop + (change[0] * maxFileHeight)/fileLen;
 
 				self._fillRect(x,
 					y,
 					commit_width,
 					dy
 				);
-			});
+			}
+			
 		}
 	}
 }
