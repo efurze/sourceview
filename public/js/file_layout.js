@@ -1,7 +1,10 @@
 'use strict';
 
 var Layout = function(model, revList) {
-	this._root = new LayoutNode("/", model, revList);
+	this._UNIFORM = false;
+	this._root = this._UNIFORM 
+				? new UniformNode("/", model, revList)
+				: new LayoutNode("/", model, revList);
 	this._model = model;
 	this._revList = revList;
 	this._listeners = [];
@@ -172,7 +175,12 @@ Layout.prototype._addDir = function(filename) {
 		self._addDir(parts.parent);
 	}
 	ASSERT(Layout.node_index[parts.parent]);
-	Layout.node_index[filename] = new LayoutNode(parts.name,
+	Layout.node_index[filename] = self._UNIFORM 
+									? new UniformNode(parts.name,
+										self._model,
+										self._revList,
+										Layout.node_index[parts.parent])
+									: new LayoutNode(parts.name,
 										self._model,
 										self._revList,
 										Layout.node_index[parts.parent]);
@@ -448,7 +456,9 @@ LayoutNode.prototype.doLayout = function(from, to) {
 				y, 
 				self._dx, 
 				subdir.requestedHeight(pixelsPerLine, y));
-			subdir.doLayout(from, to);
+			if (subdir.isOpen()) {
+				subdir.doLayout(from, to);
+			}
 			self._layout[name] = {
 				'y': y,
 				'dy': subdir._dy
@@ -587,5 +597,53 @@ LayoutNode.prototype.isOpen = function() {
 	return this._isOpen;
 }
 
+//=====================================================================================
 
-Logger.channels[Logger.CHANNEL.FILE_LAYOUT] = Logger.LEVEL.DEBUG;
+
+var UniformNode = function(name, model, revList, parent) {
+	LayoutNode.call(this, name, model, revList, parent);
+}
+
+UniformNode.FILE_HEIGHT = 3;
+
+UniformNode.prototype = Object.create(LayoutNode.prototype);
+
+UniformNode.prototype.doLayout = function(from, to) {
+	var self = this;
+	self._layout = {};
+	ASSERT(to < self._revList.length);
+
+	Logger.DEBUG("doLayout", self.path(), Logger.CHANNEL.FILE_LAYOUT);
+
+	var y = 0;
+	self._children.forEach(function(name) {
+		if (self._childDirs.hasOwnProperty(name)) {
+			var subdir = self._childDirs[name];
+			subdir.doLayout(from, to);
+			subdir.setClip(self._x + MARGIN, 
+				y, 
+				self._dx, 
+				subdir._dy);
+			self._layout[name] = {
+				'y': y,
+				'dy': subdir._dy
+			};
+			y += subdir._dy;
+		} else {
+			self._layout[name] = {
+				'y': y,
+				'dy': UniformNode.FILE_HEIGHT
+			};
+			y += UniformNode.FILE_HEIGHT;
+		}
+	});
+
+	self._dy = y;
+}
+
+UniformNode.prototype.fileMaxSize = function(filename) {
+	return -1;
+}
+
+
+Logger.channels[Logger.CHANNEL.FILE_LAYOUT] = Logger.LEVEL.INFO;

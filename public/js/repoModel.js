@@ -70,6 +70,7 @@ FileTree.prototype.getFileSize = function(path) {
 		if (!dir.children[parts[i]]) {
 			dir.children[parts[i]] = {
 				size: 0,
+				files: 0,
 				subdir_count: 0,
 				children: {}
 			};
@@ -92,6 +93,7 @@ FileTree.prototype.setFileSize = function(path, size) {
 		if (!parent.children[parts[i]]) {
 			parent.children[parts[i]] = {
 				size: 0,
+				files: 0,
 				subdir_count: 0,
 				children: {}
 			};
@@ -176,7 +178,11 @@ RepoModel.prototype.addData = function(commits, size_history, diff_summaries) {
 		}
 	});
 
-	self._diffSummaries = Object.assign(self._diffSummaries, diff_summaries);
+	Object.keys(diff_summaries).forEach(function(sha) {
+		if (!self._diffSummaries.hasOwnProperty(sha)) {
+			self._diffSummaries[sha] = diff_summaries[sha];
+		}
+	}); 
 
 	commits.forEach(function(commit) {
 		self._commits[commit.id] = {

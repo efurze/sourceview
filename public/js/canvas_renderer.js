@@ -157,13 +157,27 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	ASSERT(!isNaN(to));
 	ASSERT(from < to);
 
-	var lineCount = getLineCount(initial_size[self._revList[from]]);
-	Logger.INFO("adding data to model, lineCount:", lineCount, Logger.CHANNEL.RENDERER);
-	if (lineCount > 10 * 1024) {
-		self._layout.addFilter("/*");
-	}
+	Logger.INFO("adding data to model", Logger.CHANNEL.RENDERER);
 
 	self._model.addData(commits, initial_size, summaries);
+
+	var final_size = self._model.fileSizes(self._revList[to]).getTree();
+
+	if (false) {
+		var lineCount = getCount(final_size, 'size');
+		if (lineCount > 10 * 1000) {
+			self._layout.addFilter("/*");
+		}
+		Logger.INFO("Line count", lineCount, Logger.CHANNEL.RENDERER);
+	} else {
+		var fileCount = getCount(final_size, 'files');
+		if (fileCount > 1000) {
+			self._layout.addFilter("/*");
+		}
+		Logger.INFO("File count", fileCount, Logger.CHANNEL.RENDERER);
+	}
+
+	
 
 
 	for (var i=from; i<=to; i++) {
@@ -270,7 +284,6 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 		"to",
 		self._toCommit, "=>", to,
 		"width",
-		oldWidth, "=>", self._width,
 		Logger.CHANNEL.RENDERER);
 
 	if (oldWidth > self._width) {
@@ -660,11 +673,11 @@ CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 }
 
 
-var getLineCount = function (size_tree) {
-	var count = size_tree.size;
+var getCount = function (size_tree, field) {
+	var count = size_tree[field];
 	Object.keys(size_tree.children).forEach(function(child) {
 		if (typeof(size_tree.children[child]) == 'object') {
-			count += getLineCount(size_tree.children[child]);
+			count += getCount(size_tree.children[child], field);
 		}
 	});
 

@@ -39,6 +39,7 @@ FileFilter.prototype.filterTree = function(tree, path) {
   var ret = {
     size: tree.size,
     subdir_count: tree.subdir_count,
+    files: tree.files,
     children: {}
   };
   
