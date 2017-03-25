@@ -20,10 +20,11 @@ describe('catFile test', function() {
     	console.log(result);
       expect(result).to.have.property('id');
     	expect(result).to.have.property('tree');
-    	expect(result).to.have.property('author');
+    	expect(result).to.have.property('author_name');
+      expect(result).to.have.property('author_email');
     	expect(result).to.have.property('committer');
     	expect(result).to.have.property('parents');
-    	expect(result).to.have.property('commit_msg');
+    	expect(result).to.have.property('message');
     	done();
     });
   });
