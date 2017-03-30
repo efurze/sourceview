@@ -6,7 +6,11 @@ let Logger = require('./lib/logger.js');
 
 var ingest = function(dir, max, start) {
 	var digest = new Digest(dir);
-	digest.buildBranchInfo2('master', start, max);
+	if (fast) {
+		digest.buildBranchInfo2('master', start, max);
+	} else {
+		digest.buildBranchInfo('master', start, max);
+	}
 };
 
 var makeRevList = function(dir, max, start) {
@@ -24,6 +28,7 @@ console.log("Reading repository at " + repo);
 var max = 0;
 var start = 0;
 var revList = false;
+var fast = false;
 
 process.argv.forEach(function(arg, index) {
 	if (index < 2)
@@ -39,6 +44,8 @@ process.argv.forEach(function(arg, index) {
 		console.log("Beginning ingestion at", start);
 	} else if (arg.startsWith('-revList')) {
 		revList = true;
+	} else if (arg.startsWith('-fast')) {
+		fast = true;
 	}
 });
 
