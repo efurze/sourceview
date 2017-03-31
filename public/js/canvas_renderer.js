@@ -33,13 +33,14 @@
 var CanvasRenderer = function(revList) {
 	Logger.INFO("CanvasRenderer()", Logger.CHANNEL.RENDERER);
 	var self = this;
-
+	this._ANTIALIAS = false;
 	this._canvas = document.getElementById("repo_canvas");
 	this._context = this._canvas.getContext('2d');
 
 	this._width = this._canvas.width;
 	this._height = this._canvas.height;
 	
+	console.log("width:", this._width, "height:", this._height);
 	
 	this._filesCanvas = document.getElementById("filenames");
 	this._filesContext = this._filesCanvas.getContext('2d');
@@ -131,12 +132,15 @@ CanvasRenderer.prototype._createSlider = function (from, to, revList) {
 CanvasRenderer.prototype._initialRequest = function() {
 	var self = this;
 	var from = 0, 
-		to = 0;
+		to = 100,
+		commit_width = self._width/100;
 
-	var commit_width = Math.floor(self._width/100);
-	var to = Math.floor(self._width/commit_width);
+	if (self._ANTIALIAS) {
+		commit_width = Math.floor(commit_width);
+		to = Math.floor(self._width/commit_width);
+	}
 
-	self._width = commit_width * (to+1);
+	self._width = commit_width * (to - from + 1);
 	self._repoView.setClip(0, 0, self._width, self._height);
 
 	self._fromCommit = from;
@@ -246,8 +250,13 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 	ASSERT(to < self._revList.length);
 
 	var requestedRange = to - from + 1;
-	var newCommitWidth = Math.floor(self._canvas.width / requestedRange);
-	var newRange = Math.floor(self._canvas.width / newCommitWidth);
+	var newCommitWidth = self._canvas.width / requestedRange;
+	var newRange = requestedRange;
+
+	if (self._ANTIALIAS) {
+		newCommitWidth = Math.floor(newCommitWidth);
+		newRange = Math.floor(self._canvas.width / newCommitWidth);
+	}
 
 	var oldFrom = self._fromCommit,
 		oldTo = self._toCommit,
