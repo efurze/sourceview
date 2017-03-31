@@ -167,7 +167,10 @@ RepoView.prototype.fileHeightAtCommit = function(filename, commit_index) {
 	} else {
 		let len = self._layoutModel.fileMaxSize(filename);
 		if (len < 0) {
-			return self.fileHeight(filename);
+			if (self._model.fileSize(filename, self._revList[commit_index]) > 0)
+				return self.fileHeight(filename);
+			else 
+				return 0;
 		} else {
 			return  self._model.fileSize(filename, self._revList[commit_index]) 
 			 	* self.fileHeight(filename) / len;
