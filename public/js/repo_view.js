@@ -187,9 +187,11 @@ RepoView.prototype.isDescendantOf = function(filename, dir) {
 
 RepoView.prototype.render = function() {
 	var self = this;
+	
 	if (self._dirtyCommitsAry.length)
 		requestAnimationFrame(self._renderCommits.bind(self));
-	else if (self._dirtyFilesAry.length)
+	
+	if (self._dirtyFilesAry.length)
 		requestAnimationFrame(self._renderFiles.bind(self));
 }
 
