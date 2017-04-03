@@ -36,6 +36,14 @@ RepoView.prototype.setClip = function(x, y, dx, dy) {
 	this._height = dy;
 }
 
+RepoView.prototype.getClipX = function() {
+	return this._x;
+}
+
+RepoView.prototype.getClipDX = function() {
+	return this._width;
+}
+
 RepoView.prototype.markFile = function(file) {
 	var self = this;
 	if (!self._dirtyFiles.hasOwnProperty(file)) {
@@ -187,7 +195,7 @@ RepoView.prototype.isDescendantOf = function(filename, dir) {
 
 RepoView.prototype.render = function() {
 	var self = this;
-	
+
 	if (self._dirtyCommitsAry.length)
 		requestAnimationFrame(self._renderCommits.bind(self));
 	
@@ -235,10 +243,7 @@ RepoView.prototype._renderCommits = function() {
 	//console.log(rect_count);
 	//console.timeEnd("repo render");
 
-	if (self._dirtyCommitsAry.length) 
-		self.render();
-	else 
-		Logger.INFO("render done", Logger.CHANNEL.REPO_VIEW);
+	self.render();
 }
 
 // draw a column
@@ -268,6 +273,7 @@ RepoView.prototype._renderCommit = function(diff_index) {
 
 RepoView.prototype._clearColumn = function(diff_index) { 
 	var self = this;
+	return;
 	var x = self._commit_width * (diff_index - self._fromCommit);
 	self._context.beginPath();
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
@@ -306,7 +312,7 @@ RepoView.prototype._clearRow = function(filename) {
 
 	self._context.beginPath();
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
-	self._fillRect(self._x,
+	self._fillRect(0,
 		self.fileYTop(filename),
 		self._width,
 		self.fileHeight(filename)
@@ -455,7 +461,7 @@ RepoView.prototype._fillRect = function(x, y, dx, dy) {
 	//if (dx < 1 || dy < 1)
 	//	return;
 
-	self._context.fillRect(x, y, dx, dy);
+	self._context.fillRect(x + self._x, y, dx, dy);
 	rect_count++;
 }
 

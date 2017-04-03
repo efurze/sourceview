@@ -7,12 +7,7 @@
     </div>
 </div>
     <div id="canvas-container">
-        <div id="filenames-container">
-            <canvas id="filenames" class="canvas"></canvas>
-        </div>
-        <div id="repo-container">
-            <canvas id="repo_canvas" class="canvas"></canvas>
-        </div>
+        <canvas id="canvas" class="canvas"></canvas>
     </div>
 
 <div>
@@ -44,12 +39,7 @@
 
         // this is required to make the canvas fill the entire div
 
-        var c = $("#repo_canvas");
-        var container = $(c).parent();
-        c.attr('width', $(container).width());
-        c.attr('height', $(container).height());
-
-        c = $("#filenames");
+        c = $("#canvas");
         container = $(c).parent();
         c.attr('width', $(container).width());
         c.attr('height', $(container).height());

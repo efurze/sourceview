@@ -6,19 +6,7 @@
   overflow: scroll;
 }
 
-#filenames-container {
-  overflow: scroll;
-  display: inline-block;
-  width: 15%;
-  height: 100%;
-}
 
-#repo-container {
-  overflow: scroll;
-  float: right;
-  width: 85%;
-  height: 100%;
-}
 
 .popup {
     visibility: hidden;

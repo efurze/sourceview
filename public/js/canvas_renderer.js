@@ -36,17 +36,14 @@ var CanvasRenderer = function(revList) {
 
 	var self = this;
 	this._ANTIALIAS = false;
-	this._canvas = document.getElementById("repo_canvas");
-	this._canvas.height = 2000;
+
+	this._canvas = document.getElementById("canvas");
 	this._context = this._canvas.getContext('2d');
 
 	this._width = this._canvas.width;
 	this._height = this._canvas.height;
-	
-	this._filesCanvas = document.getElementById("filenames");
-	this._filesCanvas.height = 2000;
-	this._filesContext = this._filesCanvas.getContext('2d');
-	this._filesWidth = this._filesCanvas.width;
+
+	this._filesWidth = this._canvas.width * 0.15;
 
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
@@ -78,13 +75,13 @@ var CanvasRenderer = function(revList) {
 	this._downloader = new Downloader();
 
 	this._layout = new Layout(this._model, this._revList);
-	this._layout.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
+	this._layout.setClip(0, 0, this._filesWidth, this._height);
 
-	this._dirView = new DirectoryView(this._layout, this._filesContext);
-	this._dirView.setClip(0, 0, this._filesCanvas.width, this._filesCanvas.height);
+	this._dirView = new DirectoryView(this._layout, this._context);
+	this._dirView.setClip(0, 0, this._filesWidth, this._height);
 
 	this._repoView = new RepoView(this._context, this._model, this._layout, revList);
-	
+	this._repoView.setClip(self._filesWidth, 0, self._width - self._filesWidth, self._height);
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).mousedown(this.mouseDown.bind(this));
@@ -143,7 +140,6 @@ CanvasRenderer.prototype._initialRequest = function() {
 	}
 
 	self._width = commit_width * (to - from + 1);
-	self._repoView.setClip(0, 0, self._width, self._height);
 
 	self._fromCommit = from;
 	self._toCommit = to;
@@ -152,7 +148,7 @@ CanvasRenderer.prototype._initialRequest = function() {
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 	self._createSlider(from, to, self._revList);
 	self.clearHistory();
-	self.renderFilenames();
+	self.render();
 	self._fetchMoreData();
 }
 
@@ -362,19 +358,8 @@ CanvasRenderer.prototype.fileYTop = function(filename) {
 CanvasRenderer.prototype.render = function() {
 	Logger.INFO("render", Logger.CHANNEL.RENDERER);
 	var self = this;
-	self.renderFilenames();
-	self._repoView.render();
-};
-
-CanvasRenderer.prototype.renderFilenames = function() {
-	var self = this;
-
-	self._filesContext.fillStyle = COLORS.FILES_BACKGROUND;
-	self._filesContext.strokeStyle = COLORS.FILES_BACKGROUND;
-	self._filesContext.clearRect(0, 0, self._filesWidth, self._height);
-	self._filesContext.fillRect(0, 0, self._filesWidth, self._height);
-
 	self._dirView.render();	
+	self._repoView.render();
 };
 
 
@@ -606,7 +591,7 @@ CanvasRenderer.prototype.mouseMoveHistoryWindow = function(event) {
 			self._highlightedFile = file;
 			self._repoView.setHighlightedFile(file);
 			self._dirView.setHighlightedFile(file);
-			self.renderFilenames();
+			self.render();
 		}
 	}
 };
@@ -628,7 +613,7 @@ CanvasRenderer.prototype.mouseMoveFilesWindow = function(event) {
 			self._highlightedFile = file;
 			self._repoView.setHighlightedFile(file);
 			self._dirView.setHighlightedFile(file);
-			self.renderFilenames();
+			self.render();
 		}
 	}
 };
@@ -675,8 +660,11 @@ CanvasRenderer.prototype.fileFromYCoord = function(y) {
 
 CanvasRenderer.prototype.commitIndexFromXCoord = function(x) {
 	var self = this;
+
+	x = x - self._repoView.getClipX();
+	var width = self._repoView.getClipDX();
 	var length = self._toCommit - self._fromCommit + 1;
-	var index = Math.floor((length * x) / self._width);
+	var index = Math.floor((length * x) / width);
 	if (index >= 0 && self._fromCommit+index <= self._toCommit) {
 		return self._fromCommit+index;
 	}

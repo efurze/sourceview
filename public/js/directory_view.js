@@ -33,6 +33,11 @@ DirectoryView.prototype.render = function() {
 	var layout = self._layout.getLayout();
 	ASSERT(layout);
 
+	self._context.fillStyle = COLORS.FILES_BACKGROUND;
+	self._context.strokeStyle = COLORS.FILES_BACKGROUND;
+	self._context.clearRect(self._x, self._y, self._dx, self._dy);
+	self._context.fillRect(self._x, self._y, self._dx, self._dy);
+
 	Object.keys(layout).forEach(function(path) {
 		ASSERT(layout[path]);
 		self._renderItem(path, layout[path].y, layout[path].dy)
@@ -82,7 +87,7 @@ DirectoryView.prototype._renderHighlighted = function(path) {
 
 	context.beginPath();
 	context.fillStyle = COLORS.FILES_BACKGROUND;
-	context.fillRect(x, y, self._dx, font.height);
+	context.fillRect(x, y, self._dx - x, font.height);
 	context.beginPath();
 	context.fillStyle = font.color;
 	context.fillText(filename, x, y + font.height);
