@@ -1,37 +1,46 @@
-<div class="row">
-    <div class="col-md-2 text-center small-padding">
+
+<div>
+    <div class="text-center small-padding">
     </div>
-    <div class="col-md-10 text-center small-padding">
+    <div class="text-center small-padding">
         <div id="slider-div"></div>
     </div>
 </div>
-<div class="row" id="main-row">
-    <div class="popup" id="diff-popup"></div>
-    <div class="col-md-2 text-center small-padding">
-        <canvas id="filenames" class="canvas"></canvas>
+    <div id="canvas-container">
+        <div id="filenames-container">
+            <canvas id="filenames" class="canvas"></canvas>
+        </div>
+        <div id="repo-container">
+            <canvas id="repo_canvas" class="canvas"></canvas>
+        </div>
     </div>
-    <div class="col-md-10 text-center small-padding" id="canvas_div">
-        <canvas id="repo_canvas" class="canvas"></canvas>
-    </div>
-</div>
-<div class="row">
-    <div class="col-md-2 text-left small-padding">
+
+<div>
+    <div class="text-left small-padding">
         <input type="text" id="filter_input">  
         <button id="filter_button" type="button">Filter</button>
     </div>
-    <div class="col-md-1 text-center small-padding">
+    <div class="text-center small-padding">
         <button id="first_button" type="button">First</button>
     </div>
-    <div class="col-md-8 text-center small-padding">
+    <div class="text-center small-padding">
         <div id="commit_info"></div>
     </div>
-    <div class="col-md-1 text-center small-padding">
+    <div class="text-center small-padding">
         <button id="last_button" type="button">Last</button>
     </div>
 </div>
 <textarea id="code_textarea"></textarea>
 <script>
 	$(document).ready(function() {
+
+        $("#repo_canvas").resize(function() {
+            console.log("canvas resized");
+        });
+
+        $("#canvas-container").resize(function() {
+            console.log("container resized");
+        });
 
         // this is required to make the canvas fill the entire div
 
@@ -41,16 +50,11 @@
         c.attr('height', $(container).height());
 
         c = $("#filenames");
-        var container = $(c).parent();
+        container = $(c).parent();
         c.attr('width', $(container).width());
         c.attr('height', $(container).height());
 
-        c = $("#directories");
-        var container = $(c).parent();
-        c.attr('width', $(container).width());
-        c.attr('height', $(container).height());
-
-		    BranchViewer.init({{{repo_data}}});
+		BranchViewer.init({{{repo_data}}});
 	});
 </script>
 

@@ -68,13 +68,13 @@ Layout.prototype._addTree = function(tree, path) {
 	var newly_added = false;
 	if (!Layout.node_index[path]) {
 		self._addDir(path);
-		Layout.node_index[path].setOpen(false);
+		//Layout.node_index[path].setOpen(false);
 		newly_added = true;
 	} 
 
 	Object.keys(tree.children).forEach(function(child) {
 		if (newly_added) {
-			Layout.node_index[path].setOpen(true);
+			//Layout.node_index[path].setOpen(true);
 		}
 		if (typeof(tree.children[child]) == 'object') {
 			self._addTree(tree.children[child], path + child + '/');

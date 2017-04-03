@@ -32,17 +32,19 @@
 */
 var CanvasRenderer = function(revList) {
 	Logger.INFO("CanvasRenderer()", Logger.CHANNEL.RENDERER);
+
+
 	var self = this;
 	this._ANTIALIAS = false;
 	this._canvas = document.getElementById("repo_canvas");
+	this._canvas.height = 2000;
 	this._context = this._canvas.getContext('2d');
 
 	this._width = this._canvas.width;
 	this._height = this._canvas.height;
 	
-	console.log("width:", this._width, "height:", this._height);
-	
 	this._filesCanvas = document.getElementById("filenames");
+	this._filesCanvas.height = 2000;
 	this._filesContext = this._filesCanvas.getContext('2d');
 	this._filesWidth = this._filesCanvas.width;
 
@@ -176,7 +178,7 @@ CanvasRenderer.prototype.updateData = function(commits, initial_size, summaries,
 	} else {
 		var fileCount = getCount(final_size, 'files');
 		if (fileCount > 1000) {
-			self._layout.addFilter("/*");
+			//self._layout.addFilter("/*");
 		}
 		Logger.INFO("File count", fileCount, Logger.CHANNEL.RENDERER);
 	}
