@@ -100,7 +100,7 @@ DirectoryView.prototype._renderText = function(text, x, y, font, selected) {
 	var context = self._context;
 	context.beginPath();
 	context.fillStyle = COLORS.FILES_BACKGROUND;
-	context.fillRect(x, y, self._dx, font.height);
+	context.fillRect(x, y, self._dx - x, font.height);
 
 	context.beginPath();
 	context.fillStyle = selected ? 'red' : font.color;
