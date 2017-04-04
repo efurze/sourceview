@@ -44,6 +44,7 @@ var CanvasRenderer = function(revList) {
 	this._height = this._canvas.height;
 
 	this._filesWidth = this._canvas.width * 0.15;
+	this._repoWidth = this._width - this._filesWidth;
 
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
@@ -60,6 +61,10 @@ var CanvasRenderer = function(revList) {
 		y: -1
 	};
 	this._scrollbarScaleFactor = 1;
+	this._lastScrollFinish = {
+		min: 0,
+		max: 0
+	};
 	this._lastScroll = {
 		min: 0,
 		max: 0
@@ -81,7 +86,7 @@ var CanvasRenderer = function(revList) {
 	this._dirView.setClip(0, 0, this._filesWidth, this._height);
 
 	this._repoView = new RepoView(this._context, this._model, this._layout, revList);
-	this._repoView.setClip(self._filesWidth, 0, self._width - self._filesWidth, self._height);
+	this._repoView.setClip(self._filesWidth, 0, self._repoWidth, self._height);
 
 	$(this._canvas).mousemove(this.mouseMoveHistoryWindow.bind(this));
 	$(this._canvas).mousedown(this.mouseDown.bind(this));
@@ -98,15 +103,20 @@ var CanvasRenderer = function(revList) {
 CanvasRenderer.prototype._createSlider = function (from, to, revList) {
 	var self = this;
 
-	var pixelsPerCommit = self._width/revList.length;
+	var pixelsPerCommit = self._repoWidth/revList.length;
 
 	self._minSliderSize = Math.ceil(20 / pixelsPerCommit);
+	self._lastScrollFinish = {
+		min: from, 
+		max: Math.max(to, from + self._minSliderSize)
+	}
+
 	self._lastScroll = {
 		min: from, 
 		max: Math.max(to, from + self._minSliderSize)
 	}
 
-	self._scrollbarScaleFactor = (to - from)/(self._lastScroll.to - from);
+	self._scrollbarScaleFactor = (to - from)/(self._lastScrollFinish.to - from);
 
 	self._rangeBar = RangeBar({
           min: 0,
@@ -114,7 +124,7 @@ CanvasRenderer.prototype._createSlider = function (from, to, revList) {
           values: [
             [
               from,
-              self._lastScroll.max
+              self._lastScrollFinish.max
             ],
 
           ],
@@ -132,14 +142,14 @@ CanvasRenderer.prototype._initialRequest = function() {
 	var self = this;
 	var from = 0, 
 		to = 100,
-		commit_width = self._width/100;
+		commit_width = self._repoWidth/100;
 
 	if (self._ANTIALIAS) {
 		commit_width = Math.floor(commit_width);
-		to = Math.floor(self._width/commit_width);
+		to = Math.floor(self._repoWidth/commit_width);
+		self._repoWidth = commit_width * (to - from + 1);
 	}
 
-	self._width = commit_width * (to - from + 1);
 
 	self._fromCommit = from;
 	self._toCommit = to;
@@ -217,7 +227,7 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	Logger.DEBUG("scrollCanvas", count, Logger.CHANNEL.RENDERER);
 	var self = this;
 
-	var commit_width = self._width/(self._toCommit - self._fromCommit + 1);
+	var commit_width = self._repoWidth/(self._toCommit - self._fromCommit + 1);
 	var visible_commits = self._toCommit - self._fromCommit;
 	var previous_to = self._toCommit;
 	var previous_from = self._fromCommit;
@@ -232,13 +242,25 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	if (self._toCommit == previous_to)
 		return;
 		
-	self._repoView.setCommitRange(self._fromCommit, self._toCommit)
-	var img = self._context.getImageData(0,0,self._width, self._height);
+	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
+
+	var img = self._context.getImageData(
+		self._filesWidth, 
+		0, 
+		self._repoWidth, 
+		self._height);
 	
 	// clear canvas
 	self.clearHistory();
 
-	self._context.putImageData(img, -(count*commit_width), 0);
+	
+	self._context.save();
+	self._context.rect(self._filesWidth, 0, self._repoWidth, self._height);
+	self._context.clip();
+	self._context.putImageData(img, 
+		self._filesWidth - (count * commit_width), 
+		0);
+	self._context.restore();
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 	self._repoView.render();
 }
@@ -248,7 +270,7 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 	ASSERT(to < self._revList.length);
 
 	var requestedRange = to - from + 1;
-	var newCommitWidth = self._canvas.width / requestedRange;
+	var newCommitWidth = self._repoWidth / requestedRange;
 	var newRange = requestedRange;
 
 	if (self._ANTIALIAS) {
@@ -259,8 +281,8 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 	var oldFrom = self._fromCommit,
 		oldTo = self._toCommit,
 		oldRange = self._toCommit - self._fromCommit + 1,
-		oldWidth = self._width,
-		commit_width = self._width/(oldRange);
+		oldWidth = self._repoWidth,
+		commit_width = self._repoWidth/(oldRange);
 
 	if (from == oldFrom) {
 		to = Math.min(self._revList.length-1, from + newRange - 1);
@@ -268,7 +290,8 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 		from = Math.max(0,to - newRange + 1);
 	}
 	newRange = to - from + 1;
-	self._width = newRange * newCommitWidth;
+	if (self._ANTIALIAS)
+		self._repoWidth = newRange * newCommitWidth;
 	
 	if (oldRange > newRange) {
 		// expand
@@ -277,12 +300,12 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 		// contract
 		var x = 0;
 		if (to == oldTo) {
-			x = self._width*(1 - oldRange/newRange); 
+			x = self._repoWidth*(1 - oldRange/newRange); 
 		}
-		self._context.drawImage(self._canvas, 0,0, 
-			self._width, self._height,
-			x,0,
-			self._width*oldRange/newRange, self._height);
+		self._context.drawImage(self._canvas, self._filesWidth,0, 
+			self._repoWidth, self._height,
+			self._filesWidth + x,0,
+			self._repoWidth*oldRange/newRange, self._height);
 	}
 
 	Logger.INFO("rescaleX", 
@@ -293,15 +316,15 @@ CanvasRenderer.prototype._rescaleX = function(from, to) {
 		"width",
 		Logger.CHANNEL.RENDERER);
 
-	if (oldWidth > self._width) {
+	if (oldWidth > self._repoWidth) {
 		self._context.fillStyle = COLORS.REPO_BACKGROUND;
-		self._context.fillRect(self._width, 0, oldWidth, self._height);
+		self._context.fillRect(self._repoWidth, 0, oldWidth, self._height);
 	}
 
 	self._fromCommit = from;
 	self._toCommit = to;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
-	self._repoView.setClip(0, 0, self._width, self._height);
+	self._repoView.setClip(self._filesWidth, 0, self._repoWidth, self._height);
 	self._fetchMoreData();
 	self._repoView.render();
 }
@@ -368,8 +391,8 @@ CanvasRenderer.prototype.clearHistory = function() {
 
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
 	self._context.strokeStyle = COLORS.REPO_BACKGROUND;
-	self._context.clearRect(0, 0, self._width, self._height);
-	self._context.fillRect(0, 0, self._width, self._height);
+	self._context.clearRect(self._filesWidth, 0, self._repoWidth, self._height);
+	self._context.fillRect(self._filesWidth, 0, self._repoWidth, self._height);
 };
 
 
@@ -444,12 +467,13 @@ CanvasRenderer.prototype.repoClick = function(event) {
 			self.diffAjaxDone.bind(self));
 	}
 
+	let middle = self._filesWidth + (self._repoWidth/2);
 
 	if(elem.hasClass("show-left")) {
 		elem.removeClass("show-left");
 	} else if(elem.hasClass("show-right")) {
 		elem.removeClass("show-right");
-	} else if (event.offsetX < self._width/2) {
+	} else if (event.offsetX < middle) {
 		elem.addClass("show-right");
 	} else {
 		elem.addClass("show-left");
@@ -509,6 +533,8 @@ CanvasRenderer.prototype._sliderChanged = function(event, range) {
 	var oldFrom = self._lastScroll.min;
 	var oldTo = self._lastScroll.max;
 
+	self._lastScrollFinish.min = range[0];
+	self._lastScrollFinish.max = range[1];
 	self._lastScroll.min = range[0];
 	self._lastScroll.max = range[1];
 
@@ -517,7 +543,7 @@ CanvasRenderer.prototype._sliderChanged = function(event, range) {
 		self._rescaleX(range[0], range[1]);
 	}
 
-	if (self._lastScroll.min != self._lastFetchRange.from) {
+	if (self._lastScrollFinish.min != self._lastFetchRange.from) {
 		self._repoView.markAll();
 		self._repoView.render();
 	}
@@ -538,13 +564,16 @@ CanvasRenderer.prototype._sliderChanging = function(event, range) {
 		self._lastFetchRange.to = self._toCommit;
 	}
 
-	if ((range[1] - range[0]) != (self._lastScroll.max - self._lastScroll.min)) {
+	if ((range[1] - range[0]) != (self._lastScrollFinish.max - self._lastScrollFinish.min)) {
 		// resize event
 		return;
 	}
 
 	var SCROLL_THRESHOLD = 10;
 	var count = range[0] - self._lastScroll.min;
+
+	self._lastScroll.min = range[0];
+	self._lastScroll.max = range[1];
 	
 	if (count != 0) {
 		self._scrollCanvas(count);
