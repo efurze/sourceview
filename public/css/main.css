@@ -1,12 +1,38 @@
-
+#container {
+  height: 75%;
+  margin: 10;
+}
 
 #canvas-container {
-  height: 85%;
-  margin: 20;
   overflow: scroll;
+  height: 100%;
 }
 
 
+#last-container {
+  float: right;
+}
+
+.my-row {
+  margin-top: 10;
+  margin-bottom: 10;
+}
+
+#commit-container {
+  display: inline-block;
+}
+
+#filter-container {
+  display: inline-block;
+}
+
+#slider-row {
+  margin-bottom: 0;
+}
+
+.button-container {
+  display: inline-block;
+}
 
 .popup {
     visibility: hidden;

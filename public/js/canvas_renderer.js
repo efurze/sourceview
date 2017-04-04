@@ -46,6 +46,8 @@ var CanvasRenderer = function(revList) {
 	this._filesWidth = this._canvas.width * 0.15;
 	this._repoWidth = this._width - this._filesWidth;
 
+	$('#top-container').css('margin-left', this._filesWidth);
+
 	this._lastMouseX = -1;
 	this._lastMouseY = -1;
 	this._pixelsPerLine = 1;
