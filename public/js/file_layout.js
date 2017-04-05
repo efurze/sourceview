@@ -22,6 +22,7 @@ var Layout = function(model, revList) {
 	this._scrollOffset = 0;
 }
 
+Layout.node_index = {};
 
 Layout.prototype.on = function(event, cb) {
 	if (!this._listeners.hasOwnProperty(event)) {
