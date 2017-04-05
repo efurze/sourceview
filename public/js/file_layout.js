@@ -1,26 +1,42 @@
 'use strict';
 
+
+
 var Layout = function(model, revList) {
 	this._UNIFORM = false;
+	this._FIXED_HEIGHT = true;
+	this._MAX_LINES_PER_PIXEL = 10;
 	this._root = this._UNIFORM 
 				? new UniformNode("/", model, revList)
 				: new LayoutNode("/", model, revList);
 	this._model = model;
 	this._revList = revList;
-	this._listeners = [];
+	this._listeners = {
+		'layout': [],
+		'resize': []
+	}; // event: array of fns
 	this._fromCommit = -1;
 	this._toCommit = -1;
 	this._filter = new FileFilter();
+	this._viewportHeight = 0;
+	this._scrollOffset = 0;
 }
 
-Layout.node_index = {};
 
-Layout.prototype.addListener = function(cb) {
-	this._listeners.push(cb);
+Layout.prototype.on = function(event, cb) {
+	if (!this._listeners.hasOwnProperty(event)) {
+		this._listeners[event] = [];
+	}
+	this._listeners[event].push(cb);
+}
+
+Layout.prototype.setScrollOffset = function(dy) {
+	this._scrollOffset = dy;
 }
 
 Layout.prototype.setClip = function(x,y,dx,dy) {
 	ASSERT(this._root);
+	this._viewportHeight = dy;
 	this._root.setClip(x,y,dx,dy);
 };
 
@@ -36,9 +52,30 @@ Layout.prototype.doLayout = function(from, to) {
 	Logger.INFO("layout", from, '->', to, Logger.CHANNEL.FILE_LAYOUT);
 
 	self.updateFileList(from, to);
+	self._root._setRange(from, to);
+	const visibleCount = self._root.visibleCount();
+	let pixelCount = self._root._dx;
+	if (visibleCount < self._viewportHeight) {
+		self._root.setLinesPerItem(self._viewportHeight / visibleCount);
+	} else if (!self._FIXED_HEIGHT) {
+		self._root.setLinesPerItem(1);
+		pixelCount = visibleCount;
+	}
+
+
+	
+	if (pixelCount != self._root._dx) {
+		self.setClip(pixelCount,
+			self._root._y,
+			self._root._dx,
+			self._root._dy);
+		self._listeners['resize'].forEach(function(cb) {
+			cb(pixelCount);
+		});
+	}
 
 	self._root.doLayout(from, to);
-	self._listeners.forEach(function(cb) {
+	self._listeners['layout'].forEach(function(cb) {
 		cb();
 	});
 };
@@ -95,7 +132,10 @@ Layout.prototype.isVisible = function(path) {
 	var parts = parsePath(path);
 	ASSERT(Layout.node_index[parts.parent]);
 	if (Layout.node_index[parts.parent]) {
-		return Layout.node_index[parts.parent].isOpen();
+		const top = this.getFileY(path);
+		return ( Layout.node_index[parts.parent].isOpen()
+			&& ((top + this.getFileDY(path)) > this._scrollOffset)
+			&& (top < (this._scrollOffset + this._viewportHeight)));
 	}
 }
 
@@ -241,10 +281,17 @@ var LayoutNode = function(name, model, revList, parent) {
 	self._dx = 0;
 	self._dy = 0;
 	self._isOpen = true;
+	self._childLines = 0;
+
 
 	Layout.node_index[self.path()] = self;
 	Logger.DEBUG("Added dir", name, Logger.CHANNEL.FILE_LAYOUT);
 };
+
+LayoutNode.LINES_PER_ITEM = 1;
+LayoutNode.prototype.setLinesPerItem = function(l) {
+	LayoutNode.LINES_PER_ITEM = l;
+}
 
 LayoutNode.prototype.reset = function() {
 	var self = this;
@@ -412,7 +459,7 @@ LayoutNode.prototype.doLayout = function(from, to) {
 
 	Logger.DEBUG("doLayout", self.path(), Logger.CHANNEL.FILE_LAYOUT);
 
-	var lineCount = self.visibleLineCount();
+	var lineCount = self.visibleCount();
 	if (lineCount <= 0)
 		return;
 	var firstOrderPixelsPerLine = (self._dy)/lineCount;
@@ -423,7 +470,7 @@ LayoutNode.prototype.doLayout = function(from, to) {
 		var dy = 0;
 		
 		if (self._childDirs.hasOwnProperty(name)) {
-			childLineCount = self._childDirs[name].visibleLineCount();
+			childLineCount = self._childDirs[name].visibleCount();
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y_adjust += FONT_DIR.height - y;
@@ -447,7 +494,7 @@ LayoutNode.prototype.doLayout = function(from, to) {
 		var childLineCount;
 
 		if (self._childDirs.hasOwnProperty(name)) {
-			childLineCount = self._childDirs[name].visibleLineCount;
+			childLineCount = self._childDirs[name].visibleCount();
 			var subdir = self._childDirs[name];
 			if (y < FONT_DIR.height && self._parent) {
 				y = FONT_DIR.height;
@@ -499,13 +546,13 @@ LayoutNode.prototype._setRange = function(from, to) {
 	});
 }
 
-LayoutNode.prototype.visibleLineCount = function() {
+LayoutNode.prototype.visibleCount = function() {
 	var self = this;
 	var total = 0;
 	if (self._isOpen) {
 		total = self._childLines;
 		Object.keys(self._childDirs).forEach(function(name) {
-			total += self._childDirs[name].visibleLineCount();
+			total += self._childDirs[name].visibleCount();
 		});
 	}
 	return total;
@@ -587,6 +634,7 @@ LayoutNode.prototype.setClip = function(x,y,dx,dy) {
 	self._y = y;
 	self._dx = dx;
 	self._dy = dy;
+	self.LINES_PER_ITEM = 3;
 }
 
 LayoutNode.prototype.setOpen = function(open) {
@@ -604,7 +652,9 @@ var UniformNode = function(name, model, revList, parent) {
 	LayoutNode.call(this, name, model, revList, parent);
 }
 
-UniformNode.FILE_HEIGHT = 3;
+UniformNode.prototype.setLinesPerItem = function(l) {
+	LayoutNode.LINES_PER_ITEM = l;
+}
 
 UniformNode.prototype = Object.create(LayoutNode.prototype);
 
@@ -632,14 +682,30 @@ UniformNode.prototype.doLayout = function(from, to) {
 		} else {
 			self._layout[name] = {
 				'y': y,
-				'dy': UniformNode.FILE_HEIGHT
+				'dy': LayoutNode.LINES_PER_ITEM
 			};
-			y += UniformNode.FILE_HEIGHT;
+			y += LayoutNode.LINES_PER_ITEM;
 		}
 	});
 
 	self._dy = y;
 }
+
+UniformNode.prototype.visibleCount = function() {
+	var self = this;
+	var total = 0;
+	if (self._isOpen) {
+		self._children.forEach(function(name) {
+			if (self._childDirs.hasOwnProperty(name)) {
+				total += self._childDirs[name].visibleCount();
+			} else {
+				total ++;
+			}
+		});
+	}
+	return total;
+}
+
 
 UniformNode.prototype.fileMaxSize = function(filename) {
 	return -1;

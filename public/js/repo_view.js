@@ -21,7 +21,7 @@ var RepoView = function(context, model, layout, revList) {
 	this._model = model;
 	this._layout = {};
 
-	layout.addListener(this.layoutChanged.bind(this));
+	layout.on('layout', this.layoutChanged.bind(this));
 
 	revList.forEach(function(sha, index) {
 		self._revIndex[sha] = index;
@@ -273,7 +273,6 @@ RepoView.prototype._renderCommit = function(diff_index) {
 
 RepoView.prototype._clearColumn = function(diff_index) { 
 	var self = this;
-	return;
 	var x = self._commit_width * (diff_index - self._fromCommit);
 	self._context.beginPath();
 	self._context.fillStyle = COLORS.REPO_BACKGROUND;
