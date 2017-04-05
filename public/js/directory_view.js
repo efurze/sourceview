@@ -43,8 +43,12 @@ DirectoryView.prototype.render = function() {
 		self._renderItem(path, layout[path].y, layout[path].dy)
 	});
 
-	if (self._highlightedFile && !self._layout.isDir(self._highlightedFile))
+	if (self._highlightedFile && !self._layout.isDir(self._highlightedFile)) {
 		self._renderHighlighted(self._highlightedFile);
+		const parent = self._layout.getParent(self._highlightedFile);
+		if (layout.hasOwnProperty(parent)) 
+			self._renderItem(parent, layout[parent].y, layout[parent].dy);
+	}
 }
 
 DirectoryView.prototype._renderItem = function(path, y, dy) {
