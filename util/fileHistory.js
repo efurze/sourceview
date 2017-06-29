@@ -15,6 +15,9 @@ var ingest = function(dir, max, start) {
 //Logger.disable_logging();
 var repo = process.argv[2];
 var filename = process.argv[3];
+if (!filename.startsWith('/')) {
+	filename = "/" + filename;
+}
 
 
 Persist.getRevList(repo, 'master')
