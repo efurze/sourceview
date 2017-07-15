@@ -5,17 +5,11 @@ module.exports = function(grunt) {
 
   grunt.initConfig({
     
-    shell: {
-	mongo: {
-        command: ''
-      }
-    },
     
     concurrent: {
       dev: [
         'watch',
-        'nodemon',
-        'shell'
+        'nodemon'
       ],
       options: {
       logConcurrentOutput: true
@@ -88,7 +82,7 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-contrib-qunit');
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-concat');
-  grunt.loadNpmTasks('grunt-shell');
+  //grunt.loadNpmTasks('grunt-shell');
 
   grunt.registerTask('test', ['qunit']);
   grunt.registerTask('default', ['concat', 'babel']);
