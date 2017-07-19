@@ -9,7 +9,7 @@ Promise.promisifyAll(fs);
 
 
 function getData(repo, from, to) {
-
+	console.log("getData", repo, from, to);
 	var data = {};
 	return persist.getRevList(repo, 'master')
 		.then(function(history) {
@@ -35,29 +35,32 @@ function getData(repo, from, to) {
 module.exports = {
 
 	revList: function(req, res) {
-		var repo = req.query['repo'];
+		var repo = req.params['repo'];
+		console.log("revList repo:", repo);
 	
 		persist.getRevList(repo, 'master')
 			.then(function(revList) {
 				res.render("range", {
 					title: "Source View",
-					repo_data: JSON.stringify(revList)
+					repo_data: JSON.stringify(revList),
+					repo: repo
 				});
 			});
 	},
 
 	requestRangeJSON: function(req, res) {
-		getData(req.query['repo'], 
-				parseInt(req.query['from']), 
-				parseInt(req.query['to'])
+		console.log("requestRangeJSON");
+		getData(req.params['repo'], 
+				parseInt(req.params['from']), 
+				parseInt(req.params['to'])
 			).then(function(data) {
 				res.send(data);
 			});
 	},
 
 	getDiffJSON: function(req, res) {
-		const sha = req.query['commit'];
-		persist.getDiff(req.query['repo'], sha)
+		const sha = req.params['commit'];
+		persist.getDiff(req.params['repo'], sha)
 			.then(function(diff) {
 				const ret = {};
 				ret[sha] = diff;
@@ -66,7 +69,7 @@ module.exports = {
 	},
 
 	chart: function(req, res) {
-		var repo = req.query['repo'];
+		var repo = req.params['repo'];
 		var data = {};
 
 		persist.getRevList(repo, 'master')

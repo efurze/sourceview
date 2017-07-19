@@ -22,6 +22,7 @@ app.use('/bootstrap', express.static(path.join(__dirname, '/node_modules/bootstr
 app.use('/font-awesome', express.static(path.join(__dirname, '/node_modules/font-awesome')));
 app.use('/elessar', express.static(path.join(__dirname, '/node_modules/elessar/dist')));
 app.use('/dist', express.static(path.join(__dirname, '/dist')));
+//app.use('/', express.static(path.join(__dirname, '/public/html')));
 
 
 app.use(cookieParser());
@@ -48,21 +49,27 @@ app.use(function(req, res, next) {
 
 
 // Routes
-app.get('/chart', dataController.chart);
+app.get('/chart/:repo', dataController.chart);
 
-app.get('/range', dataController.revList);
-app.get('/', dataController.revList);
-app.get('/rangeJSON', dataController.requestRangeJSON);
+app.get('/range/:repo', dataController.revList);
+app.get('/repo/:repo', dataController.revList);
+app.get('/rangeJSON/:repo/:from/:to', dataController.requestRangeJSON);
 
-app.get('/diff', dataController.getDiffJSON);
+app.get('/diff/:repo/:commit', dataController.getDiffJSON);
 
-app.get('/repo/range', function(req, res) { 
+app.get('/range/:repo', function(req, res) { 
 	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
 		.then(function(data) {
 			res.send(data.toString());
 		}).catch(function(err) {
 			res.send(err.toString());
 		})
+});
+
+
+
+app.get('*',function (req, res) {
+        res.redirect('html/main.html');
 });
 
 

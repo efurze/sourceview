@@ -34,8 +34,8 @@ $(function() {
 	}
 }
 */
-		init: function(revList) {
-			BranchViewer._renderer = new CanvasRenderer(revList);
+		init: function(revList, repoName) {
+			BranchViewer._renderer = new CanvasRenderer(revList, repoName);
 		},
 
 	};

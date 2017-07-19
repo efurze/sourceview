@@ -30,12 +30,13 @@
 ...
 ]
 */
-var CanvasRenderer = function(revList) {
+var CanvasRenderer = function(revList, repoName) {
 	Logger.INFO("CanvasRenderer()", Logger.CHANNEL.RENDERER);
 
 
 	const self = this;
 	this._ANTIALIAS = false;
+	this._repoName = repoName;
 
 	this._canvas = document.getElementById("canvas");
 	this._context = this._canvas.getContext('2d');
@@ -161,7 +162,7 @@ CanvasRenderer.prototype._initialRequest = function() {
 	self._lastFetchRange.from = from;
 	self._lastFetchRange.to = to;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
-	self._createSlider(from, to, self._revList);
+	//self._createSlider(from, to, self._revList);
 	self.clearHistory();
 	self.render();
 	self._fetchMoreData();
@@ -500,10 +501,10 @@ CanvasRenderer.prototype.repoClick = function(event) {
 		}
 	} else {
 		$('#diff-popup').html('');
-		const repo = urlParam("repo");
-		self._downloader.get("/diff?repo=" 
+		const repo = self._repoName;
+		self._downloader.get("/diff/" 
 			+ repo 
-			+ "&commit=" + sha,
+			+ "/" + sha,
 			self.diffAjaxDone.bind(self));
 	}
 
@@ -549,13 +550,13 @@ CanvasRenderer.prototype._fetchMoreData = function() {
 	if (chunk.length)
 		chunks.push(chunk);
 
-	var repo = urlParam("repo");
+	var repo = self._repoName;
 	chunks.forEach(function(chunk) {
 		request_made = true;
-		self._downloader.get("/rangeJSON?repo=" 
+		self._downloader.get("/rangeJSON/" 
 			+ repo 
-			+ "&from=" + chunk[0]
-			+"&to=" + chunk[chunk.length-1],
+			+ "/" + chunk[0]
+			+"/" + chunk[chunk.length-1],
 			self.ajaxDone.bind(self));
 	});
 
