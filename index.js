@@ -22,7 +22,10 @@ app.use('/bootstrap', express.static(path.join(__dirname, '/node_modules/bootstr
 app.use('/font-awesome', express.static(path.join(__dirname, '/node_modules/font-awesome')));
 app.use('/elessar', express.static(path.join(__dirname, '/node_modules/elessar/dist')));
 app.use('/dist', express.static(path.join(__dirname, '/dist')));
-//app.use('/', express.static(path.join(__dirname, '/public/html')));
+
+app.get('/test', function (req, res) {
+  res.render('slider_test.hbs');
+});
 
 
 app.use(cookieParser());
@@ -56,6 +59,15 @@ app.get('/repo/:repo', dataController.revList);
 app.get('/rangeJSON/:repo/:from/:to', dataController.requestRangeJSON);
 
 app.get('/diff/:repo/:commit', dataController.getDiffJSON);
+
+app.get('/range/:repo', function(req, res) { 
+	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")
+		.then(function(data) {
+			res.send(data.toString());
+		}).catch(function(err) {
+			res.send(err.toString());
+		})
+});
 
 app.get('/range/:repo', function(req, res) { 
 	fs.readFileAsync(__dirname + "/model/data/master.filesizerange.json")

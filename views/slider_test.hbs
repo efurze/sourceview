@@ -1,0 +1,33 @@
+  <script>
+  $( function() {
+    const slider = $( "#slider-range" ).slider({
+      range: false,
+      min: 0,
+      max: 500,
+      values: [ 100, 200, 300 ],
+      slide: function( event, ui ) {
+        $( "#amount" ).val( "$" + ui.values[ 0 ] + " - $" + ui.values[ 1 ] );
+      }
+    });
+    
+    let middle_handle = 200;
+    
+    $( "#amount" ).val( "$" + $( "#slider-range" ).slider( "values", 0 ) +
+      " - $" + $( "#slider-range" ).slider( "values", 1 ) );
+
+     slider.on("slide", function(event, ui) {
+     	const delta = ui.values[1] - middle_handle;
+     	middle_handle = ui.values[1];
+     	$( "#slider-range" ).slider("values", 0, ui.values[0] + delta);
+     	$( "#slider-range" ).slider("values", 2, ui.values[2] + delta);
+     })
+
+  } );
+  </script>
+
+  <p>
+  <label for="amount">Price range:</label>
+  <input type="text" id="amount" readonly style="border:0; color:#f6931f; font-weight:bold;">
+</p>
+ 
+<div id="slider-range"></div>
