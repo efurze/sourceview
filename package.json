@@ -18,7 +18,6 @@
   "dependencies": {
     "bootstrap": "latest",
     "cookie-parser": "^1.4.0",
-    "elessar": "^1.8.4",
     "express": "^4.13.3",
     "express-handlebars": "latest",
     "express-session": "^1.12.1",

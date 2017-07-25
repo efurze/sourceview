@@ -50,30 +50,3 @@
 		BranchViewer.init({{{repo_data}}}, "{{repo}}");
 	});
 </script>
-
-<script>
-var diffstr = "diff --git a/controllers/repo.js b/controllers/repo.js\n\
-index 9761de2..0d1b027 100644\n\
---- a/controllers/repo.js\n\
-+++ b/controllers/repo.js\n\
-@@ -169,7 +169,7 @@ Repo.prototype.diffHistory = function(branch_name) { // eg 'master'\n\
-                                        return self._git.diff(history[index+1].id, commit.id)\n\
-                                                .then(function(diff) {\n\
-                                                        delete commit.parents;\n\
--                                                       console.log(JSON.stringify(diff));\n\
-+                                                       //console.log(JSON.stringify(diff));\n\
-                                                        return {\n\
-                                                                \n\"commit\n\": commit,\n\
-                                                                \n\"diffs\n\": diff._summary\n\
-";
-
-    var html = Diff2Html.getPrettyHtml(diffstr);
-    var parsed = $(html);
-    parsed.find('.d2h-code-linenumber').remove();
-    parsed.find('td.d2h-info').remove();
-    parsed.find('.d2h-code-line').css('margin-left', '0');
-    $('#diff-popup').html(
-        parsed.prop('outerHTML')
-    );
-
-</script>

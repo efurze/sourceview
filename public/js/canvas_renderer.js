@@ -65,7 +65,6 @@ var CanvasRenderer = function(revList, repoName) {
 		x: -1,
 		y: -1
 	};
-	this._scrollbarScaleFactor = 1;
 	this._lastScrollFinish = {
 		min: 0,
 		max: 0
@@ -122,8 +121,28 @@ CanvasRenderer.prototype._createSlider = function (from, to, revList) {
 		max: Math.max(to, from + self._minSliderSize)
 	}
 
-	self._scrollbarScaleFactor = (to - from)/(self._lastScrollFinish.to - from);
 
+	const slider = $( "#slider-div" ).slider({
+      range: false,
+      min: 0,
+      max: revList.length-101,
+      values: [from],
+      slide: function( event, ui ) {
+      	const newFrom = Math.round(ui.value);
+        self._sliderChanging(event, [
+        		newFrom,
+        		Math.min(revList.length-1, 100 + newFrom)
+        	]);
+      },
+      stop: function(event, ui) {
+      	const newFrom = Math.round(ui.value);
+        self._sliderChanged(event, [
+        		newFrom,
+        		Math.min(revList.length-1, 100 + newFrom)
+        	]);
+      }
+    });
+/*
 	self._rangeBar = RangeBar({
           min: 0,
           max: revList.length-1,
@@ -142,6 +161,7 @@ CanvasRenderer.prototype._createSlider = function (from, to, revList) {
 	self._rangeBar.on('changing', self._sliderChanging.bind(self));
 	self._rangeBar.on('change', self._sliderChanged.bind(self));
 	$('#slider-div').prepend(self._rangeBar.$el);
+*/
 }
 
 CanvasRenderer.prototype._initialRequest = function() {
@@ -162,7 +182,7 @@ CanvasRenderer.prototype._initialRequest = function() {
 	self._lastFetchRange.from = from;
 	self._lastFetchRange.to = to;
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
-	//self._createSlider(from, to, self._revList);
+	self._createSlider(from, to, self._revList);
 	self.clearHistory();
 	self.render();
 	self._fetchMoreData();
@@ -259,9 +279,9 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
 
 	var img = self._context.getImageData(
-		self._filesWidth, 
+		self._filesWidth + (count * commit_width), 
 		0, 
-		self._repoWidth, 
+		self._repoWidth - (count * commit_width), 
 		self._height);
 	
 	// clear canvas
@@ -270,9 +290,10 @@ CanvasRenderer.prototype._scrollCanvas = function(count) {
 	
 	self._context.save();
 	self._context.rect(self._filesWidth, 0, self._repoWidth, self._height);
+	self._context.stroke();
 	self._context.clip();
 	self._context.putImageData(img, 
-		self._filesWidth - (count * commit_width), 
+		self._filesWidth, 
 		0);
 	self._context.restore();
 	self._repoView.setCommitRange(self._fromCommit, self._toCommit);
@@ -566,7 +587,6 @@ CanvasRenderer.prototype._fetchMoreData = function() {
 // scroll done
 CanvasRenderer.prototype._sliderChanged = function(event, range) {
 	var self = this;
-	range = range[0];
 	range[0] = Math.round(range[0]);
 	range[1] = Math.round(range[1]);
 
@@ -579,10 +599,12 @@ CanvasRenderer.prototype._sliderChanged = function(event, range) {
 	self._lastScroll.min = range[0];
 	self._lastScroll.max = range[1];
 
+/*
 	if ((range[1] - range[0]) != (oldTo - oldFrom)) {
 		// resized
 		self._rescaleX(range[0], range[1]);
 	}
+*/
 
 	if (self._lastScrollFinish.min != self._lastFetchRange.from) {
 		self._repoView.markAll();
@@ -595,7 +617,6 @@ CanvasRenderer.prototype._sliderChanged = function(event, range) {
 // scroll in progress
 CanvasRenderer.prototype._sliderChanging = function(event, range) {
 	var self = this;
-	range = range[0];
 	range[0] = Math.round(range[0]);
 	range[1] = Math.round(range[1]);
 	if (!self._isScrolling) {
