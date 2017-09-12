@@ -7,7 +7,35 @@ Promise.promisifyAll(fs);
 
 
 
+function getData(repo, from, to) {
+	console.log("getData", repo, from, to);
+	var data = {
+		commits: [],
+		size_history: {},
+		diff_summaries: {}
+	};
+	return persist.getRevList(repo, 'master')
+		.then(function(history) {
+			var shas = history.slice(from, to+1);
+			data.fromRev = from;
+			data.toRev = from + shas.length-1;
+			return Promise.map(shas, function(commit_id) {
+				return persist.getCommitData(repo, commit_id);
+			});
+		}).then(function(commit_data_ary) { // array of {commit: ,diff_summary: ,sizes:}
+			var sha = commit_data_ary[0].commit.id
+			data.size_history[sha] = commit_data_ary[0].sizes;
+			commit_data_ary.forEach(function(commit_data) {
+				sha = commit_data.commit.id;
+				data.commits.push(commit_data.commit);
+				data.diff_summaries[sha] = commit_data.diff_summary;
+			});
 
+			return data;
+		});
+}
+
+/*
 function getData(repo, from, to) {
 	console.log("getData", repo, from, to);
 	var data = {};
@@ -30,7 +58,7 @@ function getData(repo, from, to) {
 			return data;
 		});
 }
-
+*/
 
 module.exports = {
 
