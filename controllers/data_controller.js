@@ -23,14 +23,14 @@ function getData(repo, from, to) {
 			return Promise.map(shas, function(commit_id) {
 				return persist.getCommitData(repo, commit_id);
 			});
-		}).then(function(commit_data_ary) { // array of {commit: ,diff_summary: ,sizes:}
+		}).then(function(commit_data_ary) { // array of {commit: ,diff_summary:}
 			var first_sha = commit_data_ary[0].commit.id
 			commit_data_ary.forEach(function(commit_data) {
 				var sha = commit_data.commit.id;
 				data.commits.push(commit_data.commit);
 				data.diff_summaries[sha] = commit_data.diff_summary;
 			});
-			return persist.getSizeSnapshot(repo, first_sha);
+			return persist.sizeTree(repo, first_sha);
 		}).then(function(size_tree) {
 			data.size_history = size_tree;
 			return data;
