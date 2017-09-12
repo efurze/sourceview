@@ -14,6 +14,7 @@ function getData(repo, from, to) {
 		size_history: {},
 		diff_summaries: {}
 	};
+
 	return persist.getRevList(repo, 'master')
 		.then(function(history) {
 			var shas = history.slice(from, to+1);
@@ -23,14 +24,15 @@ function getData(repo, from, to) {
 				return persist.getCommitData(repo, commit_id);
 			});
 		}).then(function(commit_data_ary) { // array of {commit: ,diff_summary: ,sizes:}
-			var sha = commit_data_ary[0].commit.id
-			data.size_history[sha] = commit_data_ary[0].sizes;
+			var first_sha = commit_data_ary[0].commit.id
 			commit_data_ary.forEach(function(commit_data) {
-				sha = commit_data.commit.id;
+				var sha = commit_data.commit.id;
 				data.commits.push(commit_data.commit);
 				data.diff_summaries[sha] = commit_data.diff_summary;
 			});
-
+			return persist.getSizeSnapshot(repo, first_sha);
+		}).then(function(size_tree) {
+			data.size_history = size_tree;
 			return data;
 		});
 }
