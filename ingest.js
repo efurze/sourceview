@@ -1,3 +1,5 @@
+"use strict";
+
 var git = require('./lib/git.js');
 var Digest = require('./lib/digest.js');
 let Logger = require('./lib/logger.js');
